@@ -3,12 +3,33 @@
   const content = document.getElementById("toolsContent");
   let toolsReadyResolve;
   const toolsReady = new Promise(resolve => { toolsReadyResolve = resolve; });
+
+  /* ───────────────────────────────────────────────────────────────
+     QUAIS FERRAMENTAS APARECEM NA PÁGINA
+     Para reativar uma ferramenta escondida, acrescente o id aqui:
+       "stars" (próximo rank) · "skin" (custo de skin) · "event-skin" (skin por evento)
+     O HTML e a lógica delas continuam intactos; só ficam invisíveis e
+     inalcançáveis (showTool ignora ids que não estão nesta lista).
+     ─────────────────────────────────────────────────────────────── */
+  const ENABLED_TOOLS = ["wr", "retri"];
+
   const eventSkinEvents = {
-    eventX: {name:"Evento X (exemplo)", tokenName:"tokens", skinTokens:500, spinTokens:20, bonusTokensPerSpin:0,
+    aspirants5: {
+      name: "Aspirants 5.0",
+      type: "bingo",
+      spinDiamonds: 105,
+      spinsPerDrop: 10,
+      chests: 3,
+      neededHits: 3,
+      economicSpinsFromTopUp: 31, // 3 (Passe de Valor) + 14 (1ª semana) + 14 (2ª semana)
+      passCost: 56.00, // R$ 8,00 (Passe de Valor) + 6 * R$ 8,00 (Passes Semanais)
+      endDate: null
+    },
+    eventX: {name:"Evento X (exemplo)", type:"tokens", tokenName:"tokens", skinTokens:500, spinTokens:20, bonusTokensPerSpin:0,
       spinDiamonds:50, discountDiamonds:25, discountedSpinsPerDay:1, maxSpinsPerDay:null, endDate:null},
-    eventY: {name:"Evento Y (exemplo)", tokenName:"moedas", skinTokens:600, spinTokens:30, bonusTokensPerSpin:0,
+    eventY: {name:"Evento Y (exemplo)", type:"tokens", tokenName:"moedas", skinTokens:600, spinTokens:30, bonusTokensPerSpin:0,
       spinDiamonds:40, discountDiamonds:20, discountedSpinsPerDay:2, maxSpinsPerDay:null, endDate:null},
-    eventZ: {name:"Evento Z (exemplo)", tokenName:"emblemas", skinTokens:300, spinTokens:10, bonusTokensPerSpin:0,
+    eventZ: {name:"Evento Z (exemplo)", type:"tokens", tokenName:"emblemas", skinTokens:300, spinTokens:10, bonusTokensPerSpin:0,
       spinDiamonds:15, discountDiamonds:10, discountedSpinsPerDay:1, maxSpinsPerDay:null, endDate:null}
   };
 
@@ -36,6 +57,7 @@
     element.classList.toggle("warning", status === "warning");
   }
 
+  // ================= WIN RATE =================
   function gamesNeededForTarget(games, wins, targetPct, futurePct) {
     const t = targetPct / 100;
     const f = futurePct / 100;
@@ -227,6 +249,7 @@
     document.getElementById("wrN")?.focus();
   }
 
+  // ================= STARS (escondido: ver ENABLED_TOOLS) =================
   function updateStars() {
     const stars = parseNumber("stN");
     const rate = parseNumber("stW") / 100;
@@ -255,6 +278,7 @@
       (games === 1 ? " partida" : " partidas") + days + ".", "success");
   }
 
+  // ================= SKIN COST (escondido: ver ENABLED_TOOLS) =================
   function updateSkinCost() {
     const skinDiamonds = parseNumber("skD");
     const packDiamonds = parseNumber("skPD");
@@ -272,7 +296,14 @@
       " (cada diamante sai por R$ " + diamondPrice.toFixed(3).replace(".", ",") + ").", "success");
   }
 
+  // ================= NAVEGAÇÃO ENTRE FERRAMENTAS =================
+  function stopTrainer() {
+    if (window.RetriTrainer) window.RetriTrainer.stop();
+  }
+
   function showTool(name) {
+    if (!ENABLED_TOOLS.includes(name)) return;   // ferramenta escondida: ignora
+    if (name !== "retri") stopTrainer();
     const menu = document.getElementById("toolsMenu");
     menu.hidden = false;
     menu.querySelectorAll("[data-tool]").forEach(button => {
@@ -288,6 +319,7 @@
   }
 
   function showMenu() {
+    stopTrainer();
     document.getElementById("toolsMenu").hidden = false;
     document.querySelectorAll("#toolsMenu [data-tool]").forEach(button => {
       button.removeAttribute("aria-current");
@@ -296,6 +328,7 @@
     document.getElementById("toolsMenu").scrollIntoView({behavior:"smooth", block:"start"});
   }
 
+  // ================= EVENT SKIN (escondido: ver ENABLED_TOOLS) =================
   function toDateTimeLocal(value) {
     if (!value) return "";
     const date = new Date(value);
@@ -325,9 +358,7 @@
     const dailyLimit = event.maxSpinsPerDay === null ? spins : event.maxSpinsPerDay;
     const discountLimit = Math.min(event.discountedSpinsPerDay, dailyLimit);
     const schedule = Array.from({length:days}, (_, index) => ({
-      day:index + 1,
-      discounted:0,
-      normal:0
+      day:index + 1, discounted:0, normal:0
     }));
 
     let discountsToUse = Math.min(spins, Math.min(discountLimit, discountsToday) +
@@ -389,6 +420,77 @@
     container.append(list);
   }
 
+  function renderEconomicGuide(container, spinsDone, hitsDone, expectedSpins, event) {
+    container.textContent = "";
+    const bold = text => Object.assign(document.createElement("b"), { textContent: text });
+
+    // Cálculos do Guia Econômico
+    const spinsFromTopUp = event.economicSpinsFromTopUp; // 31
+    const totalSpinsNeeded = expectedSpins;
+    const remainingSpinsToBuy = Math.max(0, totalSpinsNeeded - spinsFromTopUp - spinsDone);
+    const diamondsNeeded = remainingSpinsToBuy * event.spinDiamonds;
+
+    const packDiamonds = 500;
+    const packPrice = 45.60;
+    const costInReais = (diamondsNeeded / packDiamonds) * packPrice;
+    const totalCostInReais = event.passCost + costInReais;
+
+    // Título
+    const title = document.createElement("h4");
+    title.textContent = "📋 Roteiro Econômico (Aspirants 5.0)";
+    title.style.color = "#ffcc00";
+    title.style.marginBottom = "10px";
+    container.append(title);
+
+    // Introdução (o nome da skin vem do usuário: sempre como texto, nunca como HTML)
+    const skinName = document.getElementById("eventSkinName").value.trim() || "desejada";
+    const intro = document.createElement("p");
+    intro.append(
+      "Para conseguir a skin ", bold(skinName),
+      ", você precisa completar cerca de ", bold(totalSpinsNeeded + " giros"),
+      ". O guia cobre ", bold(spinsFromTopUp + " giros"),
+      " com passes. Você ainda precisa comprar ", bold(remainingSpinsToBuy + " giros"), " avulsos."
+    );
+    container.append(intro);
+
+    // Checklist
+    const list = document.createElement("ul");
+    list.style.marginTop = "15px";
+    list.style.paddingLeft = "20px";
+    list.style.lineHeight = "1.8";
+
+    const steps = [
+      { title: "Passo 1 (Hoje):", desc: `Compre o <b>Passe de Grande Valor</b> (R$ 8,00) e gire os <b>3 tokens</b>.` },
+      { title: "Passo 2 (1º Suprimento):", desc: `Compre <b>3 Passes Semanais</b> (R$ 24,00) e gire os <b>14 tokens</b>.` },
+      { title: "Passo 3 (2º Suprimento):", desc: `Compre <b>3 Passes Semanais</b> (R$ 24,00) e gire os <b>14 tokens</b>.` },
+      { title: "Passo 4 (Diário):", desc: `Faça <b>1 giro de 105💎 por dia</b> até completar os <b>${remainingSpinsToBuy} giros</b> que faltam.` }
+    ];
+
+    steps.forEach(step => {          // textos fixos + números calculados: seguros
+      const li = document.createElement("li");
+      li.innerHTML = `<b>${step.title}</b> ${step.desc}`;
+      list.append(li);
+    });
+    container.append(list);
+
+    // Caixa de Custos
+    const costBox = document.createElement("div");
+    costBox.style.marginTop = "20px";
+    costBox.style.padding = "15px";
+    costBox.style.background = "rgba(255,255,255,0.05)";
+    costBox.style.borderRadius = "8px";
+    costBox.style.borderLeft = "4px solid #4caf50";
+
+    costBox.innerHTML = `
+      <p style="margin-bottom: 5px;"><b>💰 Custo Estimado:</b></p>
+      <p>Passes (Valor + Semanais): R$ ${event.passCost.toFixed(2).replace(".", ",")}</p>
+      <p>Diamantes avulsos (${diamondsNeeded.toLocaleString("pt-BR")} 💎): R$ ${costInReais.toFixed(2).replace(".", ",")}</p>
+      <p style="font-size: 1.2em; color: #4caf50; margin-top: 10px;"><b>Total: R$ ${totalCostInReais.toFixed(2).replace(".", ",")}</b></p>
+      <p style="font-size: 0.85em; color: #aaa; margin-top: 10px;">* Valor estimado usando o pacote de 500+65 Diamantes por R$ 45,60. O valor pode variar conforme a disponibilidade de pacotes e bônus.</p>
+    `;
+    container.append(costBox);
+  }
+
   function setupEventSkinCalculator() {
     const select = document.getElementById("eventSkinEvent");
     Object.entries(eventSkinEvents).forEach(([id, event]) => {
@@ -406,18 +508,36 @@
       const event = selectedEvent();
       const endDateInput = document.getElementById("eventSkinEndDate");
       endDateInput.value = toDateTimeLocal(event.endDate);
-      document.getElementById("eventSkinCost").value = event.skinTokens;
-      document.getElementById("eventSkinTokenRule").textContent =
-        "Cada giro rende " + (event.spinTokens + (event.bonusTokensPerSpin || 0)) + " " + event.tokenName + ".";
-      document.getElementById("eventSkinSpinRule").textContent =
-        "Giro normal: " + event.spinDiamonds + " diamantes.";
-      document.getElementById("eventSkinDiscountRule").textContent =
-        "Desconto: " + event.discountDiamonds + " diamantes · " +
-        event.discountedSpinsPerDay + " giro(s) por dia.";
-      document.getElementById("eventSkinDiscountsToday").value = Math.min(
-        event.discountedSpinsPerDay,
-        event.maxSpinsPerDay === null ? event.discountedSpinsPerDay : event.maxSpinsPerDay
-      );
+
+      const isBingo = event.type === "bingo";
+      document.querySelectorAll(".token-field").forEach(el => el.hidden = isBingo);
+      document.querySelectorAll(".bingo-field").forEach(el => el.hidden = !isBingo);
+
+      if (isBingo) {
+        document.getElementById("eventSkinTokenRule").textContent =
+          `Cada ${event.spinsPerDrop} giros rende 1 chance de bolinha.`;
+        document.getElementById("eventSkinSpinRule").textContent =
+          `Giro normal: ${event.spinDiamonds} diamantes.`;
+        document.getElementById("eventSkinDiscountRule").textContent =
+          `Precisa de ${event.neededHits} bolinhas no mesmo baú (total de ${event.chests} baús).`;
+
+        document.getElementById("eventSkinExpectedSpins").value = "45";
+        document.getElementById("eventSkinSpinsDone").value = 0;
+        document.getElementById("eventSkinHitsDone").value = 0;
+      } else {
+        document.getElementById("eventSkinCost").value = event.skinTokens;
+        document.getElementById("eventSkinTokenRule").textContent =
+          "Cada giro rende " + (event.spinTokens + (event.bonusTokensPerSpin || 0)) + " " + event.tokenName + ".";
+        document.getElementById("eventSkinSpinRule").textContent =
+          "Giro normal: " + event.spinDiamonds + " diamantes.";
+        document.getElementById("eventSkinDiscountRule").textContent =
+          "Desconto: " + event.discountDiamonds + " diamantes · " +
+          event.discountedSpinsPerDay + " giro(s) por dia.";
+        document.getElementById("eventSkinDiscountsToday").value = Math.min(
+          event.discountedSpinsPerDay,
+          event.maxSpinsPerDay === null ? event.discountedSpinsPerDay : event.maxSpinsPerDay
+        );
+      }
       updateEventDaysStatus();
       hideEventSkinResult();
     }
@@ -434,11 +554,7 @@
         const remainingMs = endDate.getTime() - Date.now();
         const days = Math.max(0, Math.ceil(remainingMs / 86400000));
         if (days > 365) return {error:"A data de término precisa estar dentro dos próximos 365 dias."};
-        return {
-          days,
-          endDate,
-          automatic:true
-        };
+        return { days, endDate, automatic:true };
       }
 
       const daysInput = document.getElementById("eventSkinDays").value.trim();
@@ -483,15 +599,6 @@
     function calculateEventSkin() {
       const event = selectedEvent();
       const timing = getEventDays();
-      const skinCostInput = document.getElementById("eventSkinCost").value.trim();
-      const tokensInput = document.getElementById("eventSkinOwned").value.trim();
-      const diamondsInput = document.getElementById("eventSkinDiamonds").value.trim();
-      const discountsTodayInput = document.getElementById("eventSkinDiscountsToday").value.trim();
-      const skinCost = Number(skinCostInput);
-      const tokensOwned = Number(tokensInput);
-      const diamondsOwned = Number(diamondsInput);
-      const discountsToday = Number(discountsTodayInput);
-      const skinName = document.getElementById("eventSkinName").value.trim() || "Skin desejada";
       const result = document.getElementById("eventSkinResult");
       const summary = document.getElementById("eventSkinSummary");
       const plan = document.getElementById("eventSkinPlan");
@@ -502,6 +609,45 @@
         document.getElementById("eventSkinDays").focus();
         return;
       }
+
+      result.hidden = false;
+      result.classList.remove("success", "warning", "impossible");
+      summary.textContent = "";
+      plan.textContent = "";
+      timeline.textContent = "";
+
+      // ================= LÓGICA PARA EVENTO TIPO BINGO (ASPIRANTS 5.0) =================
+      if (event.type === "bingo") {
+        const spinsDone = Number(document.getElementById("eventSkinSpinsDone").value) || 0;
+        const hitsDone = Number(document.getElementById("eventSkinHitsDone").value) || 0;
+        const expectedSpins = Number(document.getElementById("eventSkinExpectedSpins").value) || 45;
+        const skinName = document.getElementById("eventSkinName").value.trim() || "Skin desejada";
+
+        if (hitsDone >= event.neededHits) {
+          result.classList.add("success");
+          document.getElementById("eventSkinResultTitle").textContent = "🟢 Você já possui a skin!";
+          plan.textContent = "Você já conseguiu as " + event.neededHits + " bolinhas no mesmo baú. Não precisa fazer mais giros.";
+          return;
+        }
+
+        result.classList.add("success");
+        document.getElementById("eventSkinResultTitle").textContent = "🎯 Plano Econômico para " + skinName;
+
+        // Renderiza o guia passo a passo
+        renderEconomicGuide(plan, spinsDone, hitsDone, expectedSpins, event);
+        return;
+      }
+
+      // ================= LÓGICA PARA EVENTO TIPO TOKEN =================
+      const skinCostInput = document.getElementById("eventSkinCost").value.trim();
+      const tokensInput = document.getElementById("eventSkinOwned").value.trim();
+      const diamondsInput = document.getElementById("eventSkinDiamonds").value.trim();
+      const discountsTodayInput = document.getElementById("eventSkinDiscountsToday").value.trim();
+      const skinCost = Number(skinCostInput);
+      const tokensOwned = Number(tokensInput);
+      const diamondsOwned = Number(diamondsInput);
+      const discountsToday = Number(discountsTodayInput);
+      const skinName = document.getElementById("eventSkinName").value.trim() || "Skin desejada";
 
       if (!Number.isInteger(event.skinTokens) || event.skinTokens < 0 ||
           !Number.isInteger(event.spinTokens) || event.spinTokens <= 0 ||
@@ -521,11 +667,6 @@
         return;
       }
 
-      result.hidden = false;
-      result.classList.remove("success", "warning", "impossible");
-      summary.textContent = "";
-      plan.textContent = "";
-      timeline.textContent = "";
       summary.append(
         eventSkinMetric("🎨 Skin desejada", skinName),
         eventSkinMetric("🪙 Tokens atuais", tokensOwned.toLocaleString("pt-BR") + " " + event.tokenName),
@@ -647,13 +788,15 @@
         hideEventSkinResult();
       });
     });
-    ["eventSkinCost", "eventSkinOwned", "eventSkinDiamonds", "eventSkinDiscountsToday", "eventSkinName"].forEach(id => {
-      document.getElementById(id).addEventListener("input", hideEventSkinResult);
+    ["eventSkinCost", "eventSkinOwned", "eventSkinDiamonds", "eventSkinDiscountsToday", "eventSkinName", "eventSkinSpinsDone", "eventSkinHitsDone", "eventSkinExpectedSpins"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", hideEventSkinResult);
     });
     document.getElementById("eventSkinCalculate").addEventListener("click", calculateEventSkin);
     updateEventDescription();
   }
 
+  // ================= LOAD =================
   async function loadTools() {
     try {
       const response = await fetch("/static/views/tools.html");
@@ -661,8 +804,10 @@
       content.innerHTML = await response.text();
       content.classList.remove("tools-loading");
 
+      // Esconde os cards das ferramentas que não estão em ENABLED_TOOLS.
       content.querySelectorAll("[data-tool]").forEach(button => {
-        button.addEventListener("click", () => showTool(button.dataset.tool));
+        if (!ENABLED_TOOLS.includes(button.dataset.tool)) button.hidden = true;
+        else button.addEventListener("click", () => showTool(button.dataset.tool));
       });
       content.querySelectorAll("[data-back-tools]").forEach(button => {
         button.addEventListener("click", showMenu);
@@ -673,12 +818,35 @@
       });
       document.getElementById("wrReset").addEventListener("click", resetWinRate);
       updateWinRate();
+
+      // Treino de Retribution (static/js/retri-trainer.js)
+      const retriRoot = document.getElementById("retriRoot");
+      if (window.RetriTrainer) {
+        window.RetriTrainer.mount(retriRoot);
+      } else if (retriRoot) {
+        retriRoot.textContent = "Não foi possível carregar o treino. Atualize a página e tente novamente.";
+      }
+
+      // Ferramentas escondidas: a lógica continua ligada, só não há como abri-las.
       ["stN", "stW", "stD", "stUp", "stDown"].forEach(id => {
         document.getElementById(id).addEventListener("input", updateStars);
       });
       ["skD", "skPD", "skPR"].forEach(id => {
         document.getElementById(id).addEventListener("input", updateSkinCost);
       });
+
+      const skPreset = document.getElementById("skPreset");
+      if (skPreset) {
+        skPreset.addEventListener("change", (e) => {
+          const val = e.target.value;
+          if (!val) return;
+          const [diamonds, price] = val.split(",");
+          document.getElementById("skPD").value = diamonds;
+          document.getElementById("skPR").value = price.replace(".", ",");
+          updateSkinCost();
+        });
+      }
+
       setupEventSkinCalculator();
       toolsReadyResolve();
     } catch (error) {
@@ -688,16 +856,19 @@
     }
   }
 
+  async function openTool(name, focusId) {
+    await toolsReady;
+    const panel = document.getElementById("tool-" + name);
+    if (!panel || !ENABLED_TOOLS.includes(name)) return;
+    showTool(name);
+    panel.scrollIntoView({behavior: "smooth", block: "start"});
+    const target = focusId && document.getElementById(focusId);
+    if (target) target.focus({preventScroll: true});
+  }
+
   window.SocietyTools = {
-    async openWinRate() {
-      await toolsReady;
-      const input = document.getElementById("wrN");
-      const panel = input && input.closest(".tool-panel");
-      if (!panel) return;
-      showTool(panel.id.replace(/^tool-/, ""));
-      panel.scrollIntoView({behavior: "smooth", block: "start"});
-      input.focus({preventScroll: true});
-    }
+    openWinRate: () => openTool("wr", "wrN"),
+    openRetri: () => openTool("retri")
   };
 
   loadTools();

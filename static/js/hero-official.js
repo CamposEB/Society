@@ -14,11 +14,13 @@
 //   HeroOfficial.renderSkills(d);  // retorna HTMLElement
 //
 // API:
-//   loadIndex([force])           → Promise<index>
-//   loadHero(slug, [force])      → Promise<hero>
-//   loadHeroByName(name)         → Promise<hero>
-//   getIndexSync()               → cache | null
-//   getHeroSync(nameOrSlug)      → cache | null
+//   loadIndex([force])                 → Promise<index>
+//   loadHero(slug, [force])            → Promise<hero>
+//   loadHeroByName(name, [force])      → Promise<hero>
+//   getIndexSync()                     → cache | null
+//   getHeroSync(nameOrSlug)            → cache | null
+//   heroStatus(nameOrSlug)             → 'ready'|'loading'|'failed'|'idle'
+//   clearFailed(nameOrSlug)            → void  (limpa o cache negativo)
 //
 //   renderHeader(d)              → HTMLElement
 //   renderStats(d)               → HTMLElement
@@ -27,24 +29,32 @@
 //   renderLore(d)                → HTMLElement | null
 //   renderSkins(d)               → HTMLElement | null
 //   renderSections(d)            → DocumentFragment
+//
+// CHANGELOG
+//   2026-10-13  Cache negativo com TTL (evita spam de 404), pendingLoads
+//               para deduplicar fetches, heroStatus() público,
+//               loadHero/loadHeroByName aceitam `force`.
 (function () {
   'use strict';
 
   var BASE = '/static/data/official/';
+  var FAIL_TTL = 60 * 1000;    // 1 min: tempo que um 404 fica em cache negativo
+
   var indexCache = null;
-  var heroCache = new Map();   // slug → d
-  var slugByName = null;       // nameLower → slug
+  var heroCache = new Map();     // slug → d (só sucessos)
+  var pendingLoads = new Map();  // slug → Promise (evita fetch duplicado)
+  var failedAt = new Map();      // slug → timestamp da última falha
+  var slugByName = null;         // nameLower → slug
 
   // Hosts do CDN da Moonton que passam pelo proxy /api/img
   var CDN_HOSTS = /akmweb\.youngjoygame\.com|esportpedia\.b-cdn\.net|static\.wikia\.nocookie\.net|cdn\.mobilelegends\.com/i;
 
-  // ─── fetch ───
   function fetchJson(url) {
-    return fetch(url, { cache: 'force-cache' }).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status + ' — ' + url);
-      return r.json();
-    });
-  }
+  return fetch(url, { cache: 'default' }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' — ' + url);
+    return r.json();
+  });
+}
 
   function loadIndex(force) {
     if (indexCache && !force) return Promise.resolve(indexCache);
@@ -52,25 +62,46 @@
       indexCache = d;
       slugByName = {};
       (d.heroes || []).forEach(function (h) {
-        if (h.name) slugByName[h.name.toLowerCase().trim()] = h.slug;
+        if (h.name && h.slug) slugByName[h.name.toLowerCase().trim()] = h.slug;
       });
       return d;
     });
   }
 
   function loadHero(slug, force) {
+    if (!slug) return Promise.reject(new Error('slug vazio'));
+
     if (!force && heroCache.has(slug)) return Promise.resolve(heroCache.get(slug));
-    // tradução: sempre revalida (no-cache) para não ficar presa a um 404 antigo no cache do navegador
+    if (!force && pendingLoads.has(slug)) return pendingLoads.get(slug);
+
+    if (!force) {
+      var failedTs = failedAt.get(slug);
+      if (failedTs && Date.now() - failedTs < FAIL_TTL) {
+        // Cache negativo: rejeita sem rede. Evita o spam de 404 no console.
+        return Promise.reject(new Error('hero indisponível (cache negativo) — ' + slug));
+      }
+    }
+
     var ptReq = fetch(BASE + 'pt/' + slug + '.json', { cache: 'no-cache' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; });
-    return fetchJson(BASE + slug + '.json').then(function (d) {
+
+    var p = fetchJson(BASE + slug + '.json').then(function (d) {
+      failedAt.delete(slug);
       return ptReq.then(function (pt) {
-        d._pt = pt || null;          // tradução pt-BR opcional (gerada por traduzir_herois.py)
+        d._pt = pt || null;
         heroCache.set(slug, d);
+        pendingLoads.delete(slug);
         return d;
       });
+    }).catch(function (err) {
+      failedAt.set(slug, Date.now());
+      pendingLoads.delete(slug);
+      throw err;
     });
+
+    pendingLoads.set(slug, p);
+    return p;
   }
 
   // ─── tradução pt-BR (textos que vêm em inglês dos dados da Moonton) ───
@@ -92,16 +123,16 @@
   function trTerm(name) { var k = String(name || '').toLowerCase().trim(); return TERM_PT[k] || name; }
   function ptOf(d) { return (d && d._pt) || {}; }
 
-  function loadHeroByName(name) {
+  function loadHeroByName(name, force) {
     if (!name) return Promise.reject(new Error('nome vazio'));
     var key = name.toLowerCase().trim();
     if (slugByName && slugByName[key]) {
-      return loadHero(slugByName[key]);
+      return loadHero(slugByName[key], force);
     }
     return loadIndex().then(function () {
       var slug = slugByName && slugByName[key];
       if (!slug) throw new Error('herói não encontrado no índice: ' + name);
-      return loadHero(slug);
+      return loadHero(slug, force);
     });
   }
 
@@ -112,6 +143,36 @@
     var key = String(nameOrSlug).toLowerCase().trim();
     if (slugByName && slugByName[key]) return heroCache.get(slugByName[key]) || null;
     return null;
+  }
+
+  // Resolve qualquer entrada (nome ou slug) para o slug canônico do índice.
+  function resolveSlug(nameOrSlug) {
+    if (!nameOrSlug) return null;
+    if (heroCache.has(nameOrSlug) || pendingLoads.has(nameOrSlug) || failedAt.has(nameOrSlug)) {
+      return nameOrSlug;
+    }
+    var key = String(nameOrSlug).toLowerCase().trim();
+    if (slugByName && slugByName[key]) return slugByName[key];
+    var s = slugify(nameOrSlug);
+    if (s && slugByName && slugByName[s]) return slugByName[s];
+    return s || null;
+  }
+
+  // Estado de um herói para a UI tomar decisões (loading/failed/idle).
+  function heroStatus(nameOrSlug) {
+    var slug = resolveSlug(nameOrSlug);
+    if (!slug) return 'idle';
+    if (heroCache.has(slug)) return 'ready';
+    if (pendingLoads.has(slug)) return 'loading';
+    var t = failedAt.get(slug);
+    if (t && Date.now() - t < FAIL_TTL) return 'failed';
+    return 'idle';
+  }
+
+  // Permite que a UI (botão "Tentar novamente") limpe o cache negativo.
+  function clearFailed(nameOrSlug) {
+    var slug = resolveSlug(nameOrSlug);
+    if (slug) failedAt.delete(slug);
   }
 
   // ─── helpers de DOM ───
@@ -506,6 +567,8 @@
     loadHeroByName: loadHeroByName,
     getIndexSync: getIndexSync,
     getHeroSync:  getHeroSync,
+    heroStatus:   heroStatus,
+    clearFailed:  clearFailed,
 
     renderHeader:   renderHeader,
     renderStats:    renderStats,

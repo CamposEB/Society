@@ -1,7 +1,18 @@
+/* ==========================================================================
+   lfg.css — aba "Procurar duo"
+   Tokens locais começam com --lfg-* para não vazar no resto do app.
+   Os nomes de classe batem com o que o lfg.js gera dinamicamente.
+   Ranks e modos seguem os mesmos nomes de profile.js
+   (ver lfg-rank-sync.js para o auto-preenchimento).
+   Ícones de rank e herói usam ProfileUI.rankCandidatesForRank / heroImageUrl.
+   ========================================================================== */
+
 .lfg-page {
   --lfg-line: var(--border);
   --lfg-card: var(--surface);
   --lfg-soft: var(--text-muted);
+  --lfg-radius: 12px;
+  --lfg-radius-sm: 8px;
   display: grid;
   gap: 28px;
   max-width: 980px;
@@ -14,7 +25,10 @@
 .lfg-page h2,
 .lfg-page h3,
 .lfg-page p { margin-top: 0; }
+.lfg-page h2 { letter-spacing: -.01em; }
+.lfg-page h3 { letter-spacing: -.005em; }
 
+/* --- Linhas flex reutilizadas em vários blocos --- */
 .lfg-header,
 .lfg-section-heading,
 .lfg-dialog-heading,
@@ -32,122 +46,600 @@
   gap: 14px;
 }
 
-.lfg-header { align-items: flex-start; padding: 8px 0 2px; }
-.lfg-header h2 { margin: 0 0 4px; font-size: clamp(1.7rem, 4vw, 2.2rem); }
-.lfg-subtitle { margin: 0; color: var(--lfg-soft); }
-.lfg-eyebrow { color: var(--text-muted); font-size: .7rem; font-weight: 700; letter-spacing: .13em; margin: 0 0 5px; }
-.lfg-activity { display: flex; align-items: center; gap: 7px; margin: 14px 0 0; color: var(--lfg-soft); font-size: .88rem; }
-.lfg-activity span { color: var(--positive); font-size: .8rem; }
+/* ==========================================================================
+   Cabeçalho da aba
+   ========================================================================== */
+.lfg-header { align-items: flex-start; padding: 8px 0 4px; }
+.lfg-header h2 { margin: 0 0 6px; font-size: clamp(1.7rem, 4vw, 2.2rem); }
+.lfg-subtitle { margin: 0; color: var(--lfg-soft); max-width: 56ch; }
+.lfg-eyebrow {
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .13em;
+  margin: 0 0 5px;
+  text-transform: uppercase;
+}
+.lfg-activity {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 0;
+  color: var(--lfg-soft);
+  font-size: .88rem;
+}
+.lfg-activity span {
+  color: var(--positive);
+  font-size: .8rem;
+  animation: lfg-pulse 2s ease-in-out infinite;
+}
+.lfg-activity b { color: var(--text); font-weight: 700; }
+
+/* ==========================================================================
+   Botões
+   ========================================================================== */
 .lfg-primary,
 .lfg-secondary,
-.lfg-icon-button { min-height: 42px; transition: transform .16s ease, background .16s ease, border-color .16s ease; }
-.lfg-primary { background: var(--accent); color: var(--text-inverse); padding: 10px 17px; box-shadow: none; }
-.lfg-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
+.lfg-icon-button {
+  min-height: 42px;
+  transition:
+    transform .16s ease,
+    background .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease;
+}
+.lfg-primary {
+  background: var(--accent);
+  color: var(--text-inverse);
+  padding: 10px 17px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.lfg-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.lfg-primary:active:not(:disabled) { transform: translateY(0); }
+
 .lfg-secondary,
-.lfg-icon-button { background: var(--surface-2); color: var(--text); border: 1px solid var(--lfg-line); }
+.lfg-icon-button {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--lfg-line);
+}
 .lfg-secondary:hover:not(:disabled),
-.lfg-icon-button:hover:not(:disabled) { background: var(--surface); border-color: var(--text-muted); }
+.lfg-icon-button:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--text-muted);
+}
+
+.lfg-primary:focus-visible,
+.lfg-secondary:focus-visible,
+.lfg-icon-button:focus-visible,
+.lfg-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Seções
+   ========================================================================== */
 .lfg-section { display: grid; gap: 14px; min-width: 0; }
-.lfg-section-heading { align-items: flex-end; border-bottom: 1px solid var(--lfg-line); padding-bottom: 12px; }
+.lfg-section-heading {
+  align-items: flex-end;
+  border-bottom: 1px solid var(--lfg-line);
+  padding-bottom: 12px;
+}
 .lfg-section-heading h3 { margin: 0; font-size: 1.25rem; }
 .lfg-muted { color: var(--lfg-soft); font-size: .83rem; }
 
-.lfg-own-section { border: 1px solid var(--border); border-radius: 10px; padding: 17px; background: var(--lfg-card); }
+/* ==========================================================================
+   Seu anúncio ativo
+   ========================================================================== */
+.lfg-own-section {
+  border: 1px solid var(--border);
+  border-radius: var(--lfg-radius);
+  padding: 17px;
+  background: var(--lfg-card);
+}
 .lfg-own-section[hidden] { display: none; }
-.lfg-own-top { justify-content: flex-start; color: var(--positive); font-size: .76rem; font-weight: 700; letter-spacing: .07em; }
-.lfg-own-top span:first-child { width: 8px; height: 8px; border-radius: 50%; background: var(--positive); }
-.lfg-own-details { justify-content: flex-start; flex-wrap: wrap; margin: 14px 0 8px; font-weight: 700; }
-.lfg-own-meta { display: flex; flex-wrap: wrap; gap: 14px; color: var(--lfg-soft); font-size: .84rem; }
+.lfg-own-top {
+  justify-content: flex-start;
+  color: var(--positive);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+}
+.lfg-own-top span:first-child {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--positive);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--positive) 18%, transparent);
+}
+.lfg-own-details {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin: 14px 0 8px;
+  font-weight: 700;
+}
+.lfg-own-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--lfg-soft);
+  font-size: .84rem;
+}
 .lfg-own-actions { justify-content: flex-start; margin-top: 14px; }
 .lfg-own-actions button { min-height: 38px; }
-.lfg-danger { background: rgba(var(--danger-rgb),.13); color: var(--danger); border: 1px solid rgba(var(--danger-rgb),.25); }
-.lfg-danger:hover:not(:disabled) { background: rgba(var(--danger-rgb),.25); }
 
-.lfg-recommended { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.lfg-danger {
+  background: rgba(var(--danger-rgb), .13);
+  color: var(--danger);
+  border: 1px solid rgba(var(--danger-rgb), .25);
+}
+.lfg-danger:hover:not(:disabled) { background: rgba(var(--danger-rgb), .25); }
+
+/* ==========================================================================
+   Duo recomendado
+   ========================================================================== */
+.lfg-recommended {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
 .lfg-recommended-card,
-.lfg-player-card { min-width: 0; border: 1px solid var(--lfg-line); border-radius: 10px; background: var(--lfg-card); box-shadow: none; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.lfg-player-card {
+  min-width: 0;
+  border: 1px solid var(--lfg-line);
+  border-radius: var(--lfg-radius);
+  background: var(--lfg-card);
+  box-shadow: none;
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
 .lfg-recommended-card { padding: 14px; }
 .lfg-recommended-card:hover,
-.lfg-player-card:hover { transform: translateY(-2px); border-color: var(--text-muted); box-shadow: none; }
+.lfg-player-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--lfg-line));
+  box-shadow: 0 10px 28px -18px color-mix(in srgb, var(--accent) 70%, transparent);
+}
 .lfg-recommended-top { justify-content: flex-start; }
 .lfg-recommended-card h4 { margin: 0; }
 .lfg-recommended-card p { color: var(--lfg-soft); font-size: .84rem; margin: 10px 0; }
 .lfg-recommended-card button { width: 100%; }
-.lfg-recommend-reason { display: inline-block; color: var(--text-subtle); font-size: .75rem; }
-.lfg-recommended-empty { grid-column: 1/-1; color: var(--lfg-soft); margin: 0; font-size: .9rem; }
+.lfg-recommend-reason {
+  display: inline-block;
+  color: var(--text-subtle);
+  font-size: .75rem;
+}
+.lfg-recommended-empty {
+  grid-column: 1/-1;
+  color: var(--lfg-soft);
+  margin: 0;
+  font-size: .9rem;
+}
 
-.lfg-filters { display: grid; grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(130px, 1fr)) auto; gap: 9px; align-items: center; }
+/* ==========================================================================
+   Filtros
+   ========================================================================== */
+.lfg-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(130px, 1fr)) auto;
+  gap: 9px;
+  align-items: center;
+}
 .lfg-filters label { min-width: 0; margin: 0; }
 .lfg-filters input,
 .lfg-filters select,
 .lfg-form-grid input,
 .lfg-form-grid select,
-.lfg-form-grid textarea { width: 100%; min-width: 0; }
-.lfg-filters select { min-height: 42px; }
-.lfg-search { display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 10px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; }
-.lfg-search:focus-within { outline: 3px solid var(--text-inverse); outline-offset: 1px; }
+.lfg-form-grid textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Seta customizada só para os selects deste módulo */
+.lfg-filters select,
+.lfg-form-grid select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 42px;
+  padding-right: 36px;
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M3 4.5 6 8l3-3.5' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+.lfg-filters select:focus-visible,
+.lfg-form-grid select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Rótulos de grupo (<optgroup>) nos selects de rank */
+.lfg-form-grid select optgroup,
+.lfg-filters select optgroup {
+  color: var(--text-muted);
+  font-style: normal;
+  font-weight: 700;
+  font-size: .82rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.lfg-form-grid select optgroup option,
+.lfg-filters select optgroup option {
+  color: var(--text);
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  padding-left: 6px;
+}
+
+.lfg-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--lfg-radius-sm);
+  transition: border-color .16s ease, background .16s ease;
+}
+.lfg-search:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
 .lfg-search span { color: var(--text-muted); font-size: 1.4rem; }
-.lfg-search input { padding-left: 0; border: 0; outline: 0; background: transparent; }
+.lfg-search input {
+  padding-left: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
 .lfg-search input:focus-visible { outline: 0; }
+
+/* ==========================================================================
+   Lista de jogadores
+   ========================================================================== */
 .lfg-results-heading { color: var(--lfg-soft); font-size: .85rem; }
 .lfg-results-heading b { color: var(--text); }
+
 .lfg-player-list { display: grid; gap: 11px; }
+
 .lfg-skeleton-list { display: grid; gap: 11px; }
 .lfg-skeleton-list[hidden] { display: none; }
-.lfg-skeleton { height: 158px; border: 1px solid var(--lfg-line); border-radius: 10px; background: linear-gradient(90deg, var(--surface-tint-1), var(--surface-tint-3), var(--surface-tint-1)); background-size: 200% 100%; animation: lfg-shimmer 1.4s ease-in-out infinite; }
-.lfg-privacy-note { margin: 10px 0 0; color: var(--lfg-soft); font-size: .78rem; line-height: 1.45; }
-.lfg-player-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 17px; animation: lfg-enter .25s ease both; }
+.lfg-skeleton {
+  height: 158px;
+  border: 1px solid var(--lfg-line);
+  border-radius: var(--lfg-radius);
+  background: linear-gradient(
+    90deg,
+    var(--surface-tint-1),
+    var(--surface-tint-3),
+    var(--surface-tint-1)
+  );
+  background-size: 200% 100%;
+  animation: lfg-shimmer 1.4s ease-in-out infinite;
+}
+
+.lfg-player-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 17px;
+  animation: lfg-enter .25s ease both;
+}
 .lfg-player-main { min-width: 0; }
 .lfg-player-top { justify-content: flex-start; min-width: 0; }
-.lfg-avatar { display: grid; place-items: center; flex: 0 0 46px; width: 46px; height: 46px; border-radius: 10px; background: var(--surface-2); color: var(--text); font-size: 1.15rem; font-weight: 700; }
+
+.lfg-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 120% at 30% 0%,
+      color-mix(in srgb, var(--accent) 35%, var(--surface-2)),
+      var(--surface-2) 70%);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--lfg-line));
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
 .lfg-player-name { min-width: 0; }
-.lfg-player-name h4 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0 0 3px; font-size: 1rem; }
-.lfg-status { display: inline-flex; align-items: center; gap: 5px; font-size: .76rem; white-space: nowrap; }
-.lfg-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.lfg-player-name h4 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0 0 3px;
+  font-size: 1rem;
+}
+
+.lfg-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .76rem;
+  white-space: nowrap;
+}
+.lfg-status::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
 .lfg-status-now { color: var(--positive); }
 .lfg-status-soon { color: var(--warning); }
 .lfg-status-offline { color: var(--text-muted); }
-.lfg-player-rank { color: var(--text-subtle); margin: 10px 0 4px; font-size: .9rem; font-weight: 700; }
+
+/* ==========================================================================
+   Chips de rank + herói (com imagem) — parecidos com o perfil
+   ========================================================================== */
+.lfg-player-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.lfg-player-rank,
+.lfg-player-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 3px 10px 3px 4px;
+  border: 1px solid var(--lfg-line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-subtle);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Ícones dentro dos chips de rank/herói.
+   `inline-block` + `vertical-align:middle` funciona tanto dentro de <b>
+   (quando o lfg.js renderiza só texto) quanto dentro de .lfg-player-rank
+   (flex container). O flex: 0 0 auto só tem efeito no segundo caso. */
+.lfg-player-rank-icon,
+.lfg-player-hero-icon {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  vertical-align: middle;
+  margin-right: 6px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.lfg-player-hero-icon {
+  object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--lfg-line));
+}
+
+/* Ajuste fino quando o ícone está dentro do chip (flex) — sem margin
+   porque o gap do container já cuida do espaçamento. */
+.lfg-player-rank > .lfg-player-rank-icon,
+.lfg-player-hero > .lfg-player-hero-icon,
+.lfg-player-rank > b > .lfg-player-rank-icon,
+.lfg-player-hero > b > .lfg-player-hero-icon {
+  margin-right: 6px;
+}
+
+.lfg-player-hero-icon {
+  object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--lfg-line));
+}
+
+/* Fallback se o <img> não carregar — o alt fica escondido e some o vazio */
+.lfg-player-rank-icon[hidden],
+.lfg-player-hero-icon[hidden] { display: none; }
+
+/* Mantém compatibilidade com a versão antiga do markup (sem .lfg-player-chips) */
+.lfg-player-rank:not(.lfg-player-chips .lfg-player-rank) {
+  margin: 10px 0 4px;
+  padding-left: 4px;
+}
+
 .lfg-player-stats,
-.lfg-player-tags { display: flex; flex-wrap: wrap; gap: 7px 13px; color: var(--lfg-soft); font-size: .8rem; }
+.lfg-player-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 13px;
+  color: var(--lfg-soft);
+  font-size: .8rem;
+}
 .lfg-player-tags { margin-top: 8px; }
-.lfg-player-message { color: var(--text-subtle); margin: 10px 0 0; font-size: .88rem; overflow-wrap: anywhere; }
-.lfg-player-actions { flex-direction: column; align-items: stretch; min-width: 155px; }
+
+.lfg-player-message {
+  color: var(--text-subtle);
+  margin: 10px 0 0;
+  font-size: .88rem;
+  overflow-wrap: anywhere;
+}
+
+.lfg-player-actions {
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 155px;
+}
 .lfg-player-actions button { min-height: 40px; }
 .lfg-invite { background: var(--accent); color: var(--text-inverse); }
 .lfg-invite:hover:not(:disabled) { background: var(--primary-hover); }
-.lfg-empty { padding: 30px 18px; border: 1px dashed var(--border); border-radius: 10px; text-align: center; background: var(--surface); }
+
+/* ==========================================================================
+   Estado vazio
+   ========================================================================== */
+.lfg-empty {
+  padding: 30px 18px;
+  border: 1px dashed var(--border);
+  border-radius: var(--lfg-radius);
+  text-align: center;
+  background: var(--surface);
+}
 .lfg-empty[hidden] { display: none; }
-.lfg-empty>span { font-size: 1.8rem; }
+.lfg-empty > span { font-size: 1.8rem; display: inline-block; }
 .lfg-empty h3 { margin: 8px 0 4px; }
 .lfg-empty p { color: var(--lfg-soft); margin: 0 0 14px; }
-.lfg-empty>div { display: flex; justify-content: center; gap: 8px; }
+.lfg-empty > div { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
 
-.lfg-dialog { width: min(680px, calc(100vw - 28px)); max-height: min(90vh, 850px); overflow: auto; padding: 22px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-md); }
+/* ==========================================================================
+   Diálogos (formulário + perfil)
+   ========================================================================== */
+.lfg-dialog {
+  width: min(680px, calc(100vw - 28px));
+  max-height: min(90vh, 850px);
+  overflow: auto;
+  padding: 22px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--lfg-radius);
+  box-shadow: var(--shadow-md);
+}
 .lfg-dialog::backdrop { background: var(--overlay); }
 .lfg-dialog-heading { align-items: flex-start; margin-bottom: 17px; }
 .lfg-dialog-heading h2 { margin: 0; }
 .lfg-icon-button { min-width: 40px; padding: 7px; }
-.lfg-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 13px; }
-.lfg-form-grid label { min-width: 0; }
+
+.lfg-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 13px;
+}
+.lfg-form-grid label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: .8rem;
+  font-weight: 600;
+}
 .lfg-form-grid label[hidden] { display: none; }
 .lfg-form-grid textarea { resize: vertical; }
 .lfg-message-field { grid-column: 1/-1; }
-.lfg-char-count { display: block; text-align: right; color: var(--lfg-soft); font-size: .75rem; }
-.lfg-preview { margin-top: 4px; padding: 12px; border: 1px solid var(--lfg-line); border-radius: 10px; background: var(--surface); }
-.lfg-preview-card { margin: 7px 0 0; color: var(--text-subtle); font-size: .86rem; overflow-wrap: anywhere; }
-.lfg-form-error { min-height: 1.1em; color: var(--error-text); margin: 8px 0 0; }
-.lfg-dialog-actions { align-items: flex-end; }
-.lfg-dialog-actions>div { display: flex; gap: 8px; }
-.lfg-dialog-actions button { min-height: 42px; }
-.lfg-profile-content { display: grid; gap: 8px; color: var(--lfg-soft); }
-.lfg-profile-content b { color: var(--text); }
-.lfg-toast { position: fixed; z-index: 50; right: 22px; bottom: 22px; max-width: min(390px, calc(100vw - 32px)); padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
-.lfg-toast.visible { opacity: 1; transform: translateY(0); }
-.lfg-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-@keyframes lfg-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes lfg-shimmer { to { background-position: -200% 0; } }
+.lfg-char-count {
+  display: block;
+  text-align: right;
+  color: var(--lfg-soft);
+  font-size: .75rem;
+  font-weight: 500;
+}
 
+.lfg-privacy-note {
+  margin: 12px 0 0;
+  color: var(--lfg-soft);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.lfg-preview {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--lfg-line);
+  border-radius: var(--lfg-radius);
+  background: var(--surface-2);
+}
+.lfg-preview-card {
+  margin: 7px 0 0;
+  color: var(--text-subtle);
+  font-size: .86rem;
+  overflow-wrap: anywhere;
+}
+
+.lfg-form-error {
+  min-height: 1.1em;
+  color: var(--error-text);
+  margin: 8px 0 0;
+  font-size: .85rem;
+}
+
+.lfg-dialog-actions { align-items: flex-end; }
+.lfg-dialog-actions > div { display: flex; gap: 8px; }
+.lfg-dialog-actions button { min-height: 42px; }
+
+/* Rodapé específico do diálogo de perfil */
+.lfg-profile-footer {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--lfg-line);
+  align-items: center;
+}
+
+.lfg-profile-content {
+  display: grid;
+  gap: 8px;
+  color: var(--lfg-soft);
+}
+.lfg-profile-content b { color: var(--text); }
+
+/* ==========================================================================
+   Toast
+   ========================================================================== */
+.lfg-toast {
+  position: fixed;
+  z-index: 50;
+  right: 22px;
+  bottom: 22px;
+  max-width: min(390px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--lfg-radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.lfg-toast.visible { opacity: 1; transform: translateY(0); }
+
+/* ==========================================================================
+   Utilitário
+   ========================================================================== */
+.lfg-sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   Animações
+   ========================================================================== */
+@keyframes lfg-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes lfg-shimmer {
+  to { background-position: -200% 0; }
+}
+@keyframes lfg-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .55; transform: scale(1.2); }
+}
+
+/* ==========================================================================
+   Responsivo
+   ========================================================================== */
 @media (max-width: 900px) {
   .lfg-page { gap: 23px; }
   .lfg-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -171,12 +663,31 @@
   .lfg-form-grid { grid-template-columns: 1fr; }
   .lfg-message-field { grid-column: auto; }
   .lfg-dialog-actions { align-items: stretch; flex-direction: column; }
-  .lfg-dialog-actions>div { display: grid; grid-template-columns: 1fr 1fr; }
+  .lfg-dialog-actions > div { display: grid; grid-template-columns: 1fr 1fr; }
+  .lfg-profile-footer { align-items: stretch; gap: 10px; }
   .lfg-toast { right: 12px; bottom: 12px; }
 }
 
+/* ==========================================================================
+   Preferências de acessibilidade
+   ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
   .lfg-page *,
   .lfg-page *::before,
-  .lfg-page *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .lfg-page *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .lfg-avatar,
+  .lfg-player-rank,
+  .lfg-player-hero,
+  .lfg-preview { border-color: CanvasText; }
+  .lfg-primary,
+  .lfg-invite { border: 1px solid ButtonText; }
+  .lfg-status::before { box-shadow: none; }
+  .lfg-player-rank-icon,
+  .lfg-player-hero-icon { border: 1px solid CanvasText; }
 }

@@ -1,88 +1,140 @@
-<main class="moderation-page">
+<main class="moderation-page adm" id="admRoot">
   <header class="moderation-hero">
     <div>
       <p class="moderation-eyebrow">SOCIETY MLBB · EQUIPE DE CONFIANÇA</p>
-      <h2>Moderação da comunidade</h2>
+      <h2>Central da comunidade</h2>
       <p>Analise denúncias com privacidade, registre decisões, gerencie silenciamentos e permissões.</p>
     </div>
     <span aria-hidden="true">🛡️</span>
   </header>
 
+  <p id="admMessage" class="moderation-message" role="status"></p>
+
   <!-- ═══════════ SEU ACESSO ═══════════ -->
-  <section class="moderation-section mod-self" aria-labelledby="modSelfRoleTitle">
+  <section class="moderation-section">
     <header class="moderation-section-header">
       <div>
         <p class="moderation-eyebrow">SEU ACESSO</p>
-        <h3 id="modSelfRoleTitle">—</h3>
+        <h3 id="admAccessTitle">—</h3>
       </div>
-      <span id="modSelfRoleBadge" class="role-badge is-user">JOGADOR</span>
+      <span id="admRoleBadge" class="role-badge is-user">JOGADOR</span>
     </header>
-    <ul class="mod-permissions" id="modSelfPerms" aria-label="Permissões do seu papel"></ul>
+    <ul class="adm-ladder" id="admLadder" aria-label="Hierarquia de papéis"></ul>
+    <ul class="mod-permissions" id="admPerms" aria-label="Permissões do seu papel"></ul>
   </section>
 
-  <!-- ═══════════ DENÚNCIAS ═══════════ -->
-  <section class="moderation-section" id="moderationReportsSection">
+  <!-- ═══════════ FERRAMENTAS POR CARGO ═══════════ -->
+  <section class="moderation-section" data-min="user">
+    <header class="moderation-section-header">
+      <div>
+        <p class="moderation-eyebrow">GUIA RÁPIDO</p>
+        <h3>Ferramentas</h3>
+      </div>
+    </header>
+    <div class="adm-tools" id="admTools"></div>
+  </section>
+
+  <!-- ═══════════ PAINEL (só ADM+) ═══════════ -->
+  <section class="moderation-section" data-min="admin">
+    <header class="moderation-section-header">
+      <div>
+        <p class="moderation-eyebrow">VISÃO GERAL</p>
+        <h3>Painel</h3>
+      </div>
+      <div class="adm-header-actions">
+        <label class="adm-switch">
+          <input type="checkbox" id="admAuto">
+          <span>Auto 30s</span>
+        </label>
+        <button id="admExportReports" class="moderation-secondary" type="button">⤓ CSV</button>
+        <button id="admRefresh" class="moderation-secondary" type="button">↻ Atualizar</button>
+      </div>
+    </header>
+    <div class="adm-stats" id="admStats"></div>
+  </section>
+
+  <!-- ═══════════ DENÚNCIAS (ADM+) ═══════════ -->
+  <section class="moderation-section" data-min="admin">
     <header class="moderation-section-header">
       <div>
         <p class="moderation-eyebrow">FILA DE ANÁLISE</p>
         <h3>Denúncias</h3>
       </div>
-      <button id="moderationRefresh" class="moderation-secondary" type="button">↻ Atualizar</button>
     </header>
 
-    <!-- ⭐ NOVO: filtros + busca -->
     <div class="moderation-filters">
-      <div class="moderation-chips" role="tablist" aria-label="Filtrar denúncias">
-        <button type="button" class="moderation-chip" data-mod-filter="open" aria-pressed="true">Pendentes</button>
-        <button type="button" class="moderation-chip" data-mod-filter="reviewed" aria-pressed="false">Em análise</button>
-        <button type="button" class="moderation-chip" data-mod-filter="closed" aria-pressed="false">Encerradas</button>
-        <button type="button" class="moderation-chip" data-mod-filter="all" aria-pressed="false">Todas</button>
-      </div>
+      <div class="moderation-chips" role="tablist" id="admChips" aria-label="Filtrar denúncias"></div>
       <label class="moderation-search" aria-label="Buscar denúncia">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <circle cx="11" cy="11" r="8"/>
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input id="moderationSearchInput" type="search" autocomplete="off"
+        <input id="admSearch" type="search" autocomplete="off"
                placeholder="Buscar por @nick, motivo ou categoria..." />
       </label>
     </div>
 
-    <p id="moderationMessage" class="moderation-message" role="status"></p>
-    <div id="moderationReports" class="moderation-report-list"></div>
-    <div id="moderationReportsEmpty" class="moderation-empty" hidden>
-      <span>✅</span>
-      <b>Não há denúncias pendentes.</b>
-      <small>Novas denúncias aparecem aqui em tempo real.</small>
+    <div class="adm-header-actions" style="margin:10px 0 12px">
+      <select id="admCat"  class="adm-select" aria-label="Filtrar por categoria"></select>
+      <select id="admSort" class="adm-select" aria-label="Ordenar denúncias">
+        <option value="new">Mais recentes</option>
+        <option value="old">Mais antigas</option>
+        <option value="repeat">Mais reincidentes</option>
+      </select>
     </div>
+
+    <div class="adm-bulk" id="admBulk" hidden>
+      <label class="adm-switch">
+        <input type="checkbox" id="admSelAll">
+        <span id="admSelCount">0 selecionadas</span>
+      </label>
+      <div class="adm-bulk-actions">
+        <button data-bulk="review"  class="moderation-secondary" type="button">Em análise</button>
+        <button data-bulk="close"   class="moderation-secondary" type="button">Encerrar</button>
+        <button data-bulk="dismiss" class="moderation-secondary" type="button">Descartar</button>
+      </div>
+    </div>
+
+    <div id="admReportList" class="moderation-report-list"></div>
+    <p id="admReportsEmpty" class="moderation-empty" hidden>
+      <span>✅</span>
+      <b>Não há denúncias aqui.</b>
+      <small>Ajuste os filtros ou clique em Atualizar.</small>
+    </p>
   </section>
 
-  <!-- ═══════════ SILENCIAMENTOS ═══════════ -->
-  <section class="moderation-section" id="moderationMutesSection">
+  <!-- ═══════════ SILENCIAMENTOS (MOD+) ═══════════ -->
+  <section class="moderation-section" data-min="mod">
     <header class="moderation-section-header">
       <div>
         <p class="moderation-eyebrow">MEDIDAS ATIVAS</p>
         <h3>Silenciamentos temporários</h3>
       </div>
+      <button id="admUnmuteSel" class="moderation-secondary" type="button" disabled>
+        Remover selecionados
+      </button>
     </header>
-    <div id="moderationMutes" class="moderation-mute-list"></div>
-    <p id="moderationMutesEmpty" class="moderation-empty" hidden>Não há silenciamentos ativos.</p>
+    <div id="admMutes" class="moderation-mute-list"></div>
+    <p id="admMutesEmpty" class="moderation-empty" hidden>Não há silenciamentos ativos.</p>
   </section>
 
-  <!-- ═══════════ CONTAS E PAPÉIS (só DEV) ═══════════ -->
-  <section id="adminRoleManagement" class="moderation-section" hidden>
+  <!-- ═══════════ CONTAS E PAPÉIS (DEV) ═══════════ -->
+  <section class="moderation-section" data-min="dev">
     <header class="moderation-section-header">
       <div>
         <p class="moderation-eyebrow">ACESSO RESTRITO · DEV</p>
         <h3>Contas e papéis</h3>
       </div>
-      <button id="adminRolesRefresh" class="moderation-secondary" type="button">↻ Atualizar</button>
+      <div class="adm-header-actions">
+        <select id="admAccSort" class="adm-select" aria-label="Ordenar contas">
+          <option value="role">Por cargo</option>
+          <option value="nick">Por nick</option>
+        </select>
+        <button id="admExportAcc"  class="moderation-secondary" type="button">⤓ CSV</button>
+        <button id="admAccRefresh" class="moderation-secondary" type="button">↻ Atualizar</button>
+      </div>
     </header>
-    <p class="moderation-message">
-      Atribua permissões. As mudanças são aplicadas em tempo real.
-    </p>
 
-    <!-- ⭐ NOVO: legenda completa com todos os cargos -->
     <div class="mod-role-legend" role="note" aria-label="Hierarquia de papéis">
       <div class="mod-role-legend-item" data-role="user">
         <b><span class="role-dot is-user"></span>Jogador</b>
@@ -119,14 +171,31 @@
         <circle cx="10.8" cy="10.8" r="6.3"/>
         <path d="m15.5 15.5 4.2 4.2"/>
       </svg>
-      <input id="adminRolesSearch" type="search" placeholder="Buscar conta por nick..." autocomplete="off" aria-label="Buscar conta">
+      <input id="admAccSearch" type="search" placeholder="Buscar conta por nick..."
+             autocomplete="off" aria-label="Buscar conta">
     </div>
 
-    <div id="adminRoleList" class="moderation-role-list"></div>
-    <p id="adminRolesEmpty" class="moderation-empty" hidden>
+    <div class="moderation-chips" id="admRoleChips" role="tablist"
+         aria-label="Filtrar por cargo"></div>
+
+    <div id="admAccounts" class="moderation-role-list"></div>
+    <p id="admAccEmpty" class="moderation-empty" hidden>
       <span>🔍</span>
       <b>Nenhuma conta encontrada.</b>
       <small>Ajuste a busca ou clique em Atualizar.</small>
     </p>
+  </section>
+
+  <!-- ═══════════ LOG DE AÇÕES (ADM+) ═══════════ -->
+  <section class="moderation-section" data-min="admin">
+    <header class="moderation-section-header">
+      <div>
+        <p class="moderation-eyebrow">HISTÓRICO DA SESSÃO</p>
+        <h3>Log de ações</h3>
+      </div>
+      <button id="admLogClear" class="moderation-secondary" type="button">Limpar</button>
+    </header>
+    <ul class="adm-log" id="admLog"></ul>
+    <p id="admLogEmpty" class="moderation-empty" hidden>Sem ações registradas nesta sessão.</p>
   </section>
 </main>

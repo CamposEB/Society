@@ -1,169 +1,446 @@
 <style id="profile-verified-css">
-/* ═══════════ SELO DE VERIFICADO ═══════════ */
-.profile-name-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+.profile-name-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.profile-verified-badge{display:inline-grid;place-items:center;width:22px;height:22px;flex:0 0 auto;color:#4c8dff;filter:drop-shadow(0 0 6px rgba(76,141,255,.55));animation:profile-verified-pop 320ms cubic-bezier(.34,1.56,.64,1);cursor:help}
+.profile-verified-badge svg{display:block;width:100%;height:100%}
+.profile-verified-badge[hidden]{display:none!important}
+.profile-verified-badge[data-badge="staff"],.profile-verified-badge[data-role="dev"],.profile-verified-badge[data-role="admin"],.profile-verified-badge[data-role="mod"]{color:#f2b84b;filter:drop-shadow(0 0 7px rgba(242,184,75,.55))}
+.profile-verified-badge[data-badge="vip"],.profile-verified-badge[data-role="vip"]{color:#4c8dff;filter:drop-shadow(0 0 7px rgba(76,141,255,.55))}
+.profile-verified-badge[data-badge="streamer"],.profile-verified-badge[data-role="streamer"]{color:#ff0000;filter:drop-shadow(0 0 7px rgba(255,0,0,.55))}
+@keyframes profile-verified-pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
+
+<style id="profile-stream-css">
+.profile-stream-btn{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;margin-top:8px;padding:0 16px;height:40px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);color:var(--fg,#f5f5f5);font-weight:700;font-size:.9rem;text-decoration:none;cursor:pointer;transition:background .15s,border-color .15s,transform .1s}
+.profile-stream-btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.32)}
+.profile-stream-btn:active{transform:scale(.97)}
+.profile-stream-btn:focus-visible{outline:2px solid var(--profile-accent,#8b72ff);outline-offset:2px}
+.profile-stream-btn[hidden]{display:none!important}
+.profile-stream-btn .profile-stream-platform{padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.08);color:#9aa3b8;font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.profile-stream-btn.is-live{border-color:#ff3b3b;background:linear-gradient(180deg,#ff4a4a,#d92626);color:#fff;animation:profile-stream-pulse 1.8s ease-out infinite}
+.profile-stream-btn.is-live .profile-stream-platform{background:rgba(0,0,0,.25);color:#fff}
+@keyframes profile-stream-pulse{0%{box-shadow:0 0 0 0 rgba(255,59,59,.5)}70%{box-shadow:0 0 0 12px rgba(255,59,59,0)}100%{box-shadow:0 0 0 0 rgba(255,59,59,0)}}
+#profileCard.is-streaming .profile-avatar{box-shadow:0 0 0 3px #ff3b3b,0 0 18px rgba(255,59,59,.5)}
+.profile-golive{height:40px;padding:0 16px;border-radius:12px;border:1px solid #ff3b3b;background:transparent;color:#ff5a5a;font-weight:700;font-size:.9rem;cursor:pointer;transition:background .15s,color .15s,transform .1s}
+.profile-golive:hover:not(:disabled){background:#ff3b3b;color:#fff}
+.profile-golive:disabled{opacity:.55;cursor:wait}
+.profile-golive.is-live{background:#ff3b3b;color:#fff}
+.profile-golive[hidden]{display:none!important}
+#pStreamField[hidden]{display:none!important}
+#pStreamHint.is-ok{color:#3ecf8e}
+#pStreamHint.is-error{color:#ff6b6b}
+@media (prefers-reduced-motion:reduce){.profile-stream-btn.is-live,.profile-verified-badge{animation:none}}
+</style>
+
+<style id="profile-esports-css">
+/* ═══ DESTINY · PLAYER CARD (esports) ═══ */
+#profileRoot{
+  --pf-bg:#0a0e1a; --pf-card:#111729; --pf-card2:#161d33; --pf-line:rgba(140,155,210,.16);
+  --pf-fg:#eef1fa; --pf-mute:#8e98b4; --pf-gold:#e6b94d; --pf-live:#ff3b3b;
+  --pf-acc:var(--profile-accent,#7c5cff);
+  color:var(--pf-fg); max-width:1080px; margin:0 auto; padding:20px 16px 48px;
+  display:flex; flex-direction:column; gap:18px;
 }
+#profileRoot *{box-sizing:border-box}
+#profileRoot button,#profileRoot select,#profileRoot input,#profileRoot textarea{font-family:inherit}
+#profileRoot :focus-visible{outline:2px solid var(--pf-acc);outline-offset:2px}
 
-.profile-verified-badge {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  flex: 0 0 auto;
-  color: #4c8dff;
-  filter: drop-shadow(0 0 6px rgba(76, 141, 255, .55));
-  animation: profile-verified-pop 320ms cubic-bezier(.34, 1.56, .64, 1);
-  cursor: help;
+/* cabeçalho da página */
+.profile-page-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.profile-eyebrow{margin:0 0 4px;font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--pf-acc)}
+.profile-page-heading h2{margin:0;font-size:1.5rem}
+.profile-page-heading-copy p:last-child{margin:4px 0 0;color:var(--pf-mute);font-size:.9rem}
+.profile-page-heading-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.profile-other-actions{display:flex;gap:10px;flex-wrap:wrap}
+.profile-other-actions[hidden]{display:none!important}
+
+/* botões */
+.profile-primary,.profile-subtle-button,.profile-back-button,.profile-friend-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;
+  border-radius:12px;font-weight:600;font-size:.9rem;cursor:pointer;
+  transition:background .15s,border-color .15s,transform .1s,box-shadow .15s}
+.profile-primary{border:1px solid transparent;color:#fff;background:linear-gradient(180deg,#8a6cff,#6a47f0);box-shadow:0 6px 18px -8px rgba(124,92,255,.8)}
+.profile-primary:hover:not(:disabled){background:linear-gradient(180deg,#9a7fff,#7656ff)}
+.profile-subtle-button,.profile-back-button{border:1px solid var(--pf-line);background:rgba(255,255,255,.04);color:var(--pf-fg)}
+.profile-subtle-button:hover,.profile-back-button:hover{background:rgba(255,255,255,.09);border-color:rgba(160,175,230,.34)}
+.profile-primary:active,.profile-subtle-button:active,.profile-friend-btn:active{transform:scale(.97)}
+.profile-primary:disabled{opacity:.6;cursor:not-allowed}
+.profile-primary[hidden],.profile-back-button[hidden]{display:none!important}
+.profile-back-button svg,.profile-friend-btn svg,.profile-action-btn svg{width:16px;height:16px}
+.profile-friend-btn{border:1px solid var(--pf-acc);background:transparent;color:#b9a8ff}
+.profile-friend-btn:hover:not(:disabled){background:var(--pf-acc);color:#fff}
+.profile-friend-btn:disabled{opacity:.55;cursor:not-allowed}
+.profile-friend-btn.is-friends{border-color:#3ecf8e;color:#3ecf8e}
+.profile-friend-btn.is-friends:hover{background:#3ecf8e;color:#0a1f16}
+.profile-friend-btn.is-pending{border-color:#f2b84b;color:#f2b84b}
+.profile-friend-btn.is-accept{border-color:#3ecf8e;background:#3ecf8e;color:#0a1f16}
+.profile-friend-btn.is-accept:hover{background:transparent;color:#3ecf8e}
+
+/* PLAYER CARD */
+.profile-card{position:relative;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,var(--pf-card),#0d1224);border:1px solid var(--pf-line);box-shadow:0 24px 50px -28px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04);padding-bottom:24px}
+.profile-card[data-frame="elite"]{border-color:rgba(230,185,77,.55);box-shadow:0 0 0 1px rgba(230,185,77,.25),0 24px 50px -28px rgba(0,0,0,.9)}
+.profile-banner{position:relative;height:200px;background:radial-gradient(120% 140% at 15% 0%,color-mix(in srgb,var(--pf-acc) 55%,#0a0e1a),#0a0e1a 70%) center/cover no-repeat;display:flex;align-items:flex-end;justify-content:flex-end;padding:14px 18px}
+.profile-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,26,.05) 30%,rgba(13,18,36,.92));pointer-events:none}
+.profile-banner>span{position:relative;z-index:1;font-size:.66rem;letter-spacing:.22em;font-weight:700;color:rgba(238,241,250,.45)}
+.profile-banner.has-banner>span{display:none}
+
+.profile-identity{position:relative;z-index:2;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;align-items:end;padding:0 24px;margin-top:-56px}
+.profile-avatar{width:112px;height:112px;border-radius:26px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,#262e4a,#141a2e);color:var(--pf-acc);font-size:2.6rem;font-weight:800;border:4px solid #0d1224;box-shadow:0 0 0 2px var(--pf-acc),0 10px 26px -10px rgba(0,0,0,.8)}
+.profile-card[data-frame="elite"] .profile-avatar{box-shadow:0 0 0 2px var(--pf-gold),0 0 22px rgba(230,185,77,.35)}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.profile-name-block{min-width:0;display:flex;flex-direction:column;gap:4px;padding-bottom:4px}
+.profile-name-row h1{margin:0;font-size:1.7rem;line-height:1.15;overflow-wrap:anywhere}
+.profile-username{margin:0;color:var(--pf-mute);font-size:.9rem}
+.profile-title{margin:2px 0 0;align-self:flex-start;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;color:var(--pf-gold);background:rgba(230,185,77,.1);border:1px solid rgba(230,185,77,.3)}
+.profile-title[hidden]{display:none}
+.profile-status{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:600;color:var(--pf-mute);background:rgba(255,255,255,.05)}
+.profile-status i{width:8px;height:8px;border-radius:50%;background:#59627a}
+.profile-status.is-online{color:#3ddc84}
+.profile-status.is-online i{background:#3ddc84;box-shadow:0 0 8px rgba(61,220,132,.7)}
+.profile-community-roles{display:flex;flex-wrap:wrap;gap:6px}
+.profile-community-roles[hidden]{display:none}
+.profile-community-role{padding:3px 10px;border-radius:8px;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.06);border:1px solid var(--pf-line);color:var(--pf-mute)}
+.profile-community-role[data-role="dev"],.profile-community-role[data-role="admin"],.profile-community-role[data-role="mod"],.profile-community-role[data-role="moderador"]{color:var(--pf-gold);border-color:rgba(230,185,77,.4);background:rgba(230,185,77,.08)}
+.profile-community-role[data-role="vip"]{color:#7fb0ff;border-color:rgba(76,141,255,.4);background:rgba(76,141,255,.08)}
+.profile-community-role[data-role="streamer"]{color:#ff7a7a;border-color:rgba(255,59,59,.4);background:rgba(255,59,59,.08)}
+.profile-community-role[data-role="beta"]{color:#ff9d2e;border-color:rgba(255,157,46,.4)}
+
+/* rank */
+.profile-rank-badge{display:flex;align-items:center;gap:12px;padding:10px 16px 10px 10px;border-radius:16px;background:linear-gradient(135deg,rgba(124,92,255,.16),rgba(255,255,255,.03));border:1px solid color-mix(in srgb,var(--pf-acc) 45%,transparent)}
+.profile-rank-badge[hidden]{display:none}
+.profile-rank-image{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+.profile-rank-copy small{display:block;font-size:.62rem;letter-spacing:.16em;color:var(--pf-mute);font-weight:700}
+.profile-rank-label-row{display:flex;align-items:center;gap:8px}
+.profile-rank-label-row b{font-size:1.1rem}
+.profile-rank-stars{display:inline-flex;align-items:center;gap:3px;font-weight:700;font-size:.85rem;color:var(--pf-gold)}
+.profile-rank-stars[hidden]{display:none}
+
+.profile-bio{margin:16px 24px 0;color:#c4cbe0;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap}
+.profile-game-details{margin:14px 24px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.profile-game-tag{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid var(--pf-line);min-width:0}
+.profile-game-tag-icon{width:34px;height:34px;flex:0 0 auto;display:grid;place-items:center}
+.profile-game-tag-icon img{width:100%;height:100%;object-fit:contain}
+.profile-game-tag-copy{display:flex;flex-direction:column;min-width:0}
+.profile-game-tag-copy small{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--pf-mute)}
+.profile-game-tag-copy b{font-size:.92rem;overflow-wrap:anywhere}
+.profile-empty,.profile-data-note{margin:0;color:var(--pf-mute);font-size:.85rem;grid-column:1/-1}
+.profile-joined{margin:14px 24px 0;color:var(--pf-mute);font-size:.78rem}
+
+/* seções */
+.profile-section{margin:22px 24px 0;padding-top:20px;border-top:1px solid var(--pf-line)}
+.profile-section[hidden]{display:none}
+.profile-section-heading h2{margin:0;font-size:1.1rem}
+.profile-section-heading{margin-bottom:12px}
+.profile-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.profile-stat-card{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"i v" "i l";column-gap:12px;align-items:center;padding:14px;border-radius:14px;background:var(--pf-card2);border:1px solid var(--pf-line)}
+.profile-stat-icon{grid-area:i;width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:rgba(124,92,255,.14);font-size:1.1rem}
+.profile-stat-card b{grid-area:v;font-size:1.5rem;line-height:1.1}
+.profile-stat-label{grid-area:l;font-size:.74rem;color:var(--pf-mute)}
+.profile-achievements{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.profile-badge{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:16px 10px;border-radius:14px;background:linear-gradient(180deg,rgba(230,185,77,.1),rgba(255,255,255,.02));border:1px solid rgba(230,185,77,.32)}
+.profile-badge-icon{font-size:1.8rem}
+.profile-badge b{font-size:.85rem}
+.profile-activity{display:flex;flex-direction:column;gap:0;position:relative}
+.profile-activity-item{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--pf-line)}
+.profile-activity-item:last-child{border-bottom:0}
+.profile-activity-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:rgba(124,92,255,.14);flex:0 0 auto}
+.profile-activity-item b{display:block;font-size:.9rem;overflow-wrap:anywhere}
+.profile-activity-item time{font-size:.74rem;color:var(--pf-mute)}
+
+/* ═══ EDITOR ═══ */
+.profile-dialog{width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:0;border:1px solid var(--pf-line);border-radius:20px;background:#0d1224;color:var(--pf-fg);overflow:hidden}
+.profile-dialog::backdrop{background:rgba(4,7,16,.75);backdrop-filter:blur(4px)}
+.profile-dialog form{display:flex;flex-direction:column;max-height:calc(100dvh - 24px)}
+.profile-dialog-heading{display:flex;justify-content:space-between;align-items:center;padding:18px 22px 8px}
+.profile-dialog-heading h2{margin:0;font-size:1.2rem}
+.profile-icon-button{width:36px;height:36px;border-radius:10px;border:1px solid var(--pf-line);background:rgba(255,255,255,.04);color:var(--pf-fg);cursor:pointer}
+.profile-icon-button:hover{background:rgba(255,255,255,.1)}
+.profile-editor-preview{position:relative;margin:6px 22px 0}
+.profile-preview-banner{height:110px;border-radius:14px}
+.profile-preview-avatar{position:absolute;left:16px;bottom:-30px;width:72px;height:72px;border-radius:18px;font-size:1.6rem}
+.profile-preview-name{position:absolute;left:100px;bottom:-26px;display:flex;flex-direction:column;line-height:1.2}
+.profile-preview-name b{font-size:1rem}
+.profile-preview-name small{color:var(--pf-mute);font-size:.72rem}
+.profile-editor-tabs{display:flex;gap:4px;margin:42px 22px 0;padding:4px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--pf-line);overflow-x:auto;scrollbar-width:none}
+.profile-editor-tabs::-webkit-scrollbar{display:none}
+.profile-tab{flex:1 0 auto;padding:8px 14px;border:0;border-radius:9px;background:transparent;color:var(--pf-mute);font-weight:600;font-size:.84rem;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.profile-tab:hover{color:var(--pf-fg)}
+.profile-tab[aria-selected="true"]{background:var(--pf-acc);color:#fff}
+.profile-tab[hidden]{display:none}
+.profile-editor-body{padding:16px 22px;overflow-y:auto;min-height:0;flex:1}
+.profile-tab-panel[hidden]{display:none}
+.profile-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.profile-form-grid label,.profile-privacy-fieldset label{display:flex;flex-direction:column;gap:6px;font-size:.82rem;font-weight:600;color:#c4cbe0}
+.profile-form-grid .is-wide{grid-column:1/-1}
+.profile-form-grid small,.profile-privacy-fieldset small{font-weight:400;color:var(--pf-mute);font-size:.74rem;line-height:1.4}
+.profile-dialog input:not([type=checkbox]):not([type=color]):not([type=file]),.profile-dialog select,.profile-dialog textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--pf-line);background:#0a0e1a;color:var(--pf-fg);font-size:.92rem}
+.profile-dialog input[type=file]{font-size:.8rem;color:var(--pf-mute)}
+.profile-dialog input[type=color]{width:100%;height:42px;padding:3px;border-radius:10px;border:1px solid var(--pf-line);background:#0a0e1a}
+.profile-dialog input:focus,.profile-dialog select:focus,.profile-dialog textarea:focus{border-color:var(--pf-acc);outline:2px solid color-mix(in srgb,var(--pf-acc) 40%,transparent);outline-offset:0}
+.profile-dialog input[readonly]{opacity:.6}
+.profile-dialog input:disabled{opacity:.45}
+.profile-picker{display:flex;gap:10px;align-items:center}
+.profile-picker select{flex:1}
+.profile-picker-preview{width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center}
+.profile-picker-preview img{width:100%;height:100%;object-fit:contain}
+.profile-picker-preview.is-empty{opacity:.25}
+.profile-privacy-fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.profile-privacy-fieldset legend{font-weight:700;margin-bottom:10px}
+.profile-check{flex-direction:row!important;align-items:center;gap:10px!important}
+.profile-check input{width:18px;height:18px;accent-color:var(--pf-acc)}
+.profile-form-message{margin:0;padding:0 22px;min-height:1.2em;font-size:.84rem;color:#3ecf8e}
+.profile-form-message.is-error{color:#ff6b6b}
+.profile-dialog-actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 18px;border-top:1px solid var(--pf-line)}
+.profile-primary.is-saving::before{content:"";width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:pf-spin .7s linear infinite}
+@keyframes pf-spin{to{transform:rotate(360deg)}}
+.profile-visibility-select{width:100%}
+
+/* ═══ RESPONSIVO ═══ */
+@media (max-width:820px){
+  .profile-identity{grid-template-columns:auto minmax(0,1fr);padding:0 16px}
+  .profile-rank-badge{grid-column:1/-1;justify-self:stretch}
+  .profile-bio,.profile-game-details,.profile-joined,.profile-section{margin-left:16px;margin-right:16px}
 }
-.profile-verified-badge svg { display: block; width: 100%; height: 100%; }
-.profile-verified-badge[hidden] { display: none !important; }
-
-/* Cores por TIPO de selo */
-.profile-verified-badge[data-badge="staff"]    { color: #f2b84b; filter: drop-shadow(0 0 7px rgba(242, 184, 75, .55)); }
-.profile-verified-badge[data-badge="vip"]      { color: #4c8dff; filter: drop-shadow(0 0 7px rgba(76, 141, 255, .55)); }
-.profile-verified-badge[data-badge="streamer"] { color: #ff0000; filter: drop-shadow(0 0 7px rgba(255, 0, 0, .55)); }
-
-/* Compat: data-role antigo */
-.profile-verified-badge[data-role="dev"],
-.profile-verified-badge[data-role="admin"],
-.profile-verified-badge[data-role="mod"] { color: #f2b84b; filter: drop-shadow(0 0 7px rgba(242, 184, 75, .55)); }
-.profile-verified-badge[data-role="vip"]      { color: #4c8dff; filter: drop-shadow(0 0 7px rgba(76, 141, 255, .55)); }
-.profile-verified-badge[data-role="streamer"] { color: #ff0000; filter: drop-shadow(0 0 7px rgba(255, 0, 0, .55)); }
-
-@keyframes profile-verified-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-/* ═══════════ BOTÃO DE AMIZADE ═══════════ */
-.profile-friend-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  height: 40px;
-  border-radius: 12px;
-  border: 1px solid var(--profile-accent, #8b72ff);
-  background: transparent;
-  color: var(--profile-accent, #8b72ff);
-  font-weight: 600;
-  font-size: .9rem;
-  cursor: pointer;
-  transition: background .15s, color .15s, transform .1s;
+@media (max-width:560px){
+  #profileRoot{padding:12px 10px 36px}
+  .profile-banner{height:140px}
+  .profile-identity{grid-template-columns:1fr;gap:12px;margin-top:-44px}
+  .profile-avatar{width:92px;height:92px;border-radius:22px}
+  .profile-name-row h1{font-size:1.4rem}
+  .profile-page-heading-actions,.profile-other-actions{width:100%}
+  .profile-page-heading-actions>*,.profile-other-actions>*{flex:1 1 auto}
+  .profile-form-grid{grid-template-columns:1fr}
+  .profile-dialog{width:100vw;max-height:100dvh;border-radius:0;height:100dvh}
+  .profile-dialog form{max-height:100dvh;height:100%}
+  .profile-dialog-actions>*{flex:1}
 }
-.profile-friend-btn:hover:not(:disabled) { background: var(--profile-accent, #8b72ff); color: #1a1405; }
-.profile-friend-btn:active:not(:disabled) { transform: scale(.96); }
-.profile-friend-btn:disabled { opacity: .55; cursor: not-allowed; }
-.profile-friend-btn.is-friends { border-color: #3ecf8e; color: #3ecf8e; }
-.profile-friend-btn.is-friends:hover { background: #3ecf8e; color: #0a1f16; }
-.profile-friend-btn.is-pending { border-color: #f2b84b; color: #f2b84b; }
-.profile-friend-btn.is-accept { border-color: #3ecf8e; background: #3ecf8e; color: #0a1f16; }
-.profile-friend-btn.is-accept:hover { background: transparent; color: #3ecf8e; }
-.profile-friend-btn svg { width: 16px; height: 16px; }
+@media (prefers-reduced-motion:reduce){#profileRoot *{transition:none!important;animation:none!important}}
+</style>
 
-/* ═══════════ SELETOR DE VISIBILIDADE ═══════════ */
-.profile-visibility-select {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line-2, rgba(255,255,255,.12));
-  background: var(--s3, #1b1f26);
-  color: var(--fg, #f5f5f5);
-  font: inherit;
-  font-size: .92rem;
-  cursor: pointer;
+<style id="profile-v2-css">
+/* ═══ V2 · POLIMENTO PREMIUM (camada final; sobrepõe os estilos anteriores) ═══ */
+#profileRoot,.profile-page{--v2-acc:var(--profile-accent,#7c5cff);--v2-line:rgba(255,255,255,.08);--v2-gold:#e6b94d;
+  --v2-glow:color-mix(in srgb,var(--v2-acc) 45%,transparent);--v2-ease:cubic-bezier(.2,.7,.2,1)}
+
+/* — Hero + toolbar — */
+.profile-hero{position:relative;margin:0 -24px}
+.profile-hero .profile-banner{margin:0;min-height:200px}
+.profile-toolbar{position:absolute;right:16px;bottom:14px;z-index:3;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px;max-width:calc(100% - 32px)}
+.profile-toolbar .profile-other-actions{display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.profile-toolbar .profile-primary{height:38px;min-height:38px;padding:0 16px;border-radius:11px;border:1px solid rgba(255,255,255,.18);
+  background:linear-gradient(135deg,#9a7fff 0%,#6a47f0 55%,#5a3be0 100%);color:#fff;box-shadow:0 10px 24px -10px var(--v2-glow),inset 0 1px 0 rgba(255,255,255,.28)}
+.profile-toolbar .profile-primary:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-2px)}
+.profile-toolbar .profile-subtle-button,.profile-toolbar .profile-friend-btn,.profile-toolbar .profile-golive{
+  height:38px;min-height:38px;padding:0 14px;border-radius:11px;color:#eef1fa;background:rgba(10,14,26,.55);
+  border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(12px) saturate(1.2);-webkit-backdrop-filter:blur(12px) saturate(1.2);
+  transition:transform .2s var(--v2-ease),background .2s,border-color .2s}
+.profile-toolbar .profile-subtle-button:hover,.profile-toolbar .profile-friend-btn:hover:not(:disabled){background:rgba(124,92,255,.28);border-color:rgba(255,255,255,.3);color:#fff;transform:translateY(-2px)}
+.profile-toolbar .profile-friend-btn.is-friends{border-color:rgba(62,207,142,.6);color:#3ecf8e}
+.profile-toolbar .profile-friend-btn.is-pending{border-color:rgba(242,184,75,.6);color:#f2b84b}
+.profile-toolbar .profile-friend-btn.is-accept{background:#3ecf8e;color:#0a1f16;border-color:#3ecf8e}
+.profile-toolbar .profile-golive{border-color:rgba(255,59,59,.7);color:#ff7a7a}
+.profile-toolbar .profile-golive.is-live{background:linear-gradient(180deg,#ff4a4a,#d92626);color:#fff}
+.profile-toolbar [hidden]{display:none!important}
+
+/* — Avatar com halo de radiação — */
+.profile-avatar-wrap{position:relative;display:grid;place-items:center}
+.profile-avatar-wrap::before{content:"";position:absolute;inset:-26px;border-radius:50%;z-index:0;pointer-events:none;
+  background:radial-gradient(circle,var(--v2-glow) 0%,color-mix(in srgb,var(--v2-acc) 14%,transparent) 45%,transparent 70%);
+  filter:blur(8px);animation:v2-halo 4.5s ease-in-out infinite}
+.profile-avatar-wrap .profile-avatar{position:relative;z-index:1}
+.profile-card[data-frame="elite"] .profile-avatar-wrap::before{background:radial-gradient(circle,rgba(230,185,77,.5),rgba(230,185,77,.12) 48%,transparent 70%)}
+@keyframes v2-halo{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.07)}}
+
+/* — Emblema de rank — */
+.profile-rank-badge{position:relative;overflow:hidden;gap:14px;padding:10px 18px 10px 10px;border-radius:18px;border:1px solid rgba(255,255,255,.1);
+  background:linear-gradient(135deg,color-mix(in srgb,var(--v2-acc) 26%,#0d1224),#0d1224 75%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 14px 30px -16px var(--v2-glow)}
+.profile-rank-badge::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-18deg);transition:left .7s var(--v2-ease)}
+.profile-rank-badge:hover::after{left:130%}
+.profile-rank-emblem{position:relative;display:grid;place-items:center;width:76px;height:76px;flex:0 0 76px;border-radius:50%;
+  background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.18),transparent 60%),conic-gradient(from 210deg,#6b7396,#e8ecff,#8f98bd,#d9defa,#6b7396);
+  padding:2px;box-shadow:0 0 22px -4px var(--v2-glow)}
+.profile-rank-emblem::before{content:"";position:absolute;inset:2px;border-radius:50%;background:radial-gradient(circle at 50% 30%,#1b2342,#0b1020)}
+.profile-rank-emblem .profile-rank-image{position:relative;width:66px;height:66px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6)) saturate(1.15) contrast(1.05)}
+.profile-rank-copy small{letter-spacing:.2em}
+.profile-rank-copy b{font-size:1.12rem;font-weight:800;letter-spacing:.01em}
+.profile-rank-stars{padding:4px 10px 4px 8px;gap:5px;font-weight:800;font-size:.9rem;color:#2a1c00;
+  background:linear-gradient(180deg,#ffe38a,#e6b94d 60%,#c4952c);border:1px solid #ffeaa6;box-shadow:0 4px 14px -4px rgba(230,185,77,.7),inset 0 1px 0 rgba(255,255,255,.6)}
+.profile-rank-star{color:#7a4f00;text-shadow:none}
+
+/* — Cards: borda translúcida + hover com glow — */
+.profile-stat-card,.profile-game-tag,.profile-badge,.profile-activity-item .profile-activity-icon{border:1px solid rgba(255,255,255,.08)}
+.profile-stat-card,.profile-game-tag{background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.015) 60%);
+  transition:transform .22s var(--v2-ease),border-color .22s,box-shadow .22s}
+.profile-stat-card:hover,.profile-game-tag:hover,.profile-badge:hover{transform:translateY(-2px);
+  border-color:color-mix(in srgb,var(--v2-acc) 55%,rgba(255,255,255,.1));
+  box-shadow:0 14px 30px -16px var(--v2-glow),0 0 0 1px color-mix(in srgb,var(--v2-acc) 18%,transparent)}
+.profile-stat-card b{font-weight:800;font-size:1.6rem;letter-spacing:-.02em;color:#fff;font-variant-numeric:tabular-nums}
+.profile-stat-icon{background:linear-gradient(145deg,color-mix(in srgb,var(--v2-acc) 32%,transparent),color-mix(in srgb,var(--v2-acc) 8%,transparent));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--v2-acc) 30%,transparent)}
+.profile-stat-label{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+
+/* — Conquistas — */
+.profile-badge{background:linear-gradient(160deg,rgba(230,185,77,.16),rgba(255,255,255,.02) 65%);border-color:rgba(230,185,77,.3)}
+.profile-badge:hover{border-color:rgba(230,185,77,.7);box-shadow:0 14px 30px -16px rgba(230,185,77,.7)}
+.profile-badge.is-locked{filter:grayscale(100%);opacity:.4}
+.profile-badge.is-locked:hover{transform:none;box-shadow:none}
+.profile-empty-state{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 16px;text-align:center;
+  border:1px dashed rgba(255,255,255,.14);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
+.profile-empty-state svg{width:44px;height:44px;color:var(--v2-gold);opacity:.8;filter:drop-shadow(0 0 12px rgba(230,185,77,.4))}
+.profile-empty-state p{margin:0;font-size:.88rem;color:#9aa3b8}
+
+/* — Linha do tempo — */
+.profile-activity-icon{background:linear-gradient(145deg,color-mix(in srgb,var(--v2-acc) 28%,#0d1224),#0d1224)}
+.profile-activity-item{transition:transform .2s var(--v2-ease)}
+.profile-activity-item:hover{transform:translateX(3px)}
+
+/* — Editor: abas sem layout shift — */
+.profile-editor-tabs{position:relative}
+.profile-tab{position:relative;transition:color .2s,background .25s var(--v2-ease)}
+.profile-tab::after{content:"";position:absolute;left:14px;right:14px;bottom:2px;height:3px;border-radius:3px;background:var(--v2-acc);
+  box-shadow:0 0 12px var(--v2-glow);transform:scaleX(0);transform-origin:center;transition:transform .25s var(--v2-ease)}
+.profile-tab[aria-selected="true"]{background:color-mix(in srgb,var(--v2-acc) 16%,transparent);color:#fff;box-shadow:none}
+.profile-tab[aria-selected="true"]::after{transform:scaleX(1)}
+.profile-editor-body{display:grid;align-content:start}
+.profile-tab-panel{grid-area:1/1;transition:opacity .22s var(--v2-ease),transform .22s var(--v2-ease)}
+.profile-tab-panel[hidden]{display:block!important;visibility:hidden;opacity:0;transform:translateY(6px);pointer-events:none}
+
+/* — Prévia ao vivo (mini player card) — */
+.profile-preview-card{border-radius:16px;margin-bottom:0;padding-bottom:0;border:1px solid rgba(255,255,255,.1);
+  background:linear-gradient(180deg,#111729,#0d1224);transition:border-color .25s,box-shadow .25s}
+.profile-preview-card[data-frame="elite"]{border-color:rgba(230,185,77,.6);box-shadow:0 0 24px -10px rgba(230,185,77,.5)}
+.profile-preview-card .profile-preview-banner{border-radius:15px 15px 0 0}
+.profile-preview-card .profile-preview-avatar{box-shadow:0 0 0 2px var(--v2-acc),0 0 22px -6px var(--v2-glow);transition:box-shadow .25s}
+.profile-preview-card[data-frame="elite"] .profile-preview-avatar{box-shadow:0 0 0 2px var(--v2-gold),0 0 22px -6px rgba(230,185,77,.6)}
+.profile-preview-card{margin-bottom:34px}
+.profile-preview-rank{position:absolute;right:12px;bottom:-26px;display:inline-flex;align-items:center;gap:6px}
+.profile-preview-rank[hidden]{display:none}
+.profile-preview-rank img{width:38px;height:38px;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
+.profile-preview-rank em{font-style:normal;font-weight:800;font-size:.78rem;padding:2px 8px;border-radius:999px;color:#2a1c00;background:linear-gradient(180deg,#ffe38a,#e6b94d)}
+.profile-preview-rank em[hidden]{display:none}
+.profile-editor-tabs{margin-top:12px}
+
+@media (max-width:650px){
+  .profile-hero{margin:0 -14px}
+  .profile-hero .profile-banner{min-height:170px}
+  .profile-toolbar{left:10px;right:10px;bottom:10px;max-width:none;justify-content:stretch}
+  .profile-toolbar>*,.profile-toolbar .profile-other-actions{flex:1 1 auto}
+  .profile-toolbar .profile-other-actions>*{flex:1 1 auto}
+  .profile-rank-emblem{width:64px;height:64px;flex-basis:64px}
+  .profile-rank-emblem .profile-rank-image{width:54px;height:54px}
 }
-.profile-visibility-select:focus { outline: 2px solid var(--profile-accent, #8b72ff); outline-offset: 2px; }
+@media (prefers-reduced-motion:reduce){.profile-avatar-wrap::before{animation:none}.profile-rank-badge::after{display:none}.profile-tab-panel{transition:none}}
+</style>
+<style id="profile-v2-1-css">
+/* ═══ V2.1 · CORREÇÕES (toolbar, editor, barra social) ═══ */
+.profile-page{--pf-brand:#7c5cff;--pf-brand-soft:#a28bff}
+.profile-eyebrow{color:var(--pf-brand-soft)}
+.profile-page :focus-visible,.profile-dialog :focus-visible{outline-color:var(--pf-brand-soft)}
+
+/* Toolbar: canto superior direito do banner (não colide com avatar nem com o rank) */
+.profile-hero::before{content:"";position:absolute;inset:0 0 auto 0;height:96px;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,9,20,.62),transparent)}
+.profile-toolbar{top:14px;bottom:auto;right:16px}
+@media (max-width:650px){
+  .profile-toolbar{top:10px;bottom:auto;left:10px;right:10px;justify-content:flex-end}
+  .profile-toolbar>*,.profile-toolbar .profile-other-actions,.profile-toolbar .profile-other-actions>*{flex:0 1 auto}
+  .profile-toolbar .profile-action-btn span{display:inline}
+}
+.profile-rank-badge{align-self:end}
+
+/* Editor: nada encolhe dentro do <form> flex (era o que quebrava abas e prévia) */
+.profile-dialog form{display:flex;flex-direction:column;overflow:hidden}
+.profile-dialog form>*{flex-shrink:0}
+.profile-dialog form>.profile-editor-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.profile-editor-tabs{min-height:50px;align-items:stretch}
+.profile-tab{min-height:40px;line-height:1.2;display:inline-flex;align-items:center;justify-content:center}
+.profile-tab::after{background:var(--pf-brand-soft);box-shadow:0 0 12px rgba(124,92,255,.7)}
+.profile-tab[aria-selected="true"]{background:rgba(124,92,255,.16)}
+.profile-preview-card{flex-shrink:0}
+.profile-preview-card .profile-preview-banner{min-height:118px;height:118px}
+
+/* Barra social: Amigos / Seguidores / Seguindo (marcada pelo profile-enhance.js) */
+.pf-social{display:flex!important;align-items:stretch;gap:0;width:fit-content;max-width:100%;margin:16px 0 14px!important;padding:4px;
+  border-radius:16px;border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(145deg,rgba(124,92,255,.14),rgba(255,255,255,.03) 60%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 12px 28px -20px rgba(124,92,255,.7)}
+.pf-social-item{display:inline-flex!important;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:104px;
+  padding:10px 20px;border-radius:12px;background:transparent;border:0;color:#9aa3b8;font:inherit;font-size:.74rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;line-height:1.2;text-align:center;transition:background .2s,transform .2s}
+.pf-social-item+.pf-social-item{position:relative}
+.pf-social-item+.pf-social-item::before{content:"";position:absolute;left:0;top:22%;bottom:22%;width:1px;background:rgba(255,255,255,.1)}
+.pf-social-item b,.pf-social-item strong{display:block;font-size:1.35rem;font-weight:800;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums;text-transform:none}
+button.pf-social-item,a.pf-social-item{cursor:pointer}
+button.pf-social-item:hover,a.pf-social-item:hover{background:rgba(124,92,255,.2);transform:translateY(-1px)}
+@media (max-width:480px){.pf-social{width:100%}.pf-social-item{flex:1 1 0;min-width:0;padding:10px 8px}}
 </style>
 
 <section class="profile-page" data-profile-mode="self" id="profileRoot">
 
   <header class="profile-page-heading">
     <div class="profile-page-heading-copy">
-      <p class="profile-eyebrow" id="profileEyebrow">SOCIETY · PLAYER CARD</p>
+      <p class="profile-eyebrow" id="profileEyebrow">DESTINY · PLAYER CARD</p>
       <h2 id="profilePageTitle">Meu perfil</h2>
-      <p id="profilePageSubtitle">
-        Seu espaço na comunidade. Mostre como você joga e personalize sua identidade.
-      </p>
+      <p id="profilePageSubtitle">Seu espaço na comunidade. Mostre como você joga e personalize sua identidade.</p>
     </div>
 
     <div class="profile-page-heading-actions">
-      <button id="profileBack" class="profile-back-button" type="button"
-              aria-label="Voltar" title="Voltar" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-             aria-hidden="true" focusable="false">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
+      <button id="profileBack" class="profile-back-button" type="button" aria-label="Voltar" title="Voltar" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="15 18 9 12 15 6"/></svg>
         <span>Voltar</span>
       </button>
 
-      <button id="profileEditButton" class="profile-primary" type="button">Editar perfil</button>
 
-      <div id="profileActions" class="profile-other-actions"
-           role="group" aria-label="Ações do perfil" hidden>
-        <button id="profileFriendBtn" type="button"
-                class="profile-friend-btn"
-                aria-label="Adicionar amigo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-               aria-hidden="true" focusable="false">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="8.5" cy="7" r="4"/>
-            <line x1="20" y1="8" x2="20" y2="14"/>
-            <line x1="23" y1="11" x2="17" y2="11"/>
-          </svg>
-          <span>Adicionar amigo</span>
-        </button>
-
-        <button id="profileMessageBtn" type="button"
-                class="profile-primary profile-action-btn" aria-label="Enviar mensagem">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-               aria-hidden="true" focusable="false">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <span>Mensagem</span>
-        </button>
-
-        <button id="profileReportBtn" type="button"
-                class="profile-subtle-button profile-action-btn" aria-label="Denunciar jogador">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-               aria-hidden="true" focusable="false">
-            <path d="M4 22V4a2 2 0 0 1 2-2h10l-2 4 2 4H6"/>
-          </svg>
-          <span>Denunciar</span>
-        </button>
-      </div>
     </div>
   </header>
 
   <article id="profileCard" class="profile-card">
-    <div id="profileBanner" class="profile-banner" role="img" aria-label="Banner do perfil">
+    <div class="profile-hero">
+      <div id="profileBanner" class="profile-banner" role="img" aria-label="Banner do perfil">
       <span id="profileBannerHint">SUA JORNADA, SEU ESTILO</span>
+    </div>
+      <div class="profile-toolbar" role="toolbar" aria-label="Ações do perfil">
+      <button id="profileGoLiveBtn" class="profile-golive" type="button" aria-pressed="false" hidden>🔴 Entrei ao vivo</button>
+
+      <button id="profileEditButton" class="profile-primary" type="button">Editar perfil</button>
+
+      <div id="profileActions" class="profile-other-actions" role="group" aria-label="Ações do perfil" hidden>
+        <button id="profileFriendBtn" type="button" class="profile-friend-btn" aria-label="Adicionar amigo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+          <span>Adicionar amigo</span>
+        </button>
+        <button id="profileMessageBtn" type="button" class="profile-primary profile-action-btn" aria-label="Enviar mensagem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Mensagem</span>
+        </button>
+        <button id="profileReportBtn" type="button" class="profile-subtle-button profile-action-btn" aria-label="Denunciar jogador">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 22V4a2 2 0 0 1 2-2h10l-2 4 2 4H6"/></svg>
+          <span>Denunciar</span>
+        </button>
+      </div>
+      </div>
     </div>
 
     <div class="profile-identity">
-      <div id="profileAvatar" class="profile-avatar" aria-label="Foto de perfil"></div>
+      <div class="profile-avatar-wrap"><div id="profileAvatar" class="profile-avatar" aria-label="Foto de perfil"></div></div>
 
       <div class="profile-name-block">
         <div class="profile-name-row">
           <h1 id="profileDisplayName">Jogador</h1>
-
-          <span id="profileVerifiedBadge" class="profile-verified-badge"
-                role="img" aria-label="Conta verificada" title="Conta verificada" hidden></span>
-
+          <span id="profileVerifiedBadge" class="profile-verified-badge" role="img" aria-label="Conta verificada" title="Conta verificada" hidden></span>
           <span id="profileStatus" class="profile-status"><i></i> Online</span>
         </div>
-
         <div id="profileCommunityRoles" class="profile-community-roles" aria-label="Cargos da comunidade"></div>
         <p id="profileUsername" class="profile-username">@jogador</p>
         <p id="profileTitle" class="profile-title" hidden></p>
+        <a id="profileStreamBtn" class="profile-stream-btn" target="_blank" rel="noopener noreferrer nofollow" hidden></a>
       </div>
 
       <aside id="profileRankBadge" class="profile-rank-badge" aria-live="polite" hidden>
-        <img id="profileRankImage" class="profile-rank-image" alt="" loading="lazy" decoding="async">
+        <span class="profile-rank-emblem"><img id="profileRankImage" class="profile-rank-image" alt="" loading="lazy" decoding="async"></span>
         <div class="profile-rank-copy">
           <small>ELO ATUAL</small>
           <div class="profile-rank-label-row">
@@ -183,30 +460,21 @@
 
     <section id="profileStatsSection" class="profile-section" aria-labelledby="profileStatsTitle">
       <div class="profile-section-heading">
-        <div>
-          <p class="profile-eyebrow">SEU PROGRESSO</p>
-          <h2 id="profileStatsTitle">Estatísticas</h2>
-        </div>
+        <div><p class="profile-eyebrow">SEU PROGRESSO</p><h2 id="profileStatsTitle">Estatísticas</h2></div>
       </div>
       <div id="profileStats" class="profile-stats-grid"></div>
     </section>
 
     <section id="profileAchievementsSection" class="profile-section" aria-labelledby="profileAchievementsTitle">
       <div class="profile-section-heading">
-        <div>
-          <p class="profile-eyebrow">MARCOS DA COMUNIDADE</p>
-          <h2 id="profileAchievementsTitle">Conquistas</h2>
-        </div>
+        <div><p class="profile-eyebrow">MARCOS DA COMUNIDADE</p><h2 id="profileAchievementsTitle">Conquistas</h2></div>
       </div>
       <div id="profileAchievements" class="profile-achievements"></div>
     </section>
 
     <section id="profileActivitySection" class="profile-section" aria-labelledby="profileActivityTitle">
       <div class="profile-section-heading">
-        <div>
-          <p class="profile-eyebrow">RECENTE</p>
-          <h2 id="profileActivityTitle">Atividade</h2>
-        </div>
+        <div><p class="profile-eyebrow">RECENTE</p><h2 id="profileActivityTitle">Atividade</h2></div>
       </div>
       <div id="profileActivity" class="profile-activity"></div>
     </section>
@@ -222,130 +490,132 @@
         <button id="profileEditorClose" class="profile-icon-button" type="button" aria-label="Fechar">✕</button>
       </header>
 
-      <div class="profile-editor-preview">
+      <div class="profile-editor-preview profile-preview-card" id="profilePreviewCard" data-frame="default" aria-label="Prévia ao vivo do seu card">
         <div id="profilePreviewBanner" class="profile-banner profile-preview-banner"><span>Prévia do banner</span></div>
         <div id="profilePreviewAvatar" class="profile-avatar profile-preview-avatar"></div>
+        <div class="profile-preview-name"><b id="profilePreviewName">Jogador</b><small id="profilePreviewMeta"></small></div>
+        <span class="profile-preview-rank" id="profilePreviewRankWrap" hidden><img id="profilePreviewRank" alt=""><em id="profilePreviewStars" hidden></em></span>
       </div>
 
-      <div class="profile-form-grid">
-        <label>Foto de perfil
-          <input id="profileAvatarFile" type="file" accept="image/*">
-          <small>Imagem até 8 MB. Será otimizada antes de salvar.</small>
-        </label>
-        <button id="profileRemoveAvatar" class="profile-subtle-button" type="button">Remover foto</button>
-
-        <label>Banner
-          <input id="profileBannerFile" type="file" accept="image/*">
-          <small>Imagem até 8 MB. Será ajustada para o cabeçalho do perfil.</small>
-        </label>
-        <button id="profileRemoveBanner" class="profile-subtle-button" type="button">Remover banner</button>
-
-        <label>Nome de exibição
-          <input id="profileDisplayNameInput" maxlength="28" required>
-        </label>
-
-        <label>Username
-          <input id="profileUsernameInput" readonly aria-describedby="profileUsernameHint">
-          <small id="profileUsernameHint">O username é permanente nesta versão.</small>
-        </label>
-
-        <label>Bio
-          <textarea id="pBio" maxlength="60" rows="3" placeholder="Conte um pouco sobre você"></textarea>
-        </label>
-
-        <label>Rank
-          <div class="profile-picker">
-            <select id="pRank" aria-describedby="pRankHint">
-              <option value="">Sem rank informado</option>
-            </select>
-            <span class="profile-picker-preview" id="pRankPreview" aria-hidden="true">
-              <img id="pRankPreviewImage" alt="" loading="lazy" decoding="async">
-            </span>
-          </div>
-          <small id="pRankHint">Selecione seu elo. A imagem aparece no topo do seu card.</small>
-        </label>
-
-        <label id="pStarsField">Estrelas
-          <input id="pStars" type="number" min="0" max="9999" step="1"
-                 inputmode="numeric" placeholder="0" aria-describedby="pStarsHint">
-          <small id="pStarsHint">
-            Depois do MD10 no Mítico, informe suas estrelas. 0–24 Mítico, 25–49 Honra Mítica, 50–99 Glória Mítica, 100+ Imortal.
-          </small>
-        </label>
-
-        <label>Role principal
-          <select id="pRole">
-            <option>Qualquer</option>
-            <option>Jungle</option>
-            <option>Mid</option>
-            <option>Gold lane</option>
-            <option>EXP lane</option>
-            <option>Roam</option>
-          </select>
-        </label>
-
-        <label>Herói principal
-          <div class="profile-picker">
-            <select id="pHero" aria-describedby="pHeroHint">
-              <option value="">Nenhum herói selecionado</option>
-            </select>
-            <span class="profile-picker-preview" id="pHeroPreview" aria-hidden="true">
-              <img id="pHeroPreviewImage" alt="" loading="lazy" decoding="async">
-            </span>
-          </div>
-          <small id="pHeroHint">Escolha seu herói principal no catálogo oficial.</small>
-        </label>
-
-        <label>ID no jogo
-          <input id="pGid" maxlength="20">
-        </label>
-
-        <label>Título
-          <input id="profileTitleInput" maxlength="30" placeholder="Ex.: Jogador competitivo">
-        </label>
-
-        <label>Cor de destaque
-          <input id="profileAccentInput" type="color">
-        </label>
-
-        <label>Moldura
-          <select id="profileFrameInput">
-            <option value="default">Clássica</option>
-            <option value="elite">Elite</option>
-          </select>
-        </label>
-
-        <label>Tema do perfil
-          <select id="profileThemeInput">
-            <option value="classic">Clássico</option>
-            <option value="arena">Arena</option>
-            <option value="ocean">Oceano</option>
-          </select>
-        </label>
+      <div class="profile-editor-tabs" role="tablist" aria-label="Seções do editor">
+        <button type="button" class="profile-tab" role="tab" id="tab-identity" data-tab="identity" aria-selected="true" aria-controls="panel-identity">Identidade</button>
+        <button type="button" class="profile-tab" role="tab" id="tab-game" data-tab="game" aria-selected="false" aria-controls="panel-game" tabindex="-1">Mobile Legends</button>
+        <button type="button" class="profile-tab" role="tab" id="tab-look" data-tab="look" aria-selected="false" aria-controls="panel-look" tabindex="-1">Aparência</button>
+        <button type="button" class="profile-tab" role="tab" id="tab-privacy" data-tab="privacy" aria-selected="false" aria-controls="panel-privacy" tabindex="-1">Privacidade</button>
+        <button type="button" class="profile-tab" role="tab" id="tab-stream" data-tab="stream" aria-selected="false" aria-controls="panel-stream" tabindex="-1" hidden>Stream</button>
       </div>
 
-      <fieldset class="profile-privacy-fieldset">
-        <legend>Quem pode ver seu perfil</legend>
-        <label>
-          Visibilidade
-          <select id="profileVisibilityInput" class="profile-visibility-select">
-            <option value="public">🌍 Público — qualquer pessoa vê seus detalhes</option>
-            <option value="friends">👥 Só amigos — apenas amigos veem seus detalhes</option>
-            <option value="private">🔒 Privado — ninguém vê seus detalhes</option>
-          </select>
-          <small>Avatar, nome e selo continuam visíveis para todos em qualquer modo.</small>
-        </label>
+      <div class="profile-editor-body">
 
-        <label class="profile-check">
-          <input id="profileShowStatsInput" type="checkbox" checked>
-          Mostrar estatísticas e conquistas
-        </label>
+        <div class="profile-tab-panel" role="tabpanel" id="panel-identity" aria-labelledby="tab-identity">
+          <div class="profile-form-grid">
+            <label>Foto de perfil
+              <input id="profileAvatarFile" type="file" accept="image/*">
+              <small>Imagem até 8 MB. Será otimizada antes de salvar.</small>
+            </label>
+            <label>Banner
+              <input id="profileBannerFile" type="file" accept="image/*">
+              <small>Imagem até 8 MB. Será ajustada para o cabeçalho do perfil.</small>
+            </label>
+            <button id="profileRemoveAvatar" class="profile-subtle-button" type="button">Remover foto</button>
+            <button id="profileRemoveBanner" class="profile-subtle-button" type="button">Remover banner</button>
+            <label>Nome de exibição
+              <input id="profileDisplayNameInput" maxlength="28" required>
+            </label>
+            <label>Username
+              <input id="profileUsernameInput" readonly aria-describedby="profileUsernameHint">
+              <small id="profileUsernameHint">O username é permanente nesta versão.</small>
+            </label>
+            <label>Título
+              <input id="profileTitleInput" maxlength="30" placeholder="Ex.: Jogador competitivo">
+            </label>
+            <label class="is-wide">Bio
+              <textarea id="pBio" maxlength="60" rows="3" placeholder="Conte um pouco sobre você"></textarea>
+              <small>Até 60 caracteres.</small>
+            </label>
+          </div>
+        </div>
 
-        <label class="profile-check">
-          <input id="profileShowActivityInput" type="checkbox" checked>
-          Mostrar atividade recente
-        </label>
-      </fieldset>
+        <div class="profile-tab-panel" role="tabpanel" id="panel-game" aria-labelledby="tab-game" hidden>
+          <div class="profile-form-grid">
+            <label>Rank
+              <div class="profile-picker">
+                <select id="pRank" aria-describedby="pRankHint"><option value="">Sem rank informado</option></select>
+                <span class="profile-picker-preview" id="pRankPreview" aria-hidden="true"><img id="pRankPreviewImage" alt="" loading="lazy" decoding="async"></span>
+              </div>
+              <small id="pRankHint">Selecione seu elo. A imagem aparece no topo do seu card.</small>
+            </label>
+            <label id="pStarsField">Estrelas
+              <input id="pStars" type="number" min="0" max="9999" step="1" inputmode="numeric" placeholder="0" aria-describedby="pStarsHint">
+              <small id="pStarsHint">Depois do MD10 no Mítico, informe suas estrelas. 0–24 Mítico, 25–49 Honra Mítica, 50–99 Glória Mítica, 100+ Imortal.</small>
+            </label>
+            <label>Role principal
+              <select id="pRole">
+                <option>Qualquer</option><option>Jungle</option><option>Mid</option>
+                <option>Gold lane</option><option>EXP lane</option><option>Roam</option>
+              </select>
+            </label>
+            <label>Herói principal
+              <div class="profile-picker">
+                <select id="pHero" aria-describedby="pHeroHint"><option value="">Nenhum herói selecionado</option></select>
+                <span class="profile-picker-preview" id="pHeroPreview" aria-hidden="true"><img id="pHeroPreviewImage" alt="" loading="lazy" decoding="async"></span>
+              </div>
+              <small id="pHeroHint">Escolha seu herói principal no catálogo oficial.</small>
+            </label>
+            <label class="is-wide">ID no jogo
+              <input id="pGid" maxlength="20">
+            </label>
+          </div>
+        </div>
+
+        <div class="profile-tab-panel" role="tabpanel" id="panel-look" aria-labelledby="tab-look" hidden>
+          <div class="profile-form-grid">
+            <label>Cor de destaque
+              <input id="profileAccentInput" type="color">
+            </label>
+            <label>Moldura
+              <select id="profileFrameInput">
+                <option value="default">Clássica</option>
+                <option value="elite">Elite</option>
+              </select>
+            </label>
+            <label class="is-wide">Tema do perfil
+              <select id="profileThemeInput">
+                <option value="classic">Clássico</option>
+                <option value="arena">Arena</option>
+                <option value="ocean">Oceano</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="profile-tab-panel" role="tabpanel" id="panel-privacy" aria-labelledby="tab-privacy" hidden>
+          <fieldset class="profile-privacy-fieldset">
+            <legend>Quem pode ver seu perfil</legend>
+            <label>Visibilidade
+              <select id="profileVisibilityInput" class="profile-visibility-select">
+                <option value="public">🌍 Público — qualquer pessoa vê seus detalhes</option>
+                <option value="friends">👥 Só amigos — apenas amigos veem seus detalhes</option>
+                <option value="private">🔒 Privado — ninguém vê seus detalhes</option>
+              </select>
+              <small>Avatar, nome e selo continuam visíveis para todos em qualquer modo. O botão de stream só aparece em perfis públicos.</small>
+            </label>
+            <label class="profile-check"><input id="profileShowStatsInput" type="checkbox" checked> Mostrar estatísticas e conquistas</label>
+            <label class="profile-check"><input id="profileShowActivityInput" type="checkbox" checked> Mostrar atividade recente</label>
+          </fieldset>
+        </div>
+
+        <div class="profile-tab-panel" role="tabpanel" id="panel-stream" aria-labelledby="tab-stream" hidden>
+          <div class="profile-form-grid">
+            <!-- type="text" de propósito: o profile.js normaliza e valida o link. -->
+            <label id="pStreamField" class="is-wide" hidden>Canal de stream
+              <input id="pStreamUrl" type="text" maxlength="200" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://twitch.tv/seucanal" aria-describedby="pStreamHint">
+              <small id="pStreamHint">Link do seu canal na Twitch, YouTube ou Kick. Aparece como botão no seu perfil.</small>
+            </label>
+          </div>
+        </div>
+
+      </div>
 
       <p id="profileFormMessage" class="profile-form-message" role="status"></p>
 

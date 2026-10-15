@@ -1,9 +1,10 @@
 /* Reusable profile presentation and editor interactions. */
-/* v16 — sistema de selos: staff (dev/admin/mod), vip, streamer, beta (🚧) */
+/* v17 — streamers: botão "Assistir stream", URL do canal no editor, "Entrei ao vivo" */
 (() => {
   const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
   const MAX_AVATAR_DATA_LENGTH = 120000;
   const MAX_BANNER_DATA_LENGTH = 350000;
+  const MAX_STREAM_URL_LENGTH = 200;
 
   const ELOS_DIR = "/static/assets/";
   const HERO_IMAGE_DIR = "/static/img/icons/herois/";
@@ -112,6 +113,7 @@
   let selfProfile = null;
   let currentMode = "self";
   let currentUserId = null;
+  let pendingStreamUrl = null; // canal enviado no último "Salvar", para conferir a resposta
 
   function node(tag, text, className) {
     const element = document.createElement(tag);
@@ -403,6 +405,155 @@
     obs.observe(document.body, { childList: true, subtree: true });
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // STREAMER: canal, link da live, botão "Assistir stream"
+  // ─────────────────────────────────────────────────────────────
+  // Só aceitamos links de plataformas conhecidas. O servidor DEVE repetir
+  // esta validação: a do navegador não é segurança, é conveniência.
+  const STREAM_PLATFORMS = [
+    { name: "Twitch",  hosts: ["twitch.tv", "www.twitch.tv", "m.twitch.tv"] },
+    { name: "YouTube", hosts: ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"] },
+    { name: "Kick",    hosts: ["kick.com", "www.kick.com"] },
+  ];
+
+  /** Normaliza e valida um link de canal/live. Retorna {url, platform} ou null. */
+  function parseStreamUrl(value) {
+    let raw = String(value == null ? "" : value).trim();
+    if (!raw || raw.length > MAX_STREAM_URL_LENGTH) return null;
+    if (!/^https?:\/\//i.test(raw)) raw = "https://" + raw;
+    let url;
+    try { url = new URL(raw); } catch (e) { return null; }
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    if (url.username || url.password) return null;
+    const host = url.hostname.toLowerCase();
+    const platform = STREAM_PLATFORMS.find(p => p.hosts.includes(host));
+    if (!platform) return null;
+    if (url.pathname.replace(/\//g, "") === "") return null; // precisa apontar para um canal
+    url.protocol = "https:";
+    url.hash = "";
+    return { url: url.toString(), platform: platform.name };
+  }
+
+  /** YouTube: /@canal vira /@canal/live, que abre a transmissão atual. */
+  function liveUrlFor(info) {
+    if (!info) return "";
+    if (info.platform !== "YouTube") return info.url;
+    try {
+      const u = new URL(info.url);
+      if (/\/live\/?$/.test(u.pathname)) return u.toString();
+      if (/^\/(@[^/]+|channel\/[^/]+|c\/[^/]+|user\/[^/]+)\/?$/.test(u.pathname)) {
+        u.pathname = u.pathname.replace(/\/$/, "") + "/live";
+        return u.toString();
+      }
+    } catch (e) { /* ignora */ }
+    return info.url;
+  }
+
+  // Streamer = selo principal "streamer" OU cargo STREAMER na lista da comunidade.
+  // (Antes só olhava data.role: se vinha "membro", o campo sumia e o canal era enviado vazio.)
+  function isStreamerProfile(data) {
+    if (!data) return false;
+    if (roleFromProfile(data) === "streamer") return true;
+    const roles = Array.isArray(data.community_roles) ? data.community_roles : [];
+    return roles.some(r => String(r || "").toLocaleLowerCase("pt-BR").trim() === "streamer");
+  }
+
+  /** Resume o que mostrar no botão: {href, platform, live} ou null. */
+  function streamInfo(data) {
+    if (!data || data.details_hidden || !isStreamerProfile(data)) return null;
+    const channel = parseStreamUrl(data.stream_url);
+    const liveLink = data.stream_live ? parseStreamUrl(data.stream_live_url) : null;
+    if (!channel && !liveLink) return null;
+    const live = Boolean(data.stream_live);
+    const main = (live && liveLink) ? liveLink : (channel || liveLink);
+    return { href: main.url, platform: main.platform, live };
+  }
+
+  function createStreamLink(info, className) {
+    const a = document.createElement("a");
+    a.className = className || "profile-stream-btn";
+    a.href = info.href;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer nofollow";
+    a.classList.toggle("is-live", info.live);
+    a.append(node("span", info.live ? "🔴" : "📺", "profile-stream-dot"));
+    a.append(node("span", info.live ? "Assistir stream" : "Ver canal", "profile-stream-text"));
+    a.append(node("small", info.platform, "profile-stream-platform"));
+    a.title = info.live
+      ? "Ao vivo agora na " + info.platform
+      : "Abrir canal na " + info.platform;
+    return a;
+  }
+
+  function renderStreamButton(data) {
+    const slot = safe("profileStreamBtn");
+    if (!slot) return;
+    const info = streamInfo(data);
+    if (!info) { slot.hidden = true; slot.removeAttribute("href"); slot.replaceChildren(); return; }
+    const fresh = createStreamLink(info, "profile-stream-btn");
+    slot.hidden = false;
+    slot.className = fresh.className;
+    slot.href = fresh.href;
+    slot.target = fresh.target;
+    slot.rel = fresh.rel;
+    slot.title = fresh.title;
+    slot.replaceChildren(...fresh.childNodes);
+  }
+
+  /** Botão do próprio streamer: avisa o site que começou/terminou a live. */
+  function renderGoLive() {
+    const btn = safe("profileGoLiveBtn");
+    if (!btn) return;
+    const d = selfProfile;
+    const channel = d ? parseStreamUrl(d.stream_url) : null;
+    const show = currentMode === "self" && Boolean(d) && isStreamerProfile(d) && Boolean(channel);
+    btn.hidden = !show;
+    if (!show) return;
+    const live = Boolean(d.stream_live);
+    btn.classList.toggle("is-live", live);
+    btn.setAttribute("aria-pressed", String(live));
+    btn.textContent = live ? "⏹ Encerrar live" : "🔴 Entrei ao vivo";
+    btn.disabled = false;
+  }
+
+  function handleGoLive() {
+    const d = selfProfile;
+    const channel = d ? parseStreamUrl(d.stream_url) : null;
+    if (!channel || !isStreamerProfile(d)) return;
+    const next = !d.stream_live;
+    const ok = context?.send?.({
+      t: "stream_live_set",
+      live: next,
+      url: next ? liveUrlFor(channel) : "",
+    });
+    if (!ok) { context?.toast?.("A conexão caiu. Reconecte-se e tente de novo."); return; }
+    const btn = safe("profileGoLiveBtn");
+    if (btn) btn.disabled = true;
+    // Se o servidor não responder, libera o botão de novo.
+    setTimeout(renderGoLive, 3000);
+    context?.toast?.(next ? "Live anunciada na comunidade! 🔴" : "Live encerrada.");
+  }
+
+  function refreshStreamHint() {
+    const input = safe("pStreamUrl");
+    const hint = safe("pStreamHint");
+    if (!input || !hint) return;
+    const raw = input.value.trim();
+    hint.classList.remove("is-error", "is-ok");
+    if (!raw) {
+      hint.textContent = "Link do seu canal na Twitch, YouTube ou Kick. Aparece como botão no seu perfil.";
+      return;
+    }
+    const info = parseStreamUrl(raw);
+    if (info) {
+      hint.textContent = "✓ Canal da " + info.platform + " reconhecido.";
+      hint.classList.add("is-ok");
+    } else {
+      hint.textContent = "Link não reconhecido. Use o endereço do canal (twitch.tv/…, youtube.com/@…, kick.com/…).";
+      hint.classList.add("is-error");
+    }
+  }
+
   function formatJoined(value) {
     if (!value) return "Data de entrada não registrada";
     const date = new Date(value);
@@ -664,6 +815,7 @@
     const displayName = data.display_name || username || "Jogador";
     setText("profileDisplayName", displayName);
     renderVerifiedBadge(data);
+    renderStreamButton(data);
     setText("profileUsername", "@" + (data.username || username || "jogador"));
 
     if (data.details_hidden) {
@@ -695,6 +847,7 @@
     if (card) {
       card.style.setProperty("--profile-accent", data.accent || defaultAccent());
       card.dataset.frame = data.frame || "default";
+      card.classList.toggle("is-streaming", Boolean(streamInfo(data)?.live));
     }
     const page = safe("profileRoot") || document.querySelector(".profile-page");
     if (page) {
@@ -759,6 +912,7 @@
       if (actions) actions.hidden = true;
       if (backBtn) backBtn.hidden = true;
     }
+    renderGoLive();
     const page = safe("profileRoot") || document.querySelector(".profile-page");
     if (page) page.dataset.profileMode = currentMode;
   }
@@ -942,6 +1096,13 @@
     setVal("profileFrameInput", profile.frame || "default");
     setVal("profileThemeInput", profile.theme || "classic");
 
+    // Canal de stream: só aparece para quem tem o selo de streamer.
+    const streamField = safe("pStreamField");
+    const canStream = isStreamerProfile(profile);
+    if (streamField) streamField.hidden = !canStream;
+    setVal("pStreamUrl", canStream ? (profile.stream_url || "") : "");
+    refreshStreamHint();
+
     const visibility = profile.visibility ||
       (profile.is_private ? "private" : "public");
     setVal("profileVisibilityInput", visibility);
@@ -1004,6 +1165,22 @@
     if (currentMode !== "self") return;
     const displayName = safe("profileDisplayNameInput")?.value.trim();
     if (!displayName) { showImageError("Informe um nome de exibição."); safe("profileDisplayNameInput")?.focus(); return; }
+
+    // Canal de stream (só streamers). Vazio = remove a associação.
+    let streamUrl = "";
+    if (isStreamerProfile(profile)) {
+      const rawStream = safe("pStreamUrl")?.value.trim() || "";
+      if (rawStream) {
+        const info = parseStreamUrl(rawStream);
+        if (!info) {
+          showImageError("Link do canal inválido. Use Twitch, YouTube ou Kick.");
+          safe("pStreamUrl")?.focus();
+          return;
+        }
+        streamUrl = info.url;
+      }
+    }
+
     const msg = safe("profileFormMessage");
     if (msg) { msg.textContent = "Salvando perfil…"; msg.classList.remove("is-error"); }
 
@@ -1014,6 +1191,8 @@
 
     const visibility = safe("profileVisibilityInput")?.value || "public";
     const isPrivate = visibility === "private";
+
+    pendingStreamUrl = isStreamerProfile(profile) ? streamUrl : null;
 
     const ok = context?.send?.({
       t: "profile_set",
@@ -1034,6 +1213,7 @@
       is_private: isPrivate,
       show_stats: Boolean(safe("profileShowStatsInput")?.checked),
       show_activity: Boolean(safe("profileShowActivityInput")?.checked),
+      stream_url: streamUrl,
     });
     if (!ok) showImageError("A conexão caiu. Reconecte-se antes de salvar o perfil.");
   }
@@ -1122,6 +1302,10 @@
     if (repBtn) repBtn.addEventListener("click", handleReport);
     const friendBtn = safe("profileFriendBtn");
     if (friendBtn) friendBtn.addEventListener("click", handleFriendClick);
+    const goLiveBtn = safe("profileGoLiveBtn");
+    if (goLiveBtn) goLiveBtn.addEventListener("click", handleGoLive);
+    const streamInput = safe("pStreamUrl");
+    if (streamInput) streamInput.addEventListener("input", refreshStreamHint);
 
     const editorClose = safe("profileEditorClose");
     if (editorClose) editorClose.addEventListener("click", () => safe("profileEditor")?.close());
@@ -1258,6 +1442,7 @@
       .profile-summary-role[data-role="beta"]      { color:#ff9d2e; }
       .profile-summary-role[data-role="membro"]    { color:#9298a3; }
       .profile-summary-joined { color:var(--muted, #9298a3); font-size:.78rem; }
+      .profile-summary .profile-stream-btn { align-self:flex-start; }
     `;
     document.head.appendChild(style);
     _summaryStylesInjected = true;
@@ -1354,6 +1539,9 @@
 
     if (d.bio) root.append(node("p", d.bio, "profile-summary-bio"));
 
+    const streamData = streamInfo(d);
+    if (streamData) root.append(createStreamLink(streamData, "profile-stream-btn"));
+
     const tags = node("div", null, "profile-summary-tags");
     if (d.rank) {
       const stars = profileStars(d);
@@ -1382,7 +1570,17 @@
   }
 
   function setProfile(nextProfile, username) {
+    const expectedStream = pendingStreamUrl;
+    pendingStreamUrl = null;
     renderProfile(nextProfile, username);
+
+    // Diagnóstico: o navegador enviou o canal, mas o servidor devolveu o perfil sem ele.
+    if (expectedStream && nextProfile && !nextProfile.stream_url) {
+      console.warn("[ProfileUI] O servidor não devolveu stream_url após o profile_set. " +
+        "O backend precisa gravar e retornar esse campo.", { enviado: expectedStream });
+      context?.toast?.("O servidor não salvou o canal. É preciso atualizar o backend (campo stream_url).");
+    }
+
     const dialog = safe("profileEditor");
     if (dialog && dialog.open) {
       dialog.close();
@@ -1421,6 +1619,9 @@
     heroImageUrl, RANK_OPTIONS,
 
     createProfileSummary, profileStars, formatJoined,
+
+    // streamers
+    parseStreamUrl, liveUrlFor, isStreamerProfile, streamInfo, createStreamLink,
   };
 
   if (document.readyState === "loading") {

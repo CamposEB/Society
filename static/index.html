@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="/static/css/components.css">
 <link rel="stylesheet" href="/static/css/lfg.css">
 <link rel="stylesheet" href="/static/css/tools.css">
+<link rel="stylesheet" href="/static/css/retri-trainer.css">
 <link rel="stylesheet" href="/static/css/profile.css">
 <link rel="stylesheet" href="/static/css/tournaments.css">
 <link rel="stylesheet" href="/static/css/home.css">
@@ -29,12 +30,14 @@
 <link rel="stylesheet" href="/static/css/hero-official.css">
 <link rel="stylesheet" href="/static/css/command-palette.css">
 <link rel="stylesheet" href="/static/css/moderation.css">
+<link rel="stylesheet" href="/static/css/admin-v2.css"> 
+<!-- 🆕 admin-v2: DEPOIS do moderation.css -->
+<link rel="stylesheet" href="/static/css/admin-v2.css">
 <link rel="stylesheet" href="/static/css/meta-builds.css">
 <link rel="stylesheet" href="/static/css/sidebar-hover.css">
 <link rel="stylesheet" href="/static/css/lobby.css">
 <link rel="stylesheet" href="/static/css/guide.css">
-<link rel="stylesheet" href="/static/css/hero-official.css">
-<link rel="stylesheet" href="/static/css/moderation.css">
+<link rel="stylesheet" href="/static/css/topbar.css">
 </head>
 <body>
 
@@ -116,22 +119,70 @@
 </dialog>
 
 <div id="game">
-<header id="topbar">
+<!-- ═════════ TOPBAR ═════════ -->
+<header id="topbar" class="tb">
   <button id="menuBtn" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
   </button>
+
   <button id="topbarBrand" type="button" data-shortcut="home" aria-label="Society MLBB, início">
-    <span class="logo"><img src="/static/img/logo.png" alt="Society MLBB"></span>
+    <span class="logo"><img src="/static/img/logo.png" alt=""></span>
+    <span class="tb-wordmark" aria-hidden="true">Society <b>MLBB</b></span>
   </button>
+
+  <nav id="topbarNav" class="tb-nav" aria-label="Seções do site">
+    <button type="button" class="tb-link" data-shortcut="home" data-tab="home">Início</button>
+
+    <div class="tb-item">
+      <button type="button" class="tb-link tb-trigger" aria-expanded="false" aria-controls="tbMenuMeta">Meta
+        <svg class="tb-caret" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="m2 3.5 3 3 3-3"/></svg></button>
+      <div id="tbMenuMeta" class="tb-menu" hidden>
+        <button type="button" data-shortcut="meta" data-tab="meta"><b>Meta por rota</b><small>Heróis em alta em cada lane</small></button>
+        <button type="button" data-shortcut="heroes" data-tab="heroes"><b>Heróis</b><small>Catálogo com builds e meta</small></button>
+        <button type="button" data-shortcut="builds" data-tab="builds"><b>Builds</b><small>Itens e emblemas testados pela comunidade</small></button>
+      </div>
+    </div>
+
+    <div class="tb-item">
+      <button type="button" class="tb-link tb-trigger" aria-expanded="false" aria-controls="tbMenuCom">Comunidade
+        <svg class="tb-caret" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="m2 3.5 3 3 3-3"/></svg></button>
+      <div id="tbMenuCom" class="tb-menu" hidden>
+        <button type="button" data-shortcut="lfg" data-tab="lfg"><b>Procurar duo</b><small>Ache parceiros no seu rank e horário</small></button>
+        <button type="button" data-shortcut="dm" data-tab="dm"><b>Mensagens</b><small>Conversas privadas</small></button>
+        <button type="button" data-shortcut="tournaments" data-tab="tournaments"><b>Torneios</b><small>Campeonatos da comunidade</small></button>
+        <button type="button" data-shortcut="lobby" data-tab="lobby"><b>Lobby</b><small>Converse e organize partidas</small></button>
+      </div>
+    </div>
+
+    <div class="tb-item">
+      <button type="button" class="tb-link tb-trigger" aria-expanded="false" aria-controls="tbMenuTools">Ferramentas
+        <svg class="tb-caret" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="m2 3.5 3 3 3-3"/></svg></button>
+      <div id="tbMenuTools" class="tb-menu" hidden>
+        <button type="button" data-shortcut="winrate"><b>Calculadora de win rate</b><small>Quantas vitórias faltam para a sua meta</small></button>
+        <button type="button" data-shortcut="tools" data-tab="tools"><b>Todas as ferramentas</b><small>Win rate, estrelas e custo de skins</small></button>
+        <button type="button" data-shortcut="quiz" data-tab="quiz"><b>Quiz diário</b><small>Uma pergunta por dia, +10 moedas</small></button>
+      </div>
+    </div>
+
+    <button type="button" class="tb-link" data-shortcut="guide" data-tab="guide">Guia</button>
+  </nav>
+
   <form id="topbarSearch" role="search">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.2 4.2"/></svg>
     <input id="topbarSearchInput" type="search" placeholder="Buscar heróis, páginas, builds..." aria-label="Abrir busca rápida" autocomplete="off">
+    <kbd class="tb-kbd" aria-hidden="true">Ctrl K</kbd>
   </form>
+
+  <a id="topbarDiscord" class="tb-icon-link" href="https://discord.gg/SEU-CONVITE" target="_blank" rel="noopener noreferrer" aria-label="Entrar no Discord da comunidade">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M6 6.2C7.6 5.2 9.2 4.7 10.3 4.6l.4.9a11 11 0 0 1 2.6 0l.4-.9c1.1.1 2.7.6 4.3 1.6 1.7 2.4 2.5 5.1 2.2 8.3-1.2.9-2.5 1.5-3.8 1.9l-.9-1.5c.5-.2 1-.4 1.4-.7l-.3-.3a9 9 0 0 1-7.2 0l-.3.3c.4.3.9.5 1.4.7l-.9 1.5c-1.3-.4-2.6-1-3.8-1.9-.3-3.2.5-5.9 2.2-8.3ZM9.2 11a1.5 1.6 0 1 0 0 3.2 1.5 1.6 0 0 0 0-3.2Zm5.6 0a1.5 1.6 0 1 0 0 3.2 1.5 1.6 0 0 0 0-3.2Z"/></svg>
+  </a>
+
   <div id="topbarAccount">
     <div id="sideCoins" role="group" aria-label="Saldo de moedas">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M15.2 9.2c-.5-.8-1.4-1.2-2.7-1.2-1.4 0-2.4.7-2.4 1.7 0 2.7 5.6.8 5.6 3.6 0 1.1-1.1 2-2.8 2-1.3 0-2.4-.5-3-1.4M12.1 6.7v10.6"/></svg>
       <span id="coinsAmount">0</span><small>moedas</small>
     </div>
+    <button class="bell" type="button" aria-label="Notificações">🔔</button>
     <button id="sideProfile" type="button" aria-label="Abrir meu perfil">
       <span id="sidebarAvatar" class="sidebar-avatar" aria-hidden="true">S</span>
       <span class="sidebar-user-copy"><b id="sidebarDisplayName">Jogador</b><small id="sidebarUsername">@jogador</small></span>
@@ -188,8 +239,209 @@
   <div class="tab-loading">Carregando torneios...</div>
 </section>
 
+<!-- ═════════ ADMIN / MODERAÇÃO ═════════ -->
 <section id="tab-admin" class="tab">
-  <div class="tab-loading">Carregando ferramentas da comunidade...</div>
+  <main class="moderation-page adm" id="admRoot">
+    <header class="moderation-hero">
+      <div>
+        <p class="moderation-eyebrow">SOCIETY MLBB · EQUIPE DE CONFIANÇA</p>
+        <h2>Central da comunidade</h2>
+        <p>Analise denúncias com privacidade, registre decisões, gerencie silenciamentos e permissões.</p>
+      </div>
+      <span aria-hidden="true">🛡️</span>
+    </header>
+
+    <p id="admMessage" class="moderation-message" role="status"></p>
+
+    <!-- ═══════════ SEU ACESSO ═══════════ -->
+    <section class="moderation-section">
+      <header class="moderation-section-header">
+        <div>
+          <p class="moderation-eyebrow">SEU ACESSO</p>
+          <h3 id="admAccessTitle">—</h3>
+        </div>
+        <span id="admRoleBadge" class="role-badge is-user">JOGADOR</span>
+      </header>
+      <ul class="adm-ladder" id="admLadder" aria-label="Hierarquia de papéis"></ul>
+      <ul class="mod-permissions" id="admPerms" aria-label="Permissões do seu papel"></ul>
+    </section>
+
+    <!-- ═══════════ FERRAMENTAS POR CARGO ═══════════ -->
+    <section class="moderation-section" data-min="user">
+      <header class="moderation-section-header">
+        <div>
+          <p class="moderation-eyebrow">GUIA RÁPIDO</p>
+          <h3>Ferramentas</h3>
+        </div>
+      </header>
+      <div class="adm-tools" id="admTools"></div>
+    </section>
+
+    <!-- ═══════════ PAINEL (só ADM+) ═══════════ -->
+    <section class="moderation-section" data-min="admin">
+      <header class="moderation-section-header">
+        <div>
+          <p class="moderation-eyebrow">VISÃO GERAL</p>
+          <h3>Painel</h3>
+        </div>
+        <div class="adm-header-actions">
+          <label class="adm-switch">
+            <input type="checkbox" id="admAuto">
+            <span>Auto 30s</span>
+          </label>
+          <button id="admExportReports" class="moderation-secondary" type="button">⤓ CSV</button>
+          <button id="admRefresh" class="moderation-secondary" type="button">↻ Atualizar</button>
+        </div>
+      </header>
+      <div class="adm-stats" id="admStats"></div>
+    </section>
+
+    <!-- ═══════════ DENÚNCIAS (só ADM+) ═══════════ -->
+    <section class="moderation-section" data-min="admin">
+      <header class="moderation-section-header">
+        <div>
+          <p class="moderation-eyebrow">FILA DE ANÁLISE</p>
+          <h3>Denúncias</h3>
+        </div>
+      </header>
+
+      <div class="moderation-filters">
+        <div class="moderation-chips" role="tablist" id="admChips" aria-label="Filtrar denúncias"></div>
+        <label class="moderation-search" aria-label="Buscar denúncia">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input id="admSearch" type="search" autocomplete="off"
+                 placeholder="Buscar por @nick, motivo ou categoria..." />
+        </label>
+      </div>
+
+      <div class="adm-header-actions" style="margin:10px 0 12px">
+        <select id="admCat"  class="adm-select" aria-label="Filtrar por categoria"></select>
+        <select id="admSort" class="adm-select" aria-label="Ordenar denúncias">
+          <option value="new">Mais recentes</option>
+          <option value="old">Mais antigas</option>
+          <option value="repeat">Mais reincidentes</option>
+        </select>
+      </div>
+
+      <div class="adm-bulk" id="admBulk" hidden>
+        <label class="adm-switch">
+          <input type="checkbox" id="admSelAll">
+          <span id="admSelCount">0 selecionadas</span>
+        </label>
+        <div class="adm-bulk-actions">
+          <button data-bulk="review"  class="moderation-secondary" type="button">Em análise</button>
+          <button data-bulk="close"   class="moderation-secondary" type="button">Encerrar</button>
+          <button data-bulk="dismiss" class="moderation-secondary" type="button">Descartar</button>
+        </div>
+      </div>
+
+      <div id="admReportList" class="moderation-report-list"></div>
+      <p id="admReportsEmpty" class="moderation-empty" hidden>
+        <span>✅</span>
+        <b>Não há denúncias aqui.</b>
+        <small>Ajuste os filtros ou clique em Atualizar.</small>
+      </p>
+    </section>
+
+    <!-- ═══════════ SILENCIAMENTOS (MOD+) ═══════════ -->
+    <section class="moderation-section" data-min="mod">
+      <header class="moderation-section-header">
+        <div>
+          <p class="moderation-eyebrow">MEDIDAS ATIVAS</p>
+          <h3>Silenciamentos temporários</h3>
+        </div>
+        <button id="admUnmuteSel" class="moderation-secondary" type="button" disabled>
+          Remover selecionados
+        </button>
+      </header>
+      <div id="admMutes" class="moderation-mute-list"></div>
+      <p id="admMutesEmpty" class="moderation-empty" hidden>Não há silenciamentos ativos.</p>
+    </section>
+
+    <!-- ═══════════ CONTAS E PAPÉIS (DEV) ═══════════ -->
+    <section class="moderation-section" data-min="dev">
+      <header class="moderation-section-header">
+        <div>
+          <p class="moderation-eyebrow">ACESSO RESTRITO · DEV</p>
+          <h3>Contas e papéis</h3>
+        </div>
+        <div class="adm-header-actions">
+          <select id="admAccSort" class="adm-select" aria-label="Ordenar contas">
+            <option value="role">Por cargo</option>
+            <option value="nick">Por nick</option>
+          </select>
+          <button id="admExportAcc"  class="moderation-secondary" type="button">⤓ CSV</button>
+          <button id="admAccRefresh" class="moderation-secondary" type="button">↻ Atualizar</button>
+        </div>
+      </header>
+
+      <div class="mod-role-legend" role="note" aria-label="Hierarquia de papéis">
+        <div class="mod-role-legend-item" data-role="user">
+          <b><span class="role-dot is-user"></span>Jogador</b>
+          <small>Acesso normal ao site. Pode denunciar jogadores.</small>
+        </div>
+        <div class="mod-role-legend-item" data-role="beta">
+          <b><span class="role-dot is-beta"></span>Beta</b>
+          <small>Acesso a recursos em teste. Pode reportar bugs.</small>
+        </div>
+        <div class="mod-role-legend-item" data-role="streamer">
+          <b><span class="role-dot is-streamer"></span>Streamer</b>
+          <small>Divulga transmissões. Selo próprio no perfil.</small>
+        </div>
+        <div class="mod-role-legend-item" data-role="vip">
+          <b><span class="role-dot is-vip"></span>VIP</b>
+          <small>Destaque no perfil. Selo de verificado azul.</small>
+        </div>
+        <div class="mod-role-legend-item" data-role="admin">
+          <b><span class="role-dot is-admin"></span>ADM</b>
+          <small>Revisa denúncias, marca em análise, encerra e descarta.</small>
+        </div>
+        <div class="mod-role-legend-item" data-role="mod">
+          <b><span class="role-dot is-mod"></span>MOD</b>
+          <small>Tudo do ADM + silencia jogadores e remove silenciamentos.</small>
+        </div>
+        <div class="mod-role-legend-item" data-role="dev">
+          <b><span class="role-dot is-dev"></span>DEV</b>
+          <small>Tudo do MOD + atribui e remove qualquer cargo.</small>
+        </div>
+      </div>
+
+      <div class="mod-role-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="10.8" cy="10.8" r="6.3"/>
+          <path d="m15.5 15.5 4.2 4.2"/>
+        </svg>
+        <input id="admAccSearch" type="search" placeholder="Buscar conta por nick..."
+               autocomplete="off" aria-label="Buscar conta">
+      </div>
+
+      <div class="moderation-chips" id="admRoleChips" role="tablist"
+           aria-label="Filtrar por cargo"></div>
+
+      <div id="admAccounts" class="moderation-role-list"></div>
+      <p id="admAccEmpty" class="moderation-empty" hidden>
+        <span>🔍</span>
+        <b>Nenhuma conta encontrada.</b>
+        <small>Ajuste a busca ou clique em Atualizar.</small>
+      </p>
+    </section>
+
+    <!-- ═══════════ LOG DE AÇÕES (ADM+) ═══════════ -->
+    <section class="moderation-section" data-min="admin">
+      <header class="moderation-section-header">
+        <div>
+          <p class="moderation-eyebrow">HISTÓRICO DA SESSÃO</p>
+          <h3>Log de ações</h3>
+        </div>
+        <button id="admLogClear" class="moderation-secondary" type="button">Limpar</button>
+      </header>
+      <ul class="adm-log" id="admLog"></ul>
+      <p id="admLogEmpty" class="moderation-empty" hidden>Sem ações registradas nesta sessão.</p>
+    </section>
+  </main>
 </section>
 
 <section id="tab-profile" class="tab">
@@ -280,11 +532,13 @@
 <div id="lfgToast" class="lfg-toast" role="status" aria-live="polite"></div>
 
 <script src="/static/js/profile.js"></script>
+<script src="profile-enhance.js"></script>
 <script src="/static/js/hero-catalog.js"></script>
 <script src="/static/js/hero-official.js"></script>
 <script src="/static/js/lobby/figure-catalog.js"></script>
 <script src="/static/js/lobby/assets.js"></script>
 <script src="/static/js/lobby/lobby.js"></script>
+<script src="/static/js/guide.js"></script>
 <script src="/static/js/app.js"></script>
 <script src="/static/js/friends.js"></script>
 <script src="/static/js/social.js"></script>
@@ -296,7 +550,12 @@
 <script src="/static/js/hero-official-tabs.js"></script>
 <script src="/static/js/heroes-catalog.js"></script>
 <script src="/static/js/command-palette.js"></script>
+<script src="/static/js/topbar.js"></script>
+<script src="/static/js/retri-trainer.js"></script>
 <script src="/static/js/tools.js"></script>
+<script src="/static/js/admin-panel.js"></script>
+<!-- 🆕 admin-panel: precisa vir DEPOIS do app.js (usa window.appSend / window.Society) -->
+<script src="/static/js/admin-panel.js"></script>
 <script src="/static/js/dm-extras.js" defer></script>
 <script type="module" src="/static/js/auth.js"></script>
 </body>

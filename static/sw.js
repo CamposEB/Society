@@ -4,13 +4,14 @@
 // Estratégia:
 //   - Navegação (HTML) ........... network-first, cai pro cache se offline
 //   - /static/js, /static/css ... network-first (código muda sem mudar URL!)
+//   - /static/views/*.html ...... network-first (as abas do app.js mudam sem mudar URL!)
 //   - outros /static/* .......... cache-first com revalidação em background
 //   - /api/*, /ws, externos ..... nunca intercepta
 //   - Não-GET ................... nunca intercepta
 //
 // REGRA DE OURO: TODO caminho do respondWith precisa devolver um Response.
 // Devolver undefined dispara "Failed to convert value to 'Response'".
-const C = "lobby-v14";                 // bump a versão quando mudar a estratégia
+const C = "lobby-v15";                 // bump a versão quando mudar a estratégia
 const OFFLINE_HTML = new Response(
   '<!doctype html><meta charset="utf-8"><title>Offline</title>' +
   '<body style="font-family:system-ui;background:#0d0d10;color:#e8e8ec;' +
@@ -45,12 +46,14 @@ self.addEventListener("activate", (event) => {
 
 // ─── helpers ────────────────────────────────────────────────
 function isCodeAsset(pathname) {
-  // JS/CSS mudam sem mudar URL → precisam ser network-first
+  // JS, CSS e views HTML mudam sem mudar a URL → precisam ser network-first
   return pathname.startsWith("/static/js/") ||
          pathname.startsWith("/static/css/") ||
+         pathname.startsWith("/static/views/") ||
          pathname.endsWith(".js") ||
          pathname.endsWith(".mjs") ||
-         pathname.endsWith(".css");
+         pathname.endsWith(".css") ||
+         pathname.endsWith(".html");
 }
 
 async function putInCache(req, res) {
@@ -102,7 +105,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // ─── JS / CSS → NETWORK-FIRST (sempre pega a versão nova) ────
+  // ─── JS / CSS / views HTML → NETWORK-FIRST (sempre pega a versão nova) ───
   if (url.pathname.startsWith("/static/") && isCodeAsset(url.pathname)) {
     event.respondWith(
       (async () => {

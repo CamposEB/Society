@@ -28,6 +28,11 @@
 #  21. ⭐ FIX: friend_decline agora cancela o pedido nas DUAS direções
 #      (recusar recebido + cancelar enviado). Antes o botão "Cancelar" no
 #      painel de amigos não funcionava.
+#  22. ⭐ STREAMERS: canal de stream no perfil (profile_set aceita "stream_url"
+#      só de quem tem o papel streamer), botão "Entrei ao vivo"
+#      (stream_live_set), expiração automática da live (6 h) e lista
+#      "Streamers online agora" (mensagem {"t": "streamers_live"}).
+#      Tudo fica em profile_data (JSON), sem mudar o esquema do banco.
 import asyncio, base64, datetime, hashlib, hmac, json, os, re, secrets, time, unicodedata, uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -416,6 +421,126 @@ def _normalize_visibility(data, fallback_private=None):
     return "private" if data.get("is_private") else "public"
 
 
+# ═══════════════════════════════════════════════════════════
+# STREAMERS: canal, live manual, lista "online agora"
+# Tudo é guardado em users.profile_data (JSON):
+#   stream_url, stream_live (bool), stream_live_url, stream_live_at (epoch)
+# ═══════════════════════════════════════════════════════════
+STREAM_PLATFORMS = (
+    ("Twitch", ("twitch.tv", "www.twitch.tv", "m.twitch.tv")),
+    ("YouTube", ("youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be")),
+    ("Kick", ("kick.com", "www.kick.com")),
+)
+STREAM_URL_MAX = 300
+STREAM_LIVE_TTL = 6 * 3600          # a live "expira" sozinha se o streamer esquecer de encerrar
+STREAM_LIVE_KEYS = ("stream_live", "stream_live_url", "stream_live_at")
+STREAMERS_LIVE_MAX = 12
+
+
+def _parse_stream_url(value):
+    """Valida e normaliza link de canal/live. Retorna (url, plataforma) ou None."""
+    raw = str(value or "").strip()
+    if not raw or len(raw) > STREAM_URL_MAX or re.search(r"[\s<>\"'\\]", raw):
+        return None
+    if not re.match(r"^https?://", raw, re.I):
+        raw = "https://" + raw
+    try:
+        parsed = urlparse(raw)
+        port = parsed.port
+    except ValueError:
+        return None
+    if parsed.scheme.lower() not in ("http", "https") or parsed.username or parsed.password:
+        return None
+    if port not in (None, 80, 443):
+        return None
+    host = (parsed.hostname or "").lower()
+    platform = next((name for name, hosts in STREAM_PLATFORMS if host in hosts), None)
+    if not platform or not parsed.path.strip("/"):
+        return None
+    clean = f"https://{host}{parsed.path}" + (f"?{parsed.query}" if parsed.query else "")
+    if len(clean) > STREAM_URL_MAX:
+        return None
+    return clean, platform
+
+
+def _stream_live_active(data):
+    if not data.get("stream_live"):
+        return False
+    try:
+        started = float(data.get("stream_live_at") or 0)
+    except (TypeError, ValueError):
+        return False
+    return (time.time() - started) < STREAM_LIVE_TTL
+
+
+def streamers_live_list():
+    """Quem está ao vivo agora (só perfis públicos de quem tem o papel streamer)."""
+    try:
+        rows = db.execute(
+            "SELECT nick, display, profile_data FROM users WHERE profile_data LIKE ?",
+            ("%stream_live%",),
+        ).fetchall()
+    except Exception as exc:
+        print(f"⚠️  [streamers_live_list] erro: {exc}")
+        return []
+    result = []
+    for row in rows:
+        try:
+            data = json.loads(row["profile_data"] or "{}")
+        except (TypeError, ValueError):
+            continue
+        if not _stream_live_active(data):
+            continue
+        nick = row["nick"]
+        if role_for(nick) != "streamer" or _normalize_visibility(data) != "public":
+            continue
+        channel = _parse_stream_url(data.get("stream_url"))
+        if not channel:
+            continue
+        live_link = _parse_stream_url(data.get("stream_live_url")) or channel
+        avatar = data.get("avatar", "")
+        if len(avatar) > 60000:       # evita mandar imagens enormes para todo mundo
+            avatar = ""
+        result.append({
+            "nick": nick,
+            "display_name": data.get("display_name") or row["display"] or nick,
+            "avatar": avatar,
+            "stream_url": channel[0],
+            "stream_live_url": live_link[0],
+            "platform": live_link[1],
+            "live_at": data.get("stream_live_at") or 0,
+        })
+    result.sort(key=lambda item: item["live_at"], reverse=True)
+    return result[:STREAMERS_LIVE_MAX]
+
+
+def _expire_stream_lives():
+    """Encerra lives antigas. Retorna True se alguma foi encerrada."""
+    try:
+        rows = db.execute(
+            "SELECT nick, profile_data FROM users WHERE profile_data LIKE ?",
+            ("%stream_live%",),
+        ).fetchall()
+    except Exception as exc:
+        print(f"⚠️  [expire_stream_lives] erro: {exc}")
+        return False
+    changed = False
+    for row in rows:
+        try:
+            data = json.loads(row["profile_data"] or "{}")
+        except (TypeError, ValueError):
+            continue
+        if data.get("stream_live") and not _stream_live_active(data):
+            for key in STREAM_LIVE_KEYS:
+                data.pop(key, None)
+            db.execute("UPDATE users SET profile_data=? WHERE nick=?",
+                       (json.dumps(data, ensure_ascii=False), row["nick"]))
+            changed = True
+    if changed:
+        db.commit()
+    return changed
+
+
 def profile(nick, viewer=None):
     u = get_user(nick)
     data = json.loads(u["profile_data"] or "{}")
@@ -485,6 +610,18 @@ def profile(nick, viewer=None):
         "show_stats": bool(data.get("show_stats", True)),
         "show_activity": bool(data.get("show_activity", True)),
     })
+
+    # ⭐ canal de stream (só para quem tem o papel streamer)
+    if role == "streamer":
+        channel = _parse_stream_url(data.get("stream_url"))
+        if channel:
+            result["stream_url"] = channel[0]
+            live_now = _stream_live_active(data)
+            result["stream_live"] = live_now
+            if live_now:
+                live_link = _parse_stream_url(data.get("stream_live_url")) or channel
+                result["stream_live_url"] = live_link[0]
+
     stars = _parse_profile_stars(data.get("stars"))
     if stars is not None and _is_mythic_plus_rank(result.get("rank")):
         result["stars"] = stars
@@ -1046,6 +1183,13 @@ async def broadcast(data, skip=None):
         if n != skip: await send(n, data)
 
 
+async def broadcast_streamers():
+    """Manda a lista "Streamers online agora" para todos os conectados."""
+    data = {"t": "streamers_live", "list": streamers_live_list()}
+    for n in list(online):
+        await send(n, data)
+
+
 async def broadcast_tournaments():
     for viewer in list(online):
         await send(viewer, {"t": "tournaments", "list": tournament_list(viewer)})
@@ -1123,6 +1267,12 @@ async def online_rewards():
                            (earned + 1, today, nick))
                 db.commit()
                 await send(nick, {"t": "me", **me(nick)})
+        # ⭐ encerra lives que passaram do prazo e avisa a home
+        try:
+            if _expire_stream_lives():
+                await broadcast_streamers()
+        except Exception as exc:
+            print(f"⚠️  [online_rewards] expirar lives falhou: {exc}")
 
 
 @asynccontextmanager
@@ -1453,6 +1603,7 @@ async def ws_endpoint(ws: WebSocket):
         }))
         await send(nick, {"t": "tournaments", "list": tournament_list(nick)})
         await send(nick, friends_summary(nick))
+        await send(nick, {"t": "streamers_live", "list": streamers_live_list()})
         await social.send_initial(nick)
         current_mute = mute_status(nick)
         if current_mute:
@@ -1591,6 +1742,41 @@ async def ws_endpoint(ws: WebSocket):
                 await notify_friend_change(nick, target, "none")
 
             # ═══════════════════════════════════════════
+            # STREAMERS
+            # ═══════════════════════════════════════════
+            elif t == "streamers_list":
+                await send(nick, {"t": "streamers_live", "list": streamers_live_list()})
+            elif t == "stream_live_set":
+                # Streamer avisa que começou/terminou a live (botão "Entrei ao vivo").
+                if role_for(nick) != "streamer":
+                    await send(nick, {"t": "profile_error", "m": "Apenas streamers podem anunciar lives."})
+                    continue
+                current = get_user(nick)
+                data = json.loads(current["profile_data"] or "{}")
+                channel = _parse_stream_url(data.get("stream_url"))
+                if not channel:
+                    await send(nick, {"t": "profile_error",
+                                      "m": "Salve o link do seu canal no perfil antes de anunciar uma live."})
+                    continue
+                if m.get("live") is True:
+                    live_link = _parse_stream_url(m.get("url"))
+                    # o link da live precisa ser da mesma plataforma do canal cadastrado
+                    if not live_link or live_link[1] != channel[1]:
+                        live_link = channel
+                    data["stream_live"] = True
+                    data["stream_live_url"] = live_link[0]
+                    data["stream_live_at"] = time.time()
+                    add_activity(nick, "community", "Entrou ao vivo no " + channel[1])
+                else:
+                    for key in STREAM_LIVE_KEYS:
+                        data.pop(key, None)
+                db.execute("UPDATE users SET profile_data=? WHERE nick=?",
+                           (json.dumps(data, ensure_ascii=False), nick))
+                db.commit()
+                await send(nick, {"t": "profile", "p": profile(nick, nick)})
+                await broadcast_streamers()
+
+            # ═══════════════════════════════════════════
             # RESTO (perfil, DM, torneio, moderação, etc.)
             # ═══════════════════════════════════════════
             elif t == "profile_view":
@@ -1631,6 +1817,26 @@ async def ws_endpoint(ws: WebSocket):
                         else:
                             raw_vis = _normalize_visibility(data)
 
+                    # ⭐ canal de stream: só quem tem o papel streamer pode definir.
+                    # Para os demais o campo é ignorado em silêncio.
+                    is_streamer_user = role_for(nick) == "streamer"
+                    if "stream_url" in m and is_streamer_user:
+                        raw_stream = str(m.get("stream_url") or "").strip()
+                        if raw_stream:
+                            parsed_stream = _parse_stream_url(raw_stream)
+                            if not parsed_stream:
+                                await send(nick, {"t": "profile_error",
+                                                  "m": "Link do canal inválido. Use Twitch, YouTube ou Kick."})
+                                continue
+                            if data.get("stream_url") != parsed_stream[0]:
+                                data["stream_url"] = parsed_stream[0]
+                                for key in STREAM_LIVE_KEYS:   # trocou de canal: encerra a live antiga
+                                    data.pop(key, None)
+                        else:
+                            data.pop("stream_url", None)
+                            for key in STREAM_LIVE_KEYS:
+                                data.pop(key, None)
+
                     data.update({
                         "display_name": display_name,
                         "accent": accent,
@@ -1658,6 +1864,9 @@ async def ws_endpoint(ws: WebSocket):
                     await bc_room(nick, {"t": "player_profile", "nick": nick, "p": saved_profile}, skip=nick)
                     if db.execute("SELECT 1 FROM lfg WHERE nick=?", (nick,)).fetchone():
                         await broadcast({"t": "lfg", "list": lfg_list()})
+                    if is_streamer_user:
+                        # canal/visibilidade/avatar podem ter mudado: atualiza a home
+                        await broadcast_streamers()
                     continue
                 continue
             elif t == "settings_set":
@@ -1689,6 +1898,8 @@ async def ws_endpoint(ws: WebSocket):
                                   "profile": profile(nick, nick)})
                 if db.execute("SELECT 1 FROM lfg WHERE nick=?", (nick,)).fetchone():
                     await broadcast({"t": "lfg", "list": lfg_list()})
+                if role_for(nick) == "streamer":
+                    await broadcast_streamers()   # a visibilidade pode ter mudado
             elif t == "password_change":
                 current_password = m.get("current", "")
                 new_password = m.get("new", "")
@@ -1875,6 +2086,7 @@ async def ws_endpoint(ws: WebSocket):
                     await send(nick, {"t": "admin_roles_saved", "m": f"@{target} agora é {new_role.upper()}."})
                     await broadcast_role_list()
                     await broadcast_moderation()
+                    await broadcast_streamers()   # se deixou de ser streamer, sai da lista
                 except IdentityError as error:
                     await send(nick, {"t": "admin_roles_error", "m": str(error)})
                 except Exception as error:

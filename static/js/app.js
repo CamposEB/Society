@@ -402,6 +402,14 @@ function sendProfileToDmBridge(profile, nick){
 
 function handle(m){
   const t = m.t;
+
+  /* ⭐ CORREÇÃO #2 — repassa mensagens do novo painel (admin-panel.js escuta "society:admin"). */
+  if (typeof t === "string" && (t.indexOf("moderation_") === 0 || t.indexOf("admin_roles") === 0)) {
+    try {
+      window.dispatchEvent(new CustomEvent("society:admin", { detail: m }));
+    } catch (e) { /* ignora */ }
+  }
+
   if (typeof t === "string" && t.indexOf("hero_") === 0) {
     window.dispatchEvent(new CustomEvent("society:ws", {detail:m}));
     return;
@@ -843,6 +851,19 @@ window.Society = {
   tab: n => tab(n),
   send: o => send(o),
   toast: msg => showLfgToast(msg),
+
+  /* ⭐ CORREÇÃO #1 — usados pelo admin-panel.js (onShow / has(min)). */
+  role: () => {
+    if (IS_DEV) return "dev";
+    if (IS_MODERATOR) return "mod";
+    if (IS_ADMIN) return "admin";
+    if (IS_VIP) return "vip";
+    if (IS_STREAMER) return "streamer";
+    if (IS_BETA) return "beta";
+    return "user";
+  },
+  self: () => SELF || null,
+
   itemFile: name => {
     const n = String(name || "").toLocaleLowerCase("pt-BR");
     const slug = iconSlug(name);
