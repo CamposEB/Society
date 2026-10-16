@@ -30,12 +30,12 @@ body{display:block;margin:0;min-height:100vh;color:var(--text);font-family:Inter
 #pageTitle{max-width:1100px;margin:0 auto 14px;font-size:1.7rem}
 #sidebar{position:fixed;inset:0 auto 0 0;width:248px;padding:0 10px 12px;background:var(--surface);border-right:1px solid var(--border);
   display:flex;flex-direction:column;z-index:20;transition:transform .2s,visibility 0s linear .2s}
-.sidebar-heading{display:flex;align-items:center;justify-content:space-between}
+.sidebar-heading{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between}
 #brand{display:flex;align-items:center;gap:11px;padding:17px 10px 18px}
 #brand b{font-size:.8rem;letter-spacing:.075em}
 .logo{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:none;color:var(--logo-text);font-weight:700;font-size:1.3rem}
 #menuClose{display:none}
-#nav{display:flex;flex:1;flex-direction:column;gap:11px;min-height:0;overflow:auto;padding:0 0 10px;scrollbar-width:thin}
+#nav{display:flex;flex:1;flex-direction:column;gap:11px;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 0 10px;scrollbar-width:thin}
 #nav .nav-group{display:flex;flex-direction:column;gap:2px}
 #nav .nav-group-label{padding:9px 11px 4px;color:var(--text-muted);font-size:.62rem;font-weight:800;letter-spacing:.13em}
 #nav button[hidden]{display:none}
@@ -74,8 +74,10 @@ body{display:block;margin:0;min-height:100vh;color:var(--text);font-family:Inter
   .sidebar-avatar{width:32px;height:32px;flex-basis:32px}
   .sidebar-user-copy{display:none}
   #pageTitle{font-size:1.4rem}
-  #sidebar{width:min(290px,86vw);padding:0 12px 16px;transform:translateX(-105%);visibility:hidden}
+  #sidebar{width:min(290px,86vw);height:100vh;height:100dvh;padding:0 12px 0;transform:translateX(-105%);visibility:hidden}
   body.menu #sidebar{transform:translateX(0);visibility:visible;box-shadow:var(--shadow-lg);transition:transform .2s,visibility 0s}
+  /* Espaço no fim do menu para a barra inferior (#mobileNav) não cobrir "Sair" */
+  #nav{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
   #menuClose{display:grid;place-items:center;width:36px;height:36px;margin-right:4px;padding:7px;border:1px solid var(--border);background:var(--surface-2);color:var(--text)}
   #menuClose:hover:not(:disabled){background:var(--surface-tint-3)}
   body.menu #scrim{display:block;position:fixed;inset:0;background:var(--overlay);z-index:15}

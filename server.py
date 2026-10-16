@@ -50,6 +50,7 @@ from pydantic import BaseModel
 from identity_store import IdentityError, identity_store
 from db import connect as _connect_db
 import social
+import profile_customization
 
 BOT_KEY = os.getenv("BOT_KEY", "").strip()
 ALLOW_LEGACY_LOGIN = os.getenv("ALLOW_LEGACY_LOGIN", "true").strip().lower() in ("1", "true", "yes")
@@ -559,7 +560,6 @@ def profile(nick, viewer=None):
     else:
         can_see_details = False
 
-    # ⭐ todos os 7 cargos agora aparecem corretamente em community_roles
     ROLE_LABELS = {
         "dev": "DEV",
         "admin": "ADMIN",
@@ -568,13 +568,15 @@ def profile(nick, viewer=None):
         "streamer": "STREAMER",
         "beta": "BETA",
     }
-    if role in ROLE_LABELS:
-        community_roles = [ROLE_LABELS[role]]
-    else:
-        community_roles = ["MEMBRO"]
-
-    # ⭐ staff + vip + streamer têm selo; beta NÃO tem
+    community_roles = [ROLE_LABELS[role]] if role in ROLE_LABELS else ["MEMBRO"]
     verified = role in ("dev", "admin", "mod", "vip", "streamer")
+
+    # [v23] Sanitiza frame/tema/avatar_shape na LEITURA — protege contra
+    # downgrade/upgrade de cargo. Se o usuário perdeu o papel que dava
+    # acesso, o card cai no default e o cliente reflete isso na hora.
+    _, safe_frame = profile_customization.frame_allowed(role, data.get("frame"))
+    _, safe_theme = profile_customization.theme_allowed(role, data.get("theme"))
+    safe_shape = profile_customization.normalize_avatar_shape(data.get("avatar_shape"))
 
     result = {
         "nick": nick,
@@ -592,11 +594,11 @@ def profile(nick, viewer=None):
         "avatar": data.get("avatar", ""),
         "banner": data.get("banner", ""),
         "accent": data.get("accent", "#8b72ff"),
-        "frame": data.get("frame", "default"),
-        "theme": data.get("theme", "classic"),
+        "frame": safe_frame,               # ← sanitizado
+        "theme": safe_theme,               # ← sanitizado
+        "avatar_shape": safe_shape,        # ← NOVO
     }
 
-    # contadores sociais + relação de quem vê (seguindo / segue você)
     result["social"] = social.social_counts(nick, viewer)
 
     if not can_see_details:
@@ -611,7 +613,6 @@ def profile(nick, viewer=None):
         "show_activity": bool(data.get("show_activity", True)),
     })
 
-    # ⭐ canal de stream (só para quem tem o papel streamer)
     if role == "streamer":
         channel = _parse_stream_url(data.get("stream_url"))
         if channel:
@@ -1784,30 +1785,35 @@ async def ws_endpoint(ws: WebSocket):
                 if get_user(other):
                     await send(nick, {"t": "pview", "nick": other, "p": profile(other, nick)})
             elif t == "profile_set":
-                f = {k: str(m.get(k, "")).strip()[:(60 if k == "bio" else 20)] for k in ("bio", "rank", "role", "hero", "gid")}
+                f = {k: str(m.get(k, "")).strip()[:(60 if k == "bio" else 20)]
+                     for k in ("bio", "rank", "role", "hero", "gid")}
                 stars = _parse_profile_stars(m.get("stars"))
                 if stars is not None and (_is_mythic_plus_rank(f["rank"]) or f["rank"] == ""):
                     f["rank"] = _rank_from_mythic_stars(stars)
                 if not _is_mythic_plus_rank(f["rank"]):
                     stars = None
+
                 current = get_user(nick)
                 data = json.loads(current["profile_data"] or "{}")
                 display_name = str(m.get("display_name", current["display"])).strip()[:28]
                 if not display_name:
                     await send(nick, {"t": "profile_error", "m": "O nome de exibição não pode ficar vazio."})
                     continue
+
                 for field in ("avatar", "banner"):
                     image = str(m.get(field, data.get(field, "")))
                     max_length = 120000 if field == "avatar" else 350000
                     if image and (len(image) > max_length or not re.fullmatch(
                             r"data:image/jpeg;base64,[A-Za-z0-9+/]+={0,2}", image)):
-                        await send(nick, {"t": "profile_error", "m": "A imagem selecionada não é válida ou ficou grande demais."})
+                        await send(nick, {"t": "profile_error",
+                                          "m": "A imagem selecionada não é válida ou ficou grande demais."})
                         break
                     data[field] = image
                 else:
                     accent = str(m.get("accent", data.get("accent", "#8b72ff")))
                     if not re.fullmatch(r"#[0-9a-fA-F]{6}", accent):
-                        await send(nick, {"t": "profile_error", "m": "Escolha uma cor de destaque válida."})
+                        await send(nick, {"t": "profile_error",
+                                          "m": "Escolha uma cor de destaque válida."})
                         continue
 
                     raw_vis = str(m.get("visibility", "")).strip()
@@ -1817,9 +1823,31 @@ async def ws_endpoint(ws: WebSocket):
                         else:
                             raw_vis = _normalize_visibility(data)
 
-                    # ⭐ canal de stream: só quem tem o papel streamer pode definir.
-                    # Para os demais o campo é ignorado em silêncio.
-                    is_streamer_user = role_for(nick) == "streamer"
+                    # ═══════════════════════════════════════════════════
+                    # [v23] GATING DE FRAME / TEMA / FORMATO DO AVATAR
+                    # ═══════════════════════════════════════════════════
+                    user_role = role_for(nick)
+
+                    raw_frame = str(m.get("frame", data.get("frame", "default"))).strip()
+                    frame_ok, frame_val = profile_customization.frame_allowed(user_role, raw_frame)
+                    if not frame_ok:
+                        await send(nick, {"t": "profile_error",
+                                          "m": "Você não tem acesso a esta moldura."})
+                        continue
+
+                    raw_theme = str(m.get("theme", data.get("theme", "classic"))).strip()
+                    theme_ok, theme_val = profile_customization.theme_allowed(user_role, raw_theme)
+                    if not theme_ok:
+                        await send(nick, {"t": "profile_error",
+                                          "m": "Você não tem acesso a este tema."})
+                        continue
+
+                    shape_val = profile_customization.normalize_avatar_shape(
+                        m.get("avatar_shape", data.get("avatar_shape", "round"))
+                    )
+
+                    # canal de stream: só streamers
+                    is_streamer_user = user_role == "streamer"
                     if "stream_url" in m and is_streamer_user:
                         raw_stream = str(m.get("stream_url") or "").strip()
                         if raw_stream:
@@ -1830,7 +1858,7 @@ async def ws_endpoint(ws: WebSocket):
                                 continue
                             if data.get("stream_url") != parsed_stream[0]:
                                 data["stream_url"] = parsed_stream[0]
-                                for key in STREAM_LIVE_KEYS:   # trocou de canal: encerra a live antiga
+                                for key in STREAM_LIVE_KEYS:
                                     data.pop(key, None)
                         else:
                             data.pop("stream_url", None)
@@ -1840,10 +1868,9 @@ async def ws_endpoint(ws: WebSocket):
                     data.update({
                         "display_name": display_name,
                         "accent": accent,
-                        "frame": str(m.get("frame", data.get("frame", "default")))
-                        if m.get("frame", data.get("frame", "default")) in ("default", "elite") else "default",
-                        "theme": str(m.get("theme", data.get("theme", "classic")))
-                        if m.get("theme", data.get("theme", "classic")) in ("classic", "arena", "ocean") else "classic",
+                        "frame": frame_val,           # ← validado
+                        "theme": theme_val,           # ← validado
+                        "avatar_shape": shape_val,    # ← NOVO
                         "title": str(m.get("title", data.get("title", ""))).strip()[:30],
                         "visibility": raw_vis,
                         "is_private": raw_vis == "private",
@@ -1854,8 +1881,11 @@ async def ws_endpoint(ws: WebSocket):
                         data.pop("stars", None)
                     else:
                         data["stars"] = stars
-                    db.execute("UPDATE users SET display=?, bio=?, rank=?, role=?, hero=?, gid=?, profile_data=? WHERE nick=?",
-                               (display_name, *f.values(), json.dumps(data, ensure_ascii=False), nick))
+
+                    db.execute(
+                        "UPDATE users SET display=?, bio=?, rank=?, role=?, hero=?, gid=?, profile_data=? WHERE nick=?",
+                        (display_name, *f.values(), json.dumps(data, ensure_ascii=False), nick),
+                    )
                     db.execute("UPDATE lfg SET display=? WHERE nick=?", (display_name, nick))
                     db.commit()
                     add_activity(nick, "profile", "Atualizou o perfil")
@@ -1865,7 +1895,6 @@ async def ws_endpoint(ws: WebSocket):
                     if db.execute("SELECT 1 FROM lfg WHERE nick=?", (nick,)).fetchone():
                         await broadcast({"t": "lfg", "list": lfg_list()})
                     if is_streamer_user:
-                        # canal/visibilidade/avatar podem ter mudado: atualiza a home
                         await broadcast_streamers()
                     continue
                 continue

@@ -1,5 +1,6 @@
-/* Reusable profile presentation and editor interactions. */
-/* v17 — streamers: botão "Assistir stream", URL do canal no editor, "Entrei ao vivo" */
+/* Reusable profile presentation and editor interactions.
+   v20 — detecção de cargo multi-fonte · DEV é super-user
+*/
 (() => {
   const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
   const MAX_AVATAR_DATA_LENGTH = 120000;
@@ -8,7 +9,6 @@
 
   const ELOS_DIR = "/static/assets/";
   const HERO_IMAGE_DIR = "/static/img/icons/herois/";
-
   const defaultAccent = () =>
     getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
 
@@ -17,95 +17,167 @@
     ".png-ml.png", ".png-ml.webp", ".png-ml.jpg",
     ".png", ".webp", ".jpg", ".jpeg", ".svg",
   ];
-
   const RANK_OPTIONS = [
-    { value: "Guerreiro", label: "Guerreiro", bases: ["logo-icon-rank-warrior"] },
-    { value: "Elite", label: "Elite", bases: ["logo-icon-rank-elite"] },
-    { value: "Mestre", label: "Mestre", bases: ["logo-icon-rank-master"] },
-    { value: "Grande Mestre", label: "Grande Mestre",
-      bases: ["logo-icon-rank-grandmaster", "logo-icon-rankgrandmaster"] },
-    { value: "Épico", label: "Épico", bases: ["logo-icon-rank-epic"] },
-    { value: "Lenda", label: "Lenda", bases: ["logo-icon-rank-legend"] },
-    { value: "Mítico", label: "Mítico", bases: ["logo-icon-rank-mythic"] },
-    { value: "Honra Mítica", label: "Honra Mítica", bases: ["logo-icon-rank-mythical-honor"] },
-    { value: "Glória Mítica", label: "Glória Mítica", bases: ["logo-icon-rank-mythical-glory"] },
-    { value: "Imortal", label: "Imortal", bases: ["logo-icon-rank-immortal"] },
+    { value:"Guerreiro", label:"Guerreiro", bases:["logo-icon-rank-warrior"] },
+    { value:"Elite", label:"Elite", bases:["logo-icon-rank-elite"] },
+    { value:"Mestre", label:"Mestre", bases:["logo-icon-rank-master"] },
+    { value:"Grande Mestre", label:"Grande Mestre", bases:["logo-icon-rank-grandmaster","logo-icon-rankgrandmaster"] },
+    { value:"Épico", label:"Épico", bases:["logo-icon-rank-epic"] },
+    { value:"Lenda", label:"Lenda", bases:["logo-icon-rank-legend"] },
+    { value:"Mítico", label:"Mítico", bases:["logo-icon-rank-mythic"] },
+    { value:"Honra Mítica", label:"Honra Mítica", bases:["logo-icon-rank-mythical-honor"] },
+    { value:"Glória Mítica", label:"Glória Mítica", bases:["logo-icon-rank-mythical-glory"] },
+    { value:"Imortal", label:"Imortal", bases:["logo-icon-rank-immortal"] },
   ];
-
   const RANK_ALIASES = [
-    { bases: ["logo-icon-rank-mythical-glory"], aliases: ["glória mítica","gloria mitica","mítico glorioso","mitico glorioso","mythical glory","glorioso"] },
-    { bases: ["logo-icon-rank-mythical-honor"], aliases: ["honra mítica","honra mitica","mítico honrado","mitico honrado","mythical honor","honrado"] },
-    { bases: ["logo-icon-rank-immortal"], aliases: ["imortal","immortal"] },
-    { bases: ["logo-icon-rank-grandmaster","logo-icon-rankgrandmaster"], aliases: ["grandemestre","grande mestre","grão-mestre","grao-mestre","grão mestre","grao mestre","grandmaster","grand master"] },
-    { bases: ["logo-icon-rank-mythic"], aliases: ["mítico","mitico","mythic"] },
-    { bases: ["logo-icon-rank-legend"], aliases: ["lenda","legend"] },
-    { bases: ["logo-icon-rank-master"], aliases: ["mestre","master"] },
-    { bases: ["logo-icon-rank-epic"], aliases: ["épico","epico","epic"] },
-    { bases: ["logo-icon-rank-elite"], aliases: ["elite"] },
-    { bases: ["logo-icon-rank-warrior"], aliases: ["guerreiro","warrior"] },
+    { bases:["logo-icon-rank-mythical-glory"], aliases:["glória mítica","gloria mitica","mítico glorioso","mitico glorioso","mythical glory","glorioso"] },
+    { bases:["logo-icon-rank-mythical-honor"], aliases:["honra mítica","honra mitica","mítico honrado","mitico honrado","mythical honor","honrado"] },
+    { bases:["logo-icon-rank-immortal"], aliases:["imortal","immortal"] },
+    { bases:["logo-icon-rank-grandmaster","logo-icon-rankgrandmaster"], aliases:["grandemestre","grande mestre","grão-mestre","grao-mestre","grão mestre","grao mestre","grandmaster","grand master"] },
+    { bases:["logo-icon-rank-mythic"], aliases:["mítico","mitico","mythic"] },
+    { bases:["logo-icon-rank-legend"], aliases:["lenda","legend"] },
+    { bases:["logo-icon-rank-master"], aliases:["mestre","master"] },
+    { bases:["logo-icon-rank-epic"], aliases:["épico","epico","epic"] },
+    { bases:["logo-icon-rank-elite"], aliases:["elite"] },
+    { bases:["logo-icon-rank-warrior"], aliases:["guerreiro","warrior"] },
+  ];
+  const AVATAR_SHAPES = new Set(["round","squircle","square"]);
+
+  /* ═══ CATÁLOGOS DE PERSONALIZAÇÃO ═══ */
+  const ROLE_LABELS = {
+    dev:"Dev", admin:"Admin", mod:"Moderador",
+    vip:"VIP", streamer:"Streamer", beta:"Beta",
+  };
+  const ROLE_ORDER = ["vip","beta","streamer","mod","admin","dev"];
+
+  const FRAME_CATALOG = [
+    { value:"default",     label:"Clássica",   tier:"free" },
+    { value:"elite",       label:"Elite",      tier:"free" },
+    { value:"shadow",      label:"Sombra",     tier:"free" },
+    { value:"obsidian",    label:"Obsidiana",  tier:"free" },
+    { value:"ice",         label:"Gelo",       tier:"free" },
+    { value:"frost",       label:"Geada",      tier:"free" },
+    { value:"neon",        label:"Neon",       tier:"free" },
+    { value:"holo",        label:"Holo",       tier:"free" },
+    { value:"gold",        label:"Ouro",       tier:"vip" },
+    { value:"platinum",    label:"Platina",    tier:"vip" },
+    { value:"royal",       label:"Real",       tier:"vip" },
+    { value:"celestial",   label:"Celestial",  tier:"vip" },
+    { value:"dragon",      label:"Dragão",     tier:"vip" },
+    { value:"rainbow",     label:"Arco-íris",  tier:"vip" },
+    { value:"sun",         label:"Sol",        tier:"vip" },
+    { value:"sakura",      label:"Sakura",     tier:"vip" },
+    { value:"emerald",     label:"Esmeralda",  tier:"vip" },
+    { value:"toxic",       label:"Tóxica",     tier:"vip" },
+    { value:"blood",       label:"Sangue",     tier:"vip" },
+    { value:"crimson",     label:"Carmesim",   tier:"vip" },
+    { value:"fire",        label:"Fogo",       tier:"vip" },
+    { value:"lightning",   label:"Raio",       tier:"streamer" },
+    { value:"live-pulse",  label:"Live",       tier:"streamer" },
+    { value:"beta-circuit",    label:"Circuito",    tier:"beta" },
+    { value:"beta-construct",  label:"Construto",   tier:"beta" },
+    { value:"guardian",    label:"Guardião",   tier:"mod" },
+    { value:"crown",       label:"Coroa",      tier:"admin" },
+    { value:"void",        label:"Vazio",      tier:"dev" },
+    { value:"plasma",      label:"Plasma",     tier:"dev" },
+    { value:"galaxy",      label:"Galáxia",    tier:"dev" },
   ];
 
-  function normalizeRank(value) {
-    return String(value || "").toLocaleLowerCase("pt-BR").normalize("NFD")
+  const THEME_CATALOG = [
+    { value:"classic",  label:"Clássico",    tier:"free" },
+    { value:"arena",    label:"Arena",       tier:"free" },
+    { value:"ocean",    label:"Oceano",      tier:"free" },
+    { value:"aurora",   label:"Aurora",      tier:"free" },
+    { value:"sunset",   label:"Pôr do sol",  tier:"free" },
+    { value:"forest",   label:"Floresta",    tier:"free" },
+    { value:"sakura",   label:"Sakura",      tier:"free" },
+    { value:"cyber",    label:"Cyber",       tier:"free" },
+    { value:"mythic",   label:"Mítico",      tier:"free" },
+    { value:"mono",     label:"Mono",        tier:"free" },
+    { value:"galaxy",   label:"Galáxia",     tier:"vip" },
+    { value:"volcanic", label:"Vulcânico",   tier:"vip" },
+    { value:"arctic",   label:"Ártico",      tier:"vip" },
+    { value:"desert",   label:"Deserto",     tier:"vip" },
+    { value:"eclipse",  label:"Eclipse",     tier:"vip" },
+    { value:"royal",    label:"Real",        tier:"vip" },
+    { value:"neon",     label:"Neon",        tier:"vip" },
+    { value:"matrix",   label:"Matrix",      tier:"beta" },
+    { value:"livestream", label:"Live",      tier:"streamer" },
+    { value:"sentinel", label:"Sentinela",   tier:"mod" },
+    { value:"throne",   label:"Trono",       tier:"admin" },
+    { value:"toxic",    label:"Tóxico",      tier:"dev" },
+    { value:"candy",    label:"Doce",        tier:"dev" },
+  ];
+
+  // TIER → cargos que desbloqueiam. `dev` está em TODAS por padrão,
+  // mas `userCanUse` também tem bypass extra de dev (super-user).
+  const TIER_ACCESS = {
+    free:     null,
+    vip:      ["vip","beta","streamer","mod","admin","dev"],
+    beta:     ["beta","mod","admin","dev"],
+    streamer: ["streamer","mod","admin","dev"],
+    mod:      ["mod","admin","dev"],
+    admin:    ["admin","dev"],
+    dev:      ["dev"],
+  };
+
+  // ─────────────────────────────────────────────────────────
+  // RANKS / HELPERS BÁSICOS
+  // ─────────────────────────────────────────────────────────
+  function normalizeRank(v) {
+    return String(v || "").toLocaleLowerCase("pt-BR").normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "").trim();
   }
   const MYTHIC_PLUS_KEYS = new Set(["mitico","honra mitica","gloria mitica","imortal"]);
-  function isMythicPlusRank(rank) { return MYTHIC_PLUS_KEYS.has(normalizeRank(rank)); }
-  function rankFromMythicStars(stars) {
-    if (stars >= 100) return "Imortal";
-    if (stars >= 50) return "Glória Mítica";
-    if (stars >= 25) return "Honra Mítica";
-    return "Mítico";
-  }
-  function parseStarsValue(value) {
-    const raw = String(value ?? "").trim();
+  const isMythicPlusRank = r => MYTHIC_PLUS_KEYS.has(normalizeRank(r));
+  const rankFromMythicStars = s => s >= 100 ? "Imortal" : s >= 50 ? "Glória Mítica" : s >= 25 ? "Honra Mítica" : "Mítico";
+  function parseStarsValue(v) {
+    const raw = String(v ?? "").trim();
     if (raw === "") return null;
     const n = Number.parseInt(raw, 10);
     if (!Number.isFinite(n) || n < 0) return null;
     return Math.min(n, 9999);
   }
-  function profileStars(data) {
-    if (!data || !isMythicPlusRank(data.rank)) return null;
-    return parseStarsValue(data.stars);
-  }
+  const profileStars = d => (!d || !isMythicPlusRank(d.rank)) ? null : parseStarsValue(d.stars);
   function rankBasesFor(rank) {
-    const normalized = normalizeRank(rank);
-    if (!normalized) return [];
-    const exact = RANK_OPTIONS.find(o => normalizeRank(o.value) === normalized);
+    const n = normalizeRank(rank);
+    if (!n) return [];
+    const exact = RANK_OPTIONS.find(o => normalizeRank(o.value) === n);
     if (exact) return [...exact.bases];
-    for (const entry of RANK_ALIASES) {
-      for (const alias of entry.aliases) {
-        const key = normalizeRank(alias);
-        if (key && normalized.includes(key)) return [...entry.bases];
-      }
+    for (const e of RANK_ALIASES) for (const a of e.aliases) {
+      const k = normalizeRank(a);
+      if (k && n.includes(k)) return [...e.bases];
     }
     return [];
   }
   function rankImageCandidatesFromBases(bases) {
     if (!Array.isArray(bases) || !bases.length) return [];
     const urls = [];
-    for (const base of bases) {
-      const clean = String(base).replace(/(-png-ml)?(\.[a-z0-9]+)?$/i, "");
-      for (const suffix of RANK_FILE_SUFFIXES) urls.push(ELOS_DIR + encodeURIComponent(clean + suffix));
+    for (const b of bases) {
+      const c = String(b).replace(/(-png-ml)?(\.[a-z0-9]+)?$/i, "");
+      for (const s of RANK_FILE_SUFFIXES) urls.push(ELOS_DIR + encodeURIComponent(c + s));
     }
     return urls;
   }
-  function rankCandidatesForRank(rank) { return rankImageCandidatesFromBases(rankBasesFor(rank)); }
+  const rankCandidatesForRank = r => rankImageCandidatesFromBases(rankBasesFor(r));
   function heroIconFile(name) {
-    const catalog = Array.isArray(window.HERO_CATALOG) ? window.HERO_CATALOG : [];
-    if (!name || !catalog.length) return "";
-    const lower = String(name).toLocaleLowerCase("pt-BR").trim();
-    const hero = catalog.find(h => String(h.name || "").toLocaleLowerCase("pt-BR").trim() === lower);
-    return hero && hero.file ? hero.file : "";
+    const cat = Array.isArray(window.HERO_CATALOG) ? window.HERO_CATALOG : [];
+    if (!name || !cat.length) return "";
+    const low = String(name).toLocaleLowerCase("pt-BR").trim();
+    const h = cat.find(x => String(x.name || "").toLocaleLowerCase("pt-BR").trim() === low);
+    return h && h.file ? h.file : "";
   }
   function heroImageUrl(name) {
-    const file = heroIconFile(name);
-    if (!file) return "";
-    if (window.HeroCatalog && window.HeroCatalog.routeImg) return window.HeroCatalog.routeImg(file);
-    if (/^(?:https?:)?\/\//i.test(file) || file.charAt(0) === "/") return file;
-    return HERO_IMAGE_DIR + file;
+    const f = heroIconFile(name);
+    if (!f) return "";
+    if (window.HeroCatalog && window.HeroCatalog.routeImg) return window.HeroCatalog.routeImg(f);
+    if (/^(?:https?:)?\/\//i.test(f) || f.charAt(0) === "/") return f;
+    return HERO_IMAGE_DIR + f;
   }
 
+  // ─────────────────────────────────────────────────────────
+  // ESTADO
+  // ─────────────────────────────────────────────────────────
   let context = null;
   let draftAvatar = "";
   let draftBanner = "";
@@ -113,178 +185,162 @@
   let selfProfile = null;
   let currentMode = "self";
   let currentUserId = null;
-  let pendingStreamUrl = null; // canal enviado no último "Salvar", para conferir a resposta
+  let pendingStreamUrl = null;
 
-  function node(tag, text, className) {
-    const element = document.createElement(tag);
-    if (text != null) element.textContent = text;
-    if (className) element.className = className;
-    return element;
-  }
+  const node = (t, txt, cls) => {
+    const el = document.createElement(t);
+    if (txt != null) el.textContent = txt;
+    if (cls) el.className = cls;
+    return el;
+  };
+  const safe = id => document.getElementById(id);
+  const setText   = (id,v) => { const e=safe(id); if(e) e.textContent = v; };
+  const setHidden = (id,h) => { const e=safe(id); if(e) e.hidden = Boolean(h); };
+  const setChecked= (id,c) => { const e=safe(id); if(e) e.checked = Boolean(c); };
+  const setVal    = (id,v) => { const e=safe(id); if(e) e.value = v; };
+
   function initials(name, username) {
-    const source = (name || username || "?").trim();
-    return source.slice(0, 1).toLocaleUpperCase("pt-BR") || "?";
+    const s = (name || username || "?").trim();
+    return s.slice(0,1).toLocaleUpperCase("pt-BR") || "?";
   }
   function createAvatar(data, className) {
-    const wrapper = node("span", null, className || "user-avatar");
-    const name = data.display_name || data.display || data.username || data.nick || "Jogador";
-    const image = data.avatar || "";
-    wrapper.setAttribute("role", "img");
-    wrapper.setAttribute("aria-label", "Foto de perfil de " + name);
-    if (/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(image) && image.length <= MAX_AVATAR_DATA_LENGTH) {
-      const photo = node("img");
-      photo.src = image; photo.alt = ""; photo.loading = "lazy";
-      wrapper.append(photo);
-    } else {
-      wrapper.textContent = initials(name, data.username || data.nick);
-    }
-    return wrapper;
+    const w = node("span", null, className || "user-avatar");
+    const n = data.display_name || data.display || data.username || data.nick || "Jogador";
+    const img = data.avatar || "";
+    w.setAttribute("role","img");
+    w.setAttribute("aria-label","Foto de perfil de " + n);
+    if (/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(img) && img.length <= MAX_AVATAR_DATA_LENGTH) {
+      const p = node("img"); p.src = img; p.alt=""; p.loading="lazy"; w.append(p);
+    } else w.textContent = initials(n, data.username || data.nick);
+    return w;
   }
   function setAvatar(container, data, className) {
     if (!container) return;
-    const avatar = createAvatar(data, className || container.className);
-    container.replaceChildren(...avatar.childNodes);
-    container.setAttribute("role", "img");
-    container.setAttribute("aria-label", avatar.getAttribute("aria-label"));
+    const a = createAvatar(data, className || container.className);
+    container.replaceChildren(...a.childNodes);
+    container.setAttribute("role","img");
+    container.setAttribute("aria-label", a.getAttribute("aria-label"));
     container.classList.toggle("has-photo", Boolean(data.avatar));
   }
   function applyBanner(container, image) {
     if (!container) return;
-    container.style.backgroundImage = image && image.length <= MAX_BANNER_DATA_LENGTH
-      ? 'linear-gradient(180deg, rgba(var(--bg-rgb), .08), rgba(var(--bg-rgb), .72)), url("' + image + '")' : "";
-    container.classList.toggle("has-banner", Boolean(image && image.length <= MAX_BANNER_DATA_LENGTH));
+    const ok = image && image.length <= MAX_BANNER_DATA_LENGTH;
+    container.style.backgroundImage = ok
+      ? 'linear-gradient(180deg, rgba(var(--bg-rgb), .08), rgba(var(--bg-rgb), .72)), url("' + image + '")'
+      : "";
+    container.classList.toggle("has-banner", Boolean(ok));
   }
-  function safe(id) { return document.getElementById(id); }
-  function setText(id, value) { const el = safe(id); if (el) el.textContent = value; }
-  function setHidden(id, hidden) { const el = safe(id); if (el) el.hidden = Boolean(hidden); }
-  function setChecked(id, checked) { const el = safe(id); if (el) el.checked = Boolean(checked); }
-  function setVal(id, value) { const el = safe(id); if (el) el.value = value; }
-
+  function applyAccent(el, accentFromData) {
+    if (!el) return;
+    const a = String(accentFromData || "").trim();
+    if (a) el.style.setProperty("--user-accent", a);
+    else el.style.removeProperty("--user-accent");
+  }
+  function applyAvatarShape(shape) {
+    const s = String(shape || "round").toLowerCase();
+    const v = AVATAR_SHAPES.has(s) ? s : "round";
+    document.documentElement.dataset.avatarShape = v;
+    return v;
+  }
   function looksLikeSameName(a, b) {
-    const clean = (s) => String(s || "").toLocaleLowerCase("pt-BR").normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "").replace(/^@+/, "").replace(/[^a-z0-9]/g, "");
+    const clean = s => String(s||"").toLocaleLowerCase("pt-BR").normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"").replace(/^@+/,"").replace(/[^a-z0-9]/g,"");
     const ca = clean(a), cb = clean(b);
-    if (!ca || !cb) return false;
-    return ca === cb;
+    return !!ca && !!cb && ca === cb;
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // SISTEMA DE SELOS (staff / vip / streamer / beta)
-  // ─────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  // SELOS (staff / vip / streamer / beta)
+  // ─────────────────────────────────────────────────────────
   const BADGE_DEFS = {
-    staff: {
-      color: "#f2b84b",
-      label: { dev: "DEV verificado", admin: "Administrador verificado", mod: "Moderador verificado" },
-      defaultLabel: "Equipe verificada",
-      svg:
-        '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">' +
-        '<path d="M21.71 20.29l-6.88-6.88a6.5 6.5 0 0 0-7.9-7.9l3.19 3.19-2.83 2.83-3.19-3.19a6.5 6.5 0 0 0 7.9 7.9l6.88 6.88a1 1 0 0 0 1.41 0l1.42-1.42a1 1 0 0 0 0-1.41z"/>' +
-        '<circle cx="6.5" cy="17.5" r="1.5"/>' +
-        "</svg>",
-    },
-    vip: {
-      color: "#4c8dff",
-      label: { vip: "VIP verificado" },
-      defaultLabel: "Conta verificada",
-      svg:
-        '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">' +
-        '<path d="M12 1.5l2.85 2.28 3.57-.33 1.07 3.43 3.18 1.62-1.13 3.4 1.13 3.4-3.18 1.62-1.07 3.43-3.57-.33L12 22.5l-2.85-2.28-3.57.33-1.07-3.43-3.18-1.62 1.13-3.4-1.13-3.4 3.18-1.62 1.07-3.43 3.57.33L12 1.5zm-1.4 14.3l6.1-6.1-1.5-1.5-4.6 4.6-2.1-2.1-1.5 1.5 3.6 3.6z"/>' +
-        "</svg>",
-    },
-    streamer: {
-      color: "#ff0000",
-      label: { streamer: "Streamer" },
-      defaultLabel: "Streamer",
-      svg:
-        '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">' +
-        '<path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-5.8 31 31 0 0 0-.5-5.8zM9.6 15.6V8.4l6.2 3.6z"/>' +
-        "</svg>",
-    },
-    beta: {
-      color: "#ff9d2e",
-      label: { beta: "Beta Tester" },
-      defaultLabel: "Beta Tester",
-      emoji: "🚧",
-    },
+    staff: { color:"#f2b84b",
+      label:{dev:"DEV verificado", admin:"Administrador verificado", mod:"Moderador verificado"},
+      defaultLabel:"Equipe verificada",
+      svg:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M21.71 20.29l-6.88-6.88a6.5 6.5 0 0 0-7.9-7.9l3.19 3.19-2.83 2.83-3.19-3.19a6.5 6.5 0 0 0 7.9 7.9l6.88 6.88a1 1 0 0 0 1.41 0l1.42-1.42a1 1 0 0 0 0-1.41z"/><circle cx="6.5" cy="17.5" r="1.5"/></svg>' },
+    vip: { color:"#4c8dff", label:{vip:"VIP verificado"}, defaultLabel:"Conta verificada",
+      svg:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M12 1.5l2.85 2.28 3.57-.33 1.07 3.43 3.18 1.62-1.13 3.4 1.13 3.4-3.18 1.62-1.07 3.43-3.57-.33L12 22.5l-2.85-2.28-3.57.33-1.07-3.43-3.18-1.62 1.13-3.4-1.13-3.4 3.18-1.62 1.07-3.43 3.57.33L12 1.5zm-1.4 14.3l6.1-6.1-1.5-1.5-4.6 4.6-2.1-2.1-1.5 1.5 3.6 3.6z"/></svg>' },
+    streamer: { color:"#ff0000", label:{streamer:"Streamer"}, defaultLabel:"Streamer",
+      svg:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-5.8 31 31 0 0 0-.5-5.8zM9.6 15.6V8.4l6.2 3.6z"/></svg>' },
+    beta: { color:"#ff9d2e", label:{beta:"Beta Tester"}, defaultLabel:"Beta Tester", emoji:"🚧" },
   };
+  const ROLE_TO_BADGE = { dev:"staff", admin:"staff", mod:"staff", vip:"vip", streamer:"streamer", beta:"beta" };
 
-  const ROLE_TO_BADGE = {
-    dev: "staff",
-    admin: "staff",
-    mod: "staff",
-    vip: "vip",
-    streamer: "streamer",
-    beta: "beta",
-  };
+  /* [v20 FIX] — agrega TODAS as fontes de cargo do perfil. */
+  function rolesFromProfile(data) {
+    if (!data) return [];
+    const out = new Set();
+    const push = (raw) => {
+      if (!raw) return;
+      let k = String(raw).toLocaleLowerCase("pt-BR").trim();
+      if (!k) return;
+      // normaliza variações comuns
+      if (k === "moderador" || k === "moderator" || k === "moderação" || k === "moderacao") k = "mod";
+      else if (k === "administrador" || k === "administrator") k = "admin";
+      else if (k === "desenvolvedor" || k === "developer") k = "dev";
+      else if (k === "beta tester" || k === "betatester" || k === "tester") k = "beta";
+      // reconhece só os cargos que a gente usa para gating
+      if (ROLE_TO_BADGE[k]) out.add(k);
+      // também aceita "membro" (não bloqueia gating)
+      else if (k === "membro" || k === "member" || k === "user" || k === "usuário" || k === "usuario") out.add("membro");
+    };
+    // 1) campo role
+    push(data.role);
+    // 2) arrays (cobre camelCase/snake_case/roles)
+    const lists = [
+      data.community_roles,
+      data.communityRoles,
+      data.roles,
+      data.cargos,
+    ];
+    lists.forEach(l => { if (Array.isArray(l)) l.forEach(push); });
+    // 3) flags booleanas
+    if (data.is_dev || data.isDev || data.dev) out.add("dev");
+    if (data.is_admin || data.isAdmin || data.admin) out.add("admin");
+    if (data.is_mod || data.isMod || data.mod) out.add("mod");
+    if (data.is_vip || data.isVip || data.vip) out.add("vip");
+    if (data.is_streamer || data.isStreamer || data.streamer) out.add("streamer");
+    if (data.is_beta || data.isBeta || data.beta) out.add("beta");
+    return Array.from(out);
+  }
 
+  /* [v20 FIX] — "melhor" cargo (para exibir o selo). */
+  const ROLE_PRIORITY = ["dev","admin","mod","streamer","vip","beta"];
   function roleFromProfile(data) {
-    if (!data) return "";
-    const raw = String(data.role || "").toLocaleLowerCase("pt-BR").trim();
-    if (raw) return raw;
-    const roles = Array.isArray(data.community_roles) ? data.community_roles : [];
-    for (const r of roles) {
-      const key = String(r || "").toLocaleUpperCase("pt-BR").trim();
-      if (key === "DEV") return "dev";
-      if (key === "ADMIN") return "admin";
-      if (key === "MOD" || key === "MODERADOR" || key === "MODERATOR") return "mod";
-      if (key === "VIP") return "vip";
-      if (key === "STREAMER") return "streamer";
-      if (key === "BETA") return "beta";
-    }
-    return "";
-  }
-  function badgeKeyForRole(rawRole) {
-    const key = String(rawRole || "").toLocaleLowerCase("pt-BR").trim();
-    return ROLE_TO_BADGE[key] || null;
-  }
-  function badgeDefForRole(rawRole) {
-    const k = badgeKeyForRole(rawRole);
-    return k ? BADGE_DEFS[k] : null;
-  }
-  function badgeColorForRole(rawRole) {
-    const def = badgeDefForRole(rawRole);
-    return def ? def.color : "#4c8dff";
-  }
-  function badgeLabelForRole(rawRole) {
-    const def = badgeDefForRole(rawRole);
-    if (!def) return "Conta verificada";
-    const key = String(rawRole || "").toLocaleLowerCase("pt-BR").trim();
-    return def.label[key] || def.defaultLabel;
-  }
-  function badgeSvgForRole(rawRole) {
-    const def = badgeDefForRole(rawRole);
-    return def ? (def.svg || "") : "";
-  }
-  function badgeEmojiForRole(rawRole) {
-    const def = badgeDefForRole(rawRole);
-    return def && def.emoji ? def.emoji : "";
-  }
-  function hasAnyBadge(data) {
-    return Boolean(badgeDefForRole(roleFromProfile(data)));
+    const roles = rolesFromProfile(data);
+    for (const p of ROLE_PRIORITY) if (roles.includes(p)) return p;
+    return roles[0] || "";
   }
 
-  function hasVerifiedRole(data) { return hasAnyBadge(data); }
-  function verifiedRoleKey(data) { return roleFromProfile(data) || "user"; }
-  function verifiedRoleLabel(roleKey) { return badgeLabelForRole(roleKey); }
+  const badgeKeyForRole     = r => ROLE_TO_BADGE[String(r||"").toLowerCase()] || null;
+  const badgeDefForRole     = r => { const k = badgeKeyForRole(r); return k ? BADGE_DEFS[k] : null; };
+  const badgeColorForRole   = r => { const d = badgeDefForRole(r); return d ? d.color : "#4c8dff"; };
+  function badgeLabelForRole(r) {
+    const d = badgeDefForRole(r);
+    if (!d) return "Conta verificada";
+    const k = String(r||"").toLowerCase();
+    return d.label[k] || d.defaultLabel;
+  }
+  const badgeSvgForRole     = r => { const d = badgeDefForRole(r); return d ? (d.svg || "") : ""; };
+  const badgeEmojiForRole   = r => { const d = badgeDefForRole(r); return d && d.emoji ? d.emoji : ""; };
+  const hasAnyBadge         = d => Boolean(badgeDefForRole(roleFromProfile(d)));
+  const hasVerifiedRole     = d => hasAnyBadge(d);
+  const verifiedRoleKey     = d => roleFromProfile(d) || "user";
+  const verifiedRoleLabel   = k => badgeLabelForRole(k);
 
   function renderVerifiedBadge(data) {
     const badge = safe("profileVerifiedBadge");
     if (!badge) return;
-
     const role = roleFromProfile(data);
     const def = badgeDefForRole(role);
-
     if (!def) {
       badge.hidden = true;
       badge.removeAttribute("data-badge");
       badge.removeAttribute("data-role");
       return;
     }
-
     badge.hidden = false;
     badge.dataset.badge = ROLE_TO_BADGE[role] || "";
     badge.dataset.role = role;
-
     if (def.emoji) {
       badge.innerHTML = "";
       badge.textContent = def.emoji;
@@ -299,11 +355,9 @@
       badge.style.color = def.color;
       badge.style.filter = `drop-shadow(0 0 6px ${def.color}88)`;
     }
-
     const label = badgeLabelForRole(role);
     badge.setAttribute("aria-label", label);
     badge.setAttribute("title", label);
-
     badge.style.animation = "none"; void badge.offsetWidth; badge.style.animation = "";
   }
 
@@ -311,20 +365,21 @@
   function ensureInlineBadgeStyles() {
     if (_inlineBadgeStylesInjected) return;
     if (document.getElementById("profile-inline-verified-css")) { _inlineBadgeStylesInjected = true; return; }
-    const style = document.createElement("style");
-    style.id = "profile-inline-verified-css";
-    style.textContent = `
-      #sidebarDisplayName.has-verified-badge-support { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0; max-width:100%; }
-      #sidebarDisplayName > .sidebar-display-name-text { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      .profile-verified-badge-inline { display:inline-grid; place-items:center; width:18px; height:18px; flex:0 0 auto; color:#4c8dff; filter:drop-shadow(0 0 5px rgba(76,141,255,.55)); animation:profile-verified-pop 320ms cubic-bezier(.34,1.56,.64,1); pointer-events:auto; vertical-align:middle; }
-      .profile-verified-badge-inline svg { display:block; width:100%; height:100%; }
-      .profile-verified-badge-inline[hidden] { display:none !important; }
-      .profile-verified-badge-inline[data-badge="staff"]    { color:#f2b84b; filter:drop-shadow(0 0 6px rgba(242,184,75,.55)); }
-      .profile-verified-badge-inline[data-badge="vip"]      { color:#4c8dff; filter:drop-shadow(0 0 6px rgba(76,141,255,.55)); }
-      .profile-verified-badge-inline[data-badge="streamer"] { color:#ff0000; filter:drop-shadow(0 0 6px rgba(255,0,0,.55)); }
-      .profile-verified-badge-inline[data-badge="beta"]     { font-size:18px; line-height:1; filter:drop-shadow(0 0 6px rgba(255,157,46,.65)); }
+    const s = document.createElement("style");
+    s.id = "profile-inline-verified-css";
+    s.textContent = `
+      #sidebarDisplayName.has-verified-badge-support{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-width:0;max-width:100%}
+      #sidebarDisplayName > .sidebar-display-name-text{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .profile-verified-badge-inline{display:inline-grid;place-items:center;width:18px;height:18px;flex:0 0 auto;color:#4c8dff;filter:drop-shadow(0 0 5px rgba(76,141,255,.55));animation:profile-verified-pop 320ms cubic-bezier(.34,1.56,.64,1);pointer-events:auto;vertical-align:middle}
+      .profile-verified-badge-inline svg{display:block;width:100%;height:100%}
+      .profile-verified-badge-inline[hidden]{display:none!important}
+      .profile-verified-badge-inline[data-badge="staff"]{color:#f2b84b;filter:drop-shadow(0 0 6px rgba(242,184,75,.55))}
+      .profile-verified-badge-inline[data-badge="vip"]{color:#4c8dff;filter:drop-shadow(0 0 6px rgba(76,141,255,.55))}
+      .profile-verified-badge-inline[data-badge="streamer"]{color:#ff0000;filter:drop-shadow(0 0 6px rgba(255,0,0,.55))}
+      .profile-verified-badge-inline[data-badge="beta"]{font-size:18px;line-height:1;filter:drop-shadow(0 0 6px rgba(255,157,46,.65))}
+      @keyframes profile-verified-pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
     `;
-    document.head.appendChild(style);
+    document.head.appendChild(s);
     _inlineBadgeStylesInjected = true;
   }
 
@@ -332,8 +387,8 @@
     ensureInlineBadgeStyles();
     const nameEl = safe("sidebarDisplayName");
     if (!nameEl) return false;
-    const name = (data && (data.display_name || data.display || data.username || data.nick)) ||
-                 (nameEl.textContent || "").trim() || "Jogador";
+    const name = (data && (data.display_name || data.display || data.username || data.nick))
+      || (nameEl.textContent || "").trim() || "Jogador";
     let textSpan = nameEl.querySelector(":scope > .sidebar-display-name-text");
     if (!textSpan) {
       textSpan = document.createElement("span");
@@ -342,99 +397,208 @@
     }
     textSpan.textContent = name;
     nameEl.querySelectorAll(":scope > .profile-verified-badge-inline").forEach(b => b.remove());
-
     const role = roleFromProfile(data);
     const def = badgeDefForRole(role);
-
     if (!def) { nameEl.classList.remove("has-verified-badge-support"); return true; }
-
-    const badge = document.createElement("span");
-    badge.className = "profile-verified-badge-inline";
-    badge.setAttribute("role", "img");
-    badge.dataset.badge = ROLE_TO_BADGE[role] || "";
-    badge.dataset.role = role;
-
+    const b = document.createElement("span");
+    b.className = "profile-verified-badge-inline";
+    b.setAttribute("role","img");
+    b.dataset.badge = ROLE_TO_BADGE[role] || "";
+    b.dataset.role = role;
     if (def.emoji) {
-      badge.textContent = def.emoji;
-      badge.style.color = "";
-      badge.style.fontSize = "18px";
-      badge.style.lineHeight = "1";
-      badge.style.filter = `drop-shadow(0 0 5px ${def.color}aa)`;
+      b.textContent = def.emoji;
+      b.style.color = ""; b.style.fontSize = "18px"; b.style.lineHeight = "1";
+      b.style.filter = `drop-shadow(0 0 5px ${def.color}aa)`;
     } else {
-      badge.innerHTML = def.svg;
-      badge.style.fontSize = "";
-      badge.style.lineHeight = "";
-      badge.style.color = def.color;
-      badge.style.filter = `drop-shadow(0 0 5px ${def.color}88)`;
+      b.innerHTML = def.svg;
+      b.style.color = def.color;
+      b.style.filter = `drop-shadow(0 0 5px ${def.color}88)`;
     }
-
     const label = badgeLabelForRole(role);
-    badge.setAttribute("aria-label", label);
-    badge.setAttribute("title", label);
-
+    b.setAttribute("aria-label", label);
+    b.setAttribute("title", label);
     nameEl.classList.add("has-verified-badge-support");
-    nameEl.append(badge);
-    badge.style.animation = "none"; void badge.offsetWidth; badge.style.animation = "";
+    nameEl.append(b);
+    b.style.animation = "none"; void b.offsetWidth; b.style.animation = "";
     return true;
   }
 
   function renderSidebarUsername(data, username, displayName) {
-    const el = safe("sidebarUsername");
-    if (!el) return;
+    const el = safe("sidebarUsername"); if (!el) return;
     const nick = (data?.username || username || data?.nick || "").trim();
     const name = (displayName || data?.display_name || "").trim();
     if (!nick) { el.hidden = true; el.textContent = ""; return; }
     if (name && looksLikeSameName(name, nick)) { el.hidden = true; el.textContent = ""; return; }
-    el.hidden = false;
-    el.textContent = "@" + nick;
+    el.hidden = false; el.textContent = "@" + nick;
   }
 
   function watchSidebarBadge() {
     if (watchSidebarBadge.__installed) return;
     watchSidebarBadge.__installed = true;
     const tryApply = () => { if (selfProfile) renderSidebarVerifiedBadge(selfProfile); };
-    [0, 120, 400, 1200, 2500].forEach(ms => setTimeout(tryApply, ms));
+    [0,120,400,1200,2500].forEach(ms => setTimeout(tryApply, ms));
     const obs = new MutationObserver(() => {
       if (!selfProfile) return;
-      const nameEl = safe("sidebarDisplayName");
-      if (!nameEl) return;
-      const hasBadge = nameEl.querySelector(":scope > .profile-verified-badge-inline");
-      const needsBadge = hasAnyBadge(selfProfile);
-      if (needsBadge !== Boolean(hasBadge)) renderSidebarVerifiedBadge(selfProfile);
+      const nameEl = safe("sidebarDisplayName"); if (!nameEl) return;
+      const has = nameEl.querySelector(":scope > .profile-verified-badge-inline");
+      const need = hasAnyBadge(selfProfile);
+      if (need !== Boolean(has)) renderSidebarVerifiedBadge(selfProfile);
     });
-    obs.observe(document.body, { childList: true, subtree: true });
+    obs.observe(document.body, { childList:true, subtree:true });
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // STREAMER: canal, link da live, botão "Assistir stream"
-  // ─────────────────────────────────────────────────────────────
-  // Só aceitamos links de plataformas conhecidas. O servidor DEVE repetir
-  // esta validação: a do navegador não é segurança, é conveniência.
-  const STREAM_PLATFORMS = [
-    { name: "Twitch",  hosts: ["twitch.tv", "www.twitch.tv", "m.twitch.tv"] },
-    { name: "YouTube", hosts: ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"] },
-    { name: "Kick",    hosts: ["kick.com", "www.kick.com"] },
-  ];
+  // ─────────────────────────────────────────────────────────
+  // ROLE GATING
+  // ─────────────────────────────────────────────────────────
+  /* [v20 FIX] — agora devolve a lista completa do usuário. */
+  function userRoles() {
+    return rolesFromProfile(selfProfile || profile || {});
+  }
+  function userRoleKey() {
+    return roleFromProfile(selfProfile || profile || {});
+  }
+  function requirementsForItem(item) {
+    if (!item || !item.tier || item.tier === "free") return null;
+    const list = TIER_ACCESS[item.tier];
+    return Array.isArray(list) && list.length ? list : null;
+  }
+  /* [v20 FIX] — permite se QUALQUER cargo do usuário casar; dev é super-user. */
+  function userCanUse(requiredRoles) {
+    if (!requiredRoles || !requiredRoles.length) return true;
+    const mine = userRoles();
+    if (mine.includes("dev")) return true;
+    return requiredRoles.some(r => mine.includes(r));
+  }
+  function labelForRequirements(required) {
+    if (!required || !required.length) return "";
+    for (const r of ROLE_ORDER) if (required.includes(r)) return ROLE_LABELS[r] || r;
+    return ROLE_LABELS[required[0]] || required[0];
+  }
+  function applyRoleGating() {
+    const mine = userRoles();
+    const isDev = mine.includes("dev");
+    document.querySelectorAll(".pf-swatch[data-requires]").forEach(btn => {
+      const list = (btn.dataset.requires || "").split(/\s+/).filter(Boolean);
+      const ok = isDev || list.length === 0 || list.some(r => mine.includes(r));
+      btn.dataset.requirementsMet = String(ok);
+      btn.disabled = !ok;
+      btn.setAttribute("aria-disabled", String(!ok));
+    });
+  }
+  function isFrameAllowed(value) {
+    const item = FRAME_CATALOG.find(i => i.value === value);
+    return !item ? true : userCanUse(requirementsForItem(item));
+  }
+  function isThemeAllowed(value) {
+    const item = THEME_CATALOG.find(i => i.value === value);
+    return !item ? true : userCanUse(requirementsForItem(item));
+  }
 
-  /** Normaliza e valida um link de canal/live. Retorna {url, platform} ou null. */
+  // ─────────────────────────────────────────────────────────
+  // SWATCH PICKERS
+  // ─────────────────────────────────────────────────────────
+  const TIER_LABELS = {
+    free:"Grátis para todos", vip:"VIP & superiores", beta:"Beta Testers",
+    streamer:"Streamers", mod:"Moderação", admin:"Admin", dev:"Dev",
+  };
+  const TIER_ORDER = ["free","vip","beta","streamer","mod","admin","dev"];
+
+  function buildSwatch(item, kind) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pf-swatch";
+    btn.dataset.value = item.value;
+    btn.dataset.kind = kind;
+    btn.setAttribute("role","radio");
+    btn.setAttribute("aria-checked","false");
+    const required = requirementsForItem(item);
+    if (required) {
+      btn.dataset.requires = required.join(" ");
+      btn.dataset.lockLabel = labelForRequirements(required);
+    }
+    const art = document.createElement("span");
+    art.className = "pf-swatch-art " + (kind === "frame" ? "pf-swatch-frame" : "pf-swatch-theme");
+    art.setAttribute("aria-hidden","true");
+    if (kind === "frame") art.dataset.frame = item.value;
+    else art.dataset.theme = item.value;
+    const name = document.createElement("span");
+    name.className = "pf-swatch-name";
+    name.textContent = item.label;
+    btn.append(art, name);
+    return btn;
+  }
+
+  function buildPicker(catalog, kind, containerId, selectId) {
+    const container = safe(containerId);
+    if (!container) return;
+    container.replaceChildren();
+    const groups = {};
+    catalog.forEach(item => {
+      const t = item.tier || "free";
+      (groups[t] = groups[t] || []).push(item);
+    });
+    TIER_ORDER.forEach(tier => {
+      const items = groups[tier];
+      if (!items || !items.length) return;
+      const heading = document.createElement("h4");
+      heading.className = "pf-tier-label";
+      heading.dataset.tier = tier;
+      heading.textContent = TIER_LABELS[tier] || tier;
+      container.append(heading);
+      const grid = document.createElement("div");
+      grid.className = "pf-picker-grid";
+      items.forEach(item => grid.append(buildSwatch(item, kind)));
+      container.append(grid);
+    });
+    container.addEventListener("click", ev => {
+      const btn = ev.target.closest(".pf-swatch");
+      if (!btn || btn.disabled) return;
+      const select = safe(selectId);
+      if (!select) return;
+      select.value = btn.dataset.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      syncSwatchSelection(selectId);
+    });
+    container.querySelectorAll(".pf-swatch").forEach(btn => {
+      btn.addEventListener("keydown", ev => {
+        if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); btn.click(); }
+      });
+    });
+  }
+
+  function syncSwatchSelection(selectId) {
+    const select = safe(selectId); if (!select) return;
+    const current = select.value;
+    const containerId = selectId === "profileFrameInput" ? "pfFramePicker" : "pfThemePicker";
+    const container = safe(containerId); if (!container) return;
+    container.querySelectorAll(".pf-swatch").forEach(btn => {
+      btn.setAttribute("aria-checked", String(btn.dataset.value === current));
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // STREAMER
+  // ─────────────────────────────────────────────────────────
+  const STREAM_PLATFORMS = [
+    { name:"Twitch",  hosts:["twitch.tv","www.twitch.tv","m.twitch.tv"] },
+    { name:"YouTube", hosts:["youtube.com","www.youtube.com","m.youtube.com","youtu.be"] },
+    { name:"Kick",    hosts:["kick.com","www.kick.com"] },
+  ];
   function parseStreamUrl(value) {
     let raw = String(value == null ? "" : value).trim();
     if (!raw || raw.length > MAX_STREAM_URL_LENGTH) return null;
     if (!/^https?:\/\//i.test(raw)) raw = "https://" + raw;
-    let url;
-    try { url = new URL(raw); } catch (e) { return null; }
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
-    if (url.username || url.password) return null;
-    const host = url.hostname.toLowerCase();
-    const platform = STREAM_PLATFORMS.find(p => p.hosts.includes(host));
-    if (!platform) return null;
-    if (url.pathname.replace(/\//g, "") === "") return null; // precisa apontar para um canal
-    url.protocol = "https:";
-    url.hash = "";
-    return { url: url.toString(), platform: platform.name };
+    let u;
+    try { u = new URL(raw); } catch { return null; }
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    if (u.username || u.password) return null;
+    const host = u.hostname.toLowerCase();
+    const p = STREAM_PLATFORMS.find(x => x.hosts.includes(host));
+    if (!p) return null;
+    if (u.pathname.replace(/\//g,"") === "") return null;
+    u.protocol = "https:"; u.hash = "";
+    return { url: u.toString(), platform: p.name };
   }
-
-  /** YouTube: /@canal vira /@canal/live, que abre a transmissão atual. */
   function liveUrlFor(info) {
     if (!info) return "";
     if (info.platform !== "YouTube") return info.url;
@@ -445,162 +609,127 @@
         u.pathname = u.pathname.replace(/\/$/, "") + "/live";
         return u.toString();
       }
-    } catch (e) { /* ignora */ }
+    } catch {}
     return info.url;
   }
-
-  // Streamer = selo principal "streamer" OU cargo STREAMER na lista da comunidade.
-  // (Antes só olhava data.role: se vinha "membro", o campo sumia e o canal era enviado vazio.)
   function isStreamerProfile(data) {
     if (!data) return false;
-    if (roleFromProfile(data) === "streamer") return true;
-    const roles = Array.isArray(data.community_roles) ? data.community_roles : [];
-    return roles.some(r => String(r || "").toLocaleLowerCase("pt-BR").trim() === "streamer");
+    const roles = rolesFromProfile(data);
+    if (roles.includes("streamer")) return true;
+    return false;
   }
-
-  /** Resume o que mostrar no botão: {href, platform, live} ou null. */
   function streamInfo(data) {
     if (!data || data.details_hidden || !isStreamerProfile(data)) return null;
-    const channel = parseStreamUrl(data.stream_url);
-    const liveLink = data.stream_live ? parseStreamUrl(data.stream_live_url) : null;
-    if (!channel && !liveLink) return null;
-    const live = Boolean(data.stream_live);
-    const main = (live && liveLink) ? liveLink : (channel || liveLink);
-    return { href: main.url, platform: main.platform, live };
+    const ch = parseStreamUrl(data.stream_url);
+    const live = data.stream_live ? parseStreamUrl(data.stream_live_url) : null;
+    if (!ch && !live) return null;
+    const isLive = Boolean(data.stream_live);
+    const main = (isLive && live) ? live : (ch || live);
+    return { href: main.url, platform: main.platform, live: isLive };
   }
-
   function createStreamLink(info, className) {
     const a = document.createElement("a");
     a.className = className || "profile-stream-btn";
-    a.href = info.href;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer nofollow";
+    a.href = info.href; a.target = "_blank"; a.rel = "noopener noreferrer nofollow";
     a.classList.toggle("is-live", info.live);
     a.append(node("span", info.live ? "🔴" : "📺", "profile-stream-dot"));
     a.append(node("span", info.live ? "Assistir stream" : "Ver canal", "profile-stream-text"));
     a.append(node("small", info.platform, "profile-stream-platform"));
-    a.title = info.live
-      ? "Ao vivo agora na " + info.platform
-      : "Abrir canal na " + info.platform;
+    a.title = info.live ? "Ao vivo agora na " + info.platform : "Abrir canal na " + info.platform;
     return a;
   }
-
   function renderStreamButton(data) {
-    const slot = safe("profileStreamBtn");
-    if (!slot) return;
+    const slot = safe("profileStreamBtn"); if (!slot) return;
     const info = streamInfo(data);
     if (!info) { slot.hidden = true; slot.removeAttribute("href"); slot.replaceChildren(); return; }
     const fresh = createStreamLink(info, "profile-stream-btn");
-    slot.hidden = false;
-    slot.className = fresh.className;
-    slot.href = fresh.href;
-    slot.target = fresh.target;
-    slot.rel = fresh.rel;
-    slot.title = fresh.title;
+    slot.hidden = false; slot.className = fresh.className; slot.href = fresh.href;
+    slot.target = fresh.target; slot.rel = fresh.rel; slot.title = fresh.title;
     slot.replaceChildren(...fresh.childNodes);
   }
-
-  /** Botão do próprio streamer: avisa o site que começou/terminou a live. */
   function renderGoLive() {
-    const btn = safe("profileGoLiveBtn");
-    if (!btn) return;
+    const btn = safe("profileGoLiveBtn"); if (!btn) return;
     const d = selfProfile;
-    const channel = d ? parseStreamUrl(d.stream_url) : null;
-    const show = currentMode === "self" && Boolean(d) && isStreamerProfile(d) && Boolean(channel);
-    btn.hidden = !show;
-    if (!show) return;
+    const ch = d ? parseStreamUrl(d.stream_url) : null;
+    const show = currentMode === "self" && Boolean(d) && isStreamerProfile(d) && Boolean(ch);
+    btn.hidden = !show; if (!show) return;
     const live = Boolean(d.stream_live);
     btn.classList.toggle("is-live", live);
     btn.setAttribute("aria-pressed", String(live));
     btn.textContent = live ? "⏹ Encerrar live" : "🔴 Entrei ao vivo";
     btn.disabled = false;
   }
-
   function handleGoLive() {
     const d = selfProfile;
-    const channel = d ? parseStreamUrl(d.stream_url) : null;
-    if (!channel || !isStreamerProfile(d)) return;
+    const ch = d ? parseStreamUrl(d.stream_url) : null;
+    if (!ch || !isStreamerProfile(d)) return;
     const next = !d.stream_live;
-    const ok = context?.send?.({
-      t: "stream_live_set",
-      live: next,
-      url: next ? liveUrlFor(channel) : "",
-    });
+    const ok = context?.send?.({ t:"stream_live_set", live:next, url: next ? liveUrlFor(ch) : "" });
     if (!ok) { context?.toast?.("A conexão caiu. Reconecte-se e tente de novo."); return; }
-    const btn = safe("profileGoLiveBtn");
-    if (btn) btn.disabled = true;
-    // Se o servidor não responder, libera o botão de novo.
+    const btn = safe("profileGoLiveBtn"); if (btn) btn.disabled = true;
     setTimeout(renderGoLive, 3000);
     context?.toast?.(next ? "Live anunciada na comunidade! 🔴" : "Live encerrada.");
   }
-
   function refreshStreamHint() {
-    const input = safe("pStreamUrl");
-    const hint = safe("pStreamHint");
+    const input = safe("pStreamUrl"), hint = safe("pStreamHint");
     if (!input || !hint) return;
     const raw = input.value.trim();
-    hint.classList.remove("is-error", "is-ok");
-    if (!raw) {
-      hint.textContent = "Link do seu canal na Twitch, YouTube ou Kick. Aparece como botão no seu perfil.";
-      return;
-    }
+    hint.classList.remove("is-error","is-ok");
+    if (!raw) { hint.textContent = "Link do seu canal na Twitch, YouTube ou Kick. Aparece como botão no seu perfil."; return; }
     const info = parseStreamUrl(raw);
-    if (info) {
-      hint.textContent = "✓ Canal da " + info.platform + " reconhecido.";
-      hint.classList.add("is-ok");
-    } else {
-      hint.textContent = "Link não reconhecido. Use o endereço do canal (twitch.tv/…, youtube.com/@…, kick.com/…).";
-      hint.classList.add("is-error");
-    }
+    if (info) { hint.textContent = "✓ Canal da " + info.platform + " reconhecido."; hint.classList.add("is-ok"); }
+    else { hint.textContent = "Link não reconhecido. Use o endereço do canal (twitch.tv/…, youtube.com/@…, kick.com/…)."; hint.classList.add("is-error"); }
   }
 
+  // ─────────────────────────────────────────────────────────
+  // FORMATADORES / IMAGENS
+  // ─────────────────────────────────────────────────────────
   function formatJoined(value) {
     if (!value) return "Data de entrada não registrada";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "Data de entrada não registrada";
-    return "Na comunidade desde " + new Intl.DateTimeFormat("pt-BR",
-      { day: "2-digit", month: "long", year: "numeric" }).format(date);
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "Data de entrada não registrada";
+    return "Na comunidade desde " + new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"long",year:"numeric"}).format(d);
   }
   function formatTime(value) {
-    const date = new Date(Number(value) * 1000);
-    if (Number.isNaN(date.getTime())) return "";
-    return new Intl.DateTimeFormat("pt-BR",
-      { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
+    const d = new Date(Number(value) * 1000);
+    if (Number.isNaN(d.getTime())) return "";
+    return new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}).format(d);
   }
-  function loadImageWithFallback(img, candidates, index = 0) {
+  function loadImageWithFallback(img, candidates, i = 0) {
     if (!img) return;
-    if (!Array.isArray(candidates) || !candidates.length || index >= candidates.length) {
+    if (!Array.isArray(candidates) || !candidates.length || i >= candidates.length) {
       img.removeAttribute("src"); img.onerror = null; img.hidden = true; return;
     }
     img.hidden = false;
-    img.onerror = () => loadImageWithFallback(img, candidates, index + 1);
-    img.src = candidates[index];
+    img.onerror = () => loadImageWithFallback(img, candidates, i + 1);
+    img.src = candidates[i];
   }
 
-  function buildGameTag(label, value, iconElement) {
+  // ─────────────────────────────────────────────────────────
+  // RENDER — DETALHES DO CARD
+  // ─────────────────────────────────────────────────────────
+  function buildGameTag(label, value, icon) {
     const item = node("span", null, "profile-game-tag");
-    if (iconElement) item.append(iconElement);
+    if (icon) item.append(icon);
     const copy = node("span", null, "profile-game-tag-copy");
     copy.append(node("small", label), node("b", value));
     item.append(copy);
     return item;
   }
   function renderDetails() {
-    const box = safe("profileGameDetails");
-    if (!box) return;
+    const box = safe("profileGameDetails"); if (!box) return;
     box.replaceChildren();
     if (profile.rank) {
-      const candidates = rankCandidatesForRank(profile.rank);
+      const c = rankCandidatesForRank(profile.rank);
       let icon = null;
-      if (candidates.length) {
+      if (c.length) {
         const wrap = node("span", null, "profile-game-tag-icon");
-        const img = node("img"); img.alt = ""; img.loading = "lazy";
-        loadImageWithFallback(img, candidates);
-        wrap.append(img); icon = wrap;
+        const img = node("img"); img.alt=""; img.loading="lazy";
+        loadImageWithFallback(img, c); wrap.append(img); icon = wrap;
       }
       const stars = profileStars(profile);
-      const rankValue = stars == null ? profile.rank : profile.rank + " · " + stars + " ★";
-      box.append(buildGameTag("Rank", rankValue, icon));
+      const v = stars == null ? profile.rank : profile.rank + " · " + stars + " ★";
+      box.append(buildGameTag("Rank", v, icon));
     }
     if (profile.game_role) box.append(buildGameTag("Função principal", profile.game_role, null));
     if (profile.hero) {
@@ -608,21 +737,18 @@
       let icon = null;
       if (url) {
         const wrap = node("span", null, "profile-game-tag-icon");
-        const img = node("img"); img.alt = ""; img.loading = "lazy";
+        const img = node("img"); img.alt=""; img.loading="lazy";
         img.src = url; img.onerror = () => { img.hidden = true; };
         wrap.append(img); icon = wrap;
       }
       box.append(buildGameTag("Herói principal", profile.hero, icon));
     }
     if (profile.gid) box.append(buildGameTag("ID no jogo", profile.gid, null));
-    if (!box.childElementCount) {
+    if (!box.childElementCount)
       box.append(node("p", "Adicione seus dados de jogo ao editar o perfil.", "profile-empty"));
-    }
   }
-
   function renderStats() {
-    const section = safe("profileStatsSection");
-    const container = safe("profileStats");
+    const section = safe("profileStatsSection"), container = safe("profileStats");
     if (!section || !container) return;
     const stats = profile.stats || {};
     section.hidden = profile.show_stats === false;
@@ -631,18 +757,15 @@
     [
       ["🪙", "Moedas", Number.isFinite(Number(stats.coins)) ? Number(stats.coins).toLocaleString("pt-BR") : "—"],
       ["🧠", "Quizzes respondidos", Number.isFinite(Number(stats.quizzes)) ? Number(stats.quizzes).toLocaleString("pt-BR") : "—"],
-    ].forEach(([icon, label, value]) => {
-      const card = node("article", null, "profile-stat-card");
-      card.append(node("span", icon, "profile-stat-icon"),
-        node("span", label, "profile-stat-label"), node("b", value));
-      container.append(card);
+    ].forEach(([i, l, v]) => {
+      const c = node("article", null, "profile-stat-card");
+      c.append(node("span", i, "profile-stat-icon"), node("span", l, "profile-stat-label"), node("b", v));
+      container.append(c);
     });
     container.append(node("p", "Partidas e Win Rate ainda não são registrados pelo site.", "profile-data-note"));
   }
-
   function renderAchievements() {
-    const section = safe("profileAchievementsSection");
-    const container = safe("profileAchievements");
+    const section = safe("profileAchievementsSection"), container = safe("profileAchievements");
     if (!section || !container) return;
     const achievements = profile.achievements || [];
     section.hidden = profile.show_stats === false;
@@ -652,37 +775,29 @@
       container.append(node("p", "Responda ao quiz diário para desbloquear sua primeira conquista.", "profile-empty"));
       return;
     }
-    achievements.forEach(badge => {
+    achievements.forEach(b => {
       const item = node("article", null, "profile-badge");
-      item.append(node("span", badge.icon, "profile-badge-icon"), node("b", badge.name));
+      item.append(node("span", b.icon, "profile-badge-icon"), node("b", b.name));
       container.append(item);
     });
   }
-
   function renderActivity() {
-    const section = safe("profileActivitySection");
-    const container = safe("profileActivity");
+    const section = safe("profileActivitySection"), container = safe("profileActivity");
     if (!section || !container) return;
     const activity = profile.activity || [];
     section.hidden = profile.show_activity === false;
     container.replaceChildren();
     if (section.hidden) return;
-    if (!activity.length) {
-      container.append(node("p", "Você ainda não possui atividades recentes.", "profile-empty"));
-      return;
-    }
-    activity.forEach(entry => {
+    if (!activity.length) { container.append(node("p","Você ainda não possui atividades recentes.","profile-empty")); return; }
+    activity.forEach(e => {
       const item = node("article", null, "profile-activity-item");
-      item.append(node("span",
-        entry.kind === "quiz" ? "🧠" : entry.kind === "room" ? "🎮" : "✨",
-        "profile-activity-icon"));
-      const content = node("div");
-      content.append(node("b", entry.detail), node("time", formatTime(entry.ts)));
-      item.append(content);
+      item.append(node("span", e.kind === "quiz" ? "🧠" : e.kind === "room" ? "🎮" : "✨", "profile-activity-icon"));
+      const c = node("div");
+      c.append(node("b", e.detail), node("time", formatTime(e.ts)));
+      item.append(c);
       container.append(item);
     });
   }
-
   function resolveOnlineFlag(data) {
     if (!data || typeof data !== "object") return false;
     if (typeof data.online === "boolean") return data.online;
@@ -692,103 +807,77 @@
     if (typeof data.status === "string") return data.status.toLowerCase() === "online";
     return false;
   }
-  function renderStatus(data, forcedOnline) {
-    const status = safe("profileStatus");
-    if (!status) return;
-    const isOnline = typeof forcedOnline === "boolean" ? forcedOnline : resolveOnlineFlag(data);
+  function renderStatus(data, forced) {
+    const status = safe("profileStatus"); if (!status) return;
+    const isOnline = typeof forced === "boolean" ? forced : resolveOnlineFlag(data);
     status.replaceChildren(node("i"), document.createTextNode(isOnline ? " Online" : " Offline"));
     status.classList.toggle("is-online", isOnline);
     status.classList.toggle("is-offline", !isOnline);
     status.setAttribute("data-online", isOnline ? "true" : "false");
     status.setAttribute("aria-label", isOnline ? "Online agora" : "Offline");
   }
-
   function applyRankBadge(data) {
-    const badge = safe("profileRankBadge");
-    const image = safe("profileRankImage");
-    const label = safe("profileRankLabel");
+    const badge = safe("profileRankBadge"), image = safe("profileRankImage"), label = safe("profileRankLabel");
     if (!badge) return;
     const rank = (data.rank || "").trim();
     const candidates = rankCandidatesForRank(rank);
     if (!rank || !candidates.length) {
       badge.hidden = true;
       if (image) { image.removeAttribute("src"); image.onerror = null; }
-      const hiddenStars = safe("profileRankStars");
-      if (hiddenStars) hiddenStars.hidden = true;
+      const s = safe("profileRankStars"); if (s) s.hidden = true;
       return;
     }
     badge.hidden = false;
     if (label) label.textContent = rank;
     if (image) loadImageWithFallback(image, candidates);
-    const starsWrap = safe("profileRankStars");
-    const starsCount = safe("profileRankStarsCount");
+    const wrap = safe("profileRankStars"), cnt = safe("profileRankStarsCount");
     const stars = profileStars(data);
-    if (starsWrap) {
-      if (stars == null) { starsWrap.hidden = true; starsWrap.removeAttribute("aria-label"); }
+    if (wrap) {
+      if (stars == null) { wrap.hidden = true; wrap.removeAttribute("aria-label"); }
       else {
-        starsWrap.hidden = false;
-        starsWrap.setAttribute("aria-label", stars === 1 ? "1 estrela" : stars + " estrelas");
-        if (starsCount) starsCount.textContent = String(stars);
+        wrap.hidden = false;
+        wrap.setAttribute("aria-label", stars === 1 ? "1 estrela" : stars + " estrelas");
+        if (cnt) cnt.textContent = String(stars);
       }
     }
   }
-
   function applyPageHeading(data, mode) {
-    const isOther = mode === "other";
-    if (isOther) {
+    if (mode === "other") {
       const name = (data && (data.display_name || data.username)) || "Jogador";
       setText("profilePageTitle", "Perfil de " + name);
       setText("profilePageSubtitle", "Conheça a jornada de " + name + " na Society.");
       setText("profileEyebrow", "PLAYER CARD");
     } else {
       setText("profilePageTitle", "Meu perfil");
-      setText("profilePageSubtitle",
-        "Seu espaço na comunidade. Mostre como você joga e personalize sua identidade.");
+      setText("profilePageSubtitle", "Seu espaço na comunidade. Mostre como você joga e personalize sua identidade.");
       setText("profileEyebrow", "SOCIETY · PLAYER CARD");
     }
   }
-
-  function applyFriendshipStatus(data, options = {}) {
-    const btn = safe("profileFriendBtn");
-    if (!btn) return;
-    const isOther = currentMode === "other";
-    if (!isOther) { btn.hidden = true; return; }
+  function applyFriendshipStatus(data) {
+    const btn = safe("profileFriendBtn"); if (!btn) return;
+    if (currentMode !== "other") { btn.hidden = true; return; }
     btn.hidden = false;
-
     const status = data.friendship_status || "none";
     const nick = currentUserId || data.nick || data.username || "";
-    const label = btn.querySelector("span");
-    const svg = btn.querySelector("svg");
-
-    btn.className = "profile-friend-btn";
-    btn.disabled = false;
-    btn.dataset.action = "";
-
+    const label = btn.querySelector("span"), svg = btn.querySelector("svg");
+    btn.className = "profile-friend-btn"; btn.disabled = false; btn.dataset.action = "";
     const ICONS = {
-      add:    '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>',
-      accept: '<polyline points="20 6 9 17 4 12"/>',
+      add:'<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>',
+      accept:'<polyline points="20 6 9 17 4 12"/>',
       friends:'<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/>',
       pending:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
-      remove: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/>',
+      remove:'<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/>',
     };
-
     if (status === "friends") {
-      btn.classList.add("is-friends");
-      if (label) label.textContent = "Amigos ✓";
-      btn.dataset.action = "friend_remove";
-      btn.title = "Remover amizade";
+      btn.classList.add("is-friends"); if (label) label.textContent = "Amigos ✓";
+      btn.dataset.action = "friend_remove"; btn.title = "Remover amizade";
       if (svg) svg.innerHTML = ICONS.remove;
     } else if (status === "pending_out") {
-      btn.classList.add("is-pending");
-      if (label) label.textContent = "Pedido enviado";
-      btn.disabled = true;
-      btn.dataset.action = "";
-      if (svg) svg.innerHTML = ICONS.pending;
+      btn.classList.add("is-pending"); if (label) label.textContent = "Pedido enviado";
+      btn.disabled = true; btn.dataset.action = ""; if (svg) svg.innerHTML = ICONS.pending;
     } else if (status === "pending_in") {
-      btn.classList.add("is-accept");
-      if (label) label.textContent = "Aceitar pedido";
-      btn.dataset.action = "friend_accept";
-      btn.title = "Aceitar pedido de amizade";
+      btn.classList.add("is-accept"); if (label) label.textContent = "Aceitar pedido";
+      btn.dataset.action = "friend_accept"; btn.title = "Aceitar pedido de amizade";
       if (svg) svg.innerHTML = ICONS.accept;
     } else {
       if (label) label.textContent = "Adicionar amigo";
@@ -797,20 +886,18 @@
     }
     btn.dataset.nick = String(nick);
   }
-
   function handleFriendClick() {
-    const btn = safe("profileFriendBtn");
-    if (!btn) return;
-    const action = btn.dataset.action;
-    const nick = btn.dataset.nick;
+    const btn = safe("profileFriendBtn"); if (!btn) return;
+    const action = btn.dataset.action, nick = btn.dataset.nick;
     if (!action || !nick) return;
-    if (action === "friend_remove") {
-      if (!confirm("Remover @" + nick + " da sua lista de amigos?")) return;
-    }
+    if (action === "friend_remove" && !confirm("Remover @" + nick + " da sua lista de amigos?")) return;
     const ok = context?.send?.({ t: action, nick });
     if (!ok) context?.toast?.("A conexão caiu. Reconecte-se antes de continuar.");
   }
 
+  // ─────────────────────────────────────────────────────────
+  // APLICAÇÃO DO CARD
+  // ─────────────────────────────────────────────────────────
   function applyProfileCard(data, username, options = {}) {
     const displayName = data.display_name || username || "Jogador";
     setText("profileDisplayName", displayName);
@@ -819,8 +906,7 @@
     setText("profileUsername", "@" + (data.username || username || "jogador"));
 
     if (data.details_hidden) {
-      setText("profileBio",
-        "🔒 Este perfil é " +
+      setText("profileBio", "🔒 Este perfil é " +
         (data.visibility === "friends" ? "visível apenas para amigos" : "privado") +
         ". Envie um pedido de amizade para ver mais detalhes.");
     } else {
@@ -835,35 +921,35 @@
     const roles = safe("profileCommunityRoles");
     if (roles) {
       roles.replaceChildren();
-      (Array.isArray(data.community_roles) ? data.community_roles : []).forEach(role => {
-        const badge = node("span", role, "profile-community-role");
-        badge.dataset.role = role.toLocaleLowerCase("pt-BR");
-        roles.append(badge);
+      (Array.isArray(data.community_roles) ? data.community_roles : []).forEach(r => {
+        const b = node("span", r, "profile-community-role");
+        b.dataset.role = r.toLowerCase();
+        roles.append(b);
       });
       roles.hidden = roles.childElementCount === 0;
     }
 
+    const safeFrame = isFrameAllowed(data.frame) ? (data.frame || "default") : "default";
+    const safeTheme = isThemeAllowed(data.theme) ? (data.theme || "classic") : "classic";
+
     const card = safe("profileCard");
     if (card) {
-      card.style.setProperty("--profile-accent", data.accent || defaultAccent());
-      card.dataset.frame = data.frame || "default";
+      applyAccent(card, data.accent);
+      card.dataset.frame = safeFrame;
       card.classList.toggle("is-streaming", Boolean(streamInfo(data)?.live));
     }
     const page = safe("profileRoot") || document.querySelector(".profile-page");
     if (page) {
-      page.dataset.theme = data.theme || "classic";
-      page.style.setProperty("--profile-accent", data.accent || defaultAccent());
+      page.dataset.theme = safeTheme;
+      applyAccent(page, data.accent);
     }
+    applyAvatarShape(data.avatar_shape || "round");
+
     setAvatar(safe("profileAvatar"), data, "profile-avatar");
     applyBanner(safe("profileBanner"), data.banner || "");
-
-    renderDetails();
-    renderStats();
-    renderAchievements();
-    renderActivity();
+    renderDetails(); renderStats(); renderAchievements(); renderActivity();
     applyFriendshipStatus(data);
 
-    // Avisa módulos externos (SocialUI: contadores, seguir, posts) que o perfil foi desenhado.
     try {
       const evNick = currentMode === "other"
         ? currentUserId
@@ -876,33 +962,30 @@
 
   function applySelfChrome(data, username) {
     const displayName = data.display_name || username || "Jogador";
-    const usernameHandle = "@" + (data.username || username || "jogador");
+    const handle = "@" + (data.username || username || "jogador");
     setAvatar(safe("sidebarAvatar"), data, "sidebar-avatar");
-    const navAvatar = safe("profileNavAvatar");
-    if (navAvatar) {
-      const newAvatar = createAvatar(data, "nav-profile-avatar");
-      navAvatar.replaceChildren(newAvatar.childNodes[0] ||
-        document.createTextNode(initials(displayName, data.username)));
+    const nav = safe("profileNavAvatar");
+    if (nav) {
+      const a = createAvatar(data, "nav-profile-avatar");
+      nav.replaceChildren(a.childNodes[0] || document.createTextNode(initials(displayName, data.username)));
     }
     renderSidebarVerifiedBadge({ ...data, display_name: displayName });
     renderSidebarUsername(data, username, displayName);
     setText("settingsDisplayName", displayName);
-    setText("settingsUsername", usernameHandle);
+    setText("settingsUsername", handle);
     setChecked("cfgProfilePrivate", Boolean(data.is_private));
     setChecked("cfgShowStats", data.show_stats !== false);
     setChecked("cfgShowActivity", data.show_activity !== false);
-    const notifications = data.notifications || {};
-    setChecked("notifyMessages", notifications.messages !== false);
-    setChecked("notifyInvites", notifications.invites !== false);
-    setChecked("notifyEvents", notifications.events !== false);
-    setChecked("notifyActivity", notifications.activity !== false);
+    const n = data.notifications || {};
+    setChecked("notifyMessages", n.messages !== false);
+    setChecked("notifyInvites", n.invites !== false);
+    setChecked("notifyEvents", n.events !== false);
+    setChecked("notifyActivity", n.activity !== false);
     syncDraftPreviews();
   }
 
   function setChromeVisibility() {
-    const editBtn = safe("profileEditButton");
-    const actions = safe("profileActions");
-    const backBtn = safe("profileBack");
+    const editBtn = safe("profileEditButton"), actions = safe("profileActions"), backBtn = safe("profileBack");
     if (currentMode === "other") {
       if (editBtn) editBtn.hidden = true;
       if (actions) actions.hidden = false;
@@ -925,29 +1008,29 @@
     applyProfileCard(profile, username, { forceOnline: true });
     applySelfChrome(profile, username);
     setChromeVisibility();
+    applyRoleGating();
   }
   function renderOtherProfile(nextProfile, username, userId) {
-    currentMode = "other";
-    currentUserId = userId != null ? userId : null;
+    currentMode = "other"; currentUserId = userId != null ? userId : null;
     profile = nextProfile || {};
     applyPageHeading(profile, "other");
     applyProfileCard(profile, username);
     setChromeVisibility();
-    const editor = safe("profileEditor");
-    if (editor && editor.open) editor.close();
+    const ed = safe("profileEditor"); if (ed && ed.open) ed.close();
   }
   function returnToSelf() {
     if (currentMode === "self") return;
     currentMode = "self"; currentUserId = null;
     profile = selfProfile || {};
-    const username = context?.getUsername ? context.getUsername() : undefined;
+    const username = context?.getUsername?.();
     applyPageHeading(profile, "self");
     applyProfileCard(profile, username, { forceOnline: true });
     applySelfChrome(profile, username);
     setChromeVisibility();
+    applyRoleGating();
   }
-  function getMode() { return currentMode; }
-  function getCurrentUserId() { return currentUserId; }
+  const getMode = () => currentMode;
+  const getCurrentUserId = () => currentUserId;
 
   function handleBack() {
     if (typeof context?.goBack === "function") { context.goBack(); return; }
@@ -957,75 +1040,62 @@
   function handleMessage() {
     if (currentMode !== "other" || currentUserId == null) return;
     if (typeof context?.openDM === "function") { context.openDM(currentUserId); return; }
-    document.dispatchEvent(new CustomEvent("profile:message", { detail: { userId: currentUserId } }));
+    document.dispatchEvent(new CustomEvent("profile:message", { detail:{ userId: currentUserId }}));
   }
   function handleReport() {
     if (currentMode !== "other" || currentUserId == null) return;
     if (typeof context?.reportUser === "function") { context.reportUser(currentUserId); return; }
-    document.dispatchEvent(new CustomEvent("profile:report", { detail: { userId: currentUserId } }));
+    document.dispatchEvent(new CustomEvent("profile:report", { detail:{ userId: currentUserId }}));
   }
 
+  // ─────────────────────────────────────────────────────────
+  // EDITOR
+  // ─────────────────────────────────────────────────────────
   function populateRankOptions(currentValue) {
-    const select = safe("pRank");
-    if (!select) return;
+    const select = safe("pRank"); if (!select) return;
     const desired = currentValue != null ? currentValue : select.value || "";
     while (select.options.length > 1) select.remove(1);
-    RANK_OPTIONS.forEach(option => {
+    RANK_OPTIONS.forEach(o => {
       const opt = document.createElement("option");
-      opt.value = option.value;
-      opt.textContent = option.label;
+      opt.value = o.value; opt.textContent = o.label;
       select.append(opt);
     });
     if (desired) {
-      const exists = Array.from(select.options).some(o => o.value === desired);
-      if (!exists) {
+      if (!Array.from(select.options).some(o => o.value === desired)) {
         const opt = document.createElement("option");
-        opt.value = desired;
-        opt.textContent = desired + " (personalizado)";
+        opt.value = desired; opt.textContent = desired + " (personalizado)";
         select.append(opt);
       }
       select.value = desired;
     } else select.value = "";
   }
-
   function populateHeroOptions(currentValue) {
-    const select = safe("pHero");
-    if (!select) return;
+    const select = safe("pHero"); if (!select) return;
     const desired = currentValue != null ? currentValue : select.value || "";
     while (select.options.length > 1) select.remove(1);
-    const catalog = Array.isArray(window.HERO_CATALOG) ? window.HERO_CATALOG : [];
-    const sorted = [...catalog].sort((a, b) =>
-      String(a.name || "").localeCompare(String(b.name || ""), "pt-BR"));
-    sorted.forEach(hero => {
-      if (!hero || !hero.name) return;
-      const opt = document.createElement("option");
-      opt.value = hero.name;
-      opt.textContent = hero.name;
+    const cat = Array.isArray(window.HERO_CATALOG) ? window.HERO_CATALOG : [];
+    [...cat].sort((a,b) => String(a.name||"").localeCompare(String(b.name||""),"pt-BR")).forEach(h => {
+      if (!h || !h.name) return;
+      const opt = document.createElement("option"); opt.value = h.name; opt.textContent = h.name;
       select.append(opt);
     });
     if (desired) {
-      const exists = Array.from(select.options).some(o => o.value === desired);
-      if (!exists) {
+      if (!Array.from(select.options).some(o => o.value === desired)) {
         const opt = document.createElement("option");
-        opt.value = desired;
-        opt.textContent = desired + " (personalizado)";
+        opt.value = desired; opt.textContent = desired + " (personalizado)";
         select.append(opt);
       }
       select.value = desired;
     } else select.value = "";
   }
-
   function syncStarsField() {
-    const select = safe("pRank");
-    const input = safe("pStars");
-    const field = safe("pStarsField");
-    const enabled = isMythicPlusRank(select?.value || "");
-    if (input) { input.disabled = !enabled; if (!enabled) input.value = ""; }
-    if (field) field.classList.toggle("is-disabled", !enabled);
+    const s = safe("pRank"), i = safe("pStars"), f = safe("pStarsField");
+    const enabled = isMythicPlusRank(s?.value || "");
+    if (i) { i.disabled = !enabled; if (!enabled) i.value = ""; }
+    if (f) f.classList.toggle("is-disabled", !enabled);
   }
   function applyStarsToRank() {
-    const input = safe("pStars");
-    const select = safe("pRank");
+    const input = safe("pStars"), select = safe("pRank");
     if (!input || !select || input.disabled) return;
     const stars = parseStarsValue(input.value);
     if (stars == null) return;
@@ -1033,50 +1103,35 @@
     if (select.value !== next) { populateRankOptions(next); refreshRankPreview(); }
   }
   function refreshRankPreview() {
-    const select = safe("pRank");
-    const img = safe("pRankPreviewImage");
-    const wrap = safe("pRankPreview");
-    if (!select || !img) return;
-    const value = (select.value || "").trim();
-    const candidates = rankCandidatesForRank(value);
-    if (!value || !candidates.length) {
-      img.removeAttribute("src"); img.onerror = null; img.hidden = true;
-      if (wrap) wrap.classList.add("is-empty"); return;
-    }
+    const s = safe("pRank"), img = safe("pRankPreviewImage"), wrap = safe("pRankPreview");
+    if (!s || !img) return;
+    const v = (s.value || "").trim();
+    const c = rankCandidatesForRank(v);
+    if (!v || !c.length) { img.removeAttribute("src"); img.onerror = null; img.hidden = true; if (wrap) wrap.classList.add("is-empty"); return; }
     if (wrap) wrap.classList.remove("is-empty");
-    loadImageWithFallback(img, candidates);
+    loadImageWithFallback(img, c);
   }
   function refreshHeroPreview() {
-    const select = safe("pHero");
-    const img = safe("pHeroPreviewImage");
-    const wrap = safe("pHeroPreview");
-    if (!select || !img) return;
-    const value = (select.value || "").trim();
-    const url = heroImageUrl(value);
-    if (!value || !url) {
-      img.removeAttribute("src"); img.onerror = null; img.hidden = true;
-      if (wrap) wrap.classList.add("is-empty"); return;
-    }
+    const s = safe("pHero"), img = safe("pHeroPreviewImage"), wrap = safe("pHeroPreview");
+    if (!s || !img) return;
+    const v = (s.value || "").trim();
+    const url = heroImageUrl(v);
+    if (!v || !url) { img.removeAttribute("src"); img.onerror = null; img.hidden = true; if (wrap) wrap.classList.add("is-empty"); return; }
     if (wrap) wrap.classList.remove("is-empty");
-    img.hidden = false;
-    img.onerror = () => { img.hidden = true; };
-    img.src = url;
+    img.hidden = false; img.onerror = () => { img.hidden = true; }; img.src = url;
   }
-
   function syncDraftPreviews() {
-    const inputName = safe("profileDisplayNameInput");
-    const name = (inputName?.value) || profile.display_name || "Jogador";
-    const username = profile.username || "";
+    const n = safe("profileDisplayNameInput")?.value || profile.display_name || "Jogador";
+    const u = profile.username || "";
     setAvatar(safe("profilePreviewAvatar"),
-      { display_name: name, username, avatar: draftAvatar },
+      { display_name:n, username:u, avatar:draftAvatar },
       "profile-avatar profile-preview-avatar");
     applyBanner(safe("profilePreviewBanner"), draftBanner);
   }
 
   function openEditor() {
     if (currentMode !== "self") return;
-    const form = safe("profileForm");
-    if (!form) return;
+    const form = safe("profileForm"); if (!form) return;
     form.reset();
     setText("profileFormMessage", "");
     safe("profileFormMessage")?.classList.remove("is-error");
@@ -1084,8 +1139,8 @@
     populateRankOptions(profile.rank || "");
     populateHeroOptions(profile.hero || "");
     syncStarsField();
-    const savedStars = profileStars(profile);
-    setVal("pStars", savedStars == null ? "" : String(savedStars));
+    const st = profileStars(profile);
+    setVal("pStars", st == null ? "" : String(st));
     setVal("profileDisplayNameInput", profile.display_name || "");
     setVal("profileUsernameInput", "@" + (profile.username || ""));
     setVal("pRole", profile.game_role || "Qualquer");
@@ -1093,20 +1148,26 @@
     setVal("pBio", profile.bio || "");
     setVal("profileTitleInput", profile.title || "");
     setVal("profileAccentInput", profile.accent || defaultAccent());
-    setVal("profileFrameInput", profile.frame || "default");
-    setVal("profileThemeInput", profile.theme || "classic");
 
-    // Canal de stream: só aparece para quem tem o selo de streamer.
+    const savedFrame = isFrameAllowed(profile.frame) ? (profile.frame || "default") : "default";
+    const savedTheme = isThemeAllowed(profile.theme) ? (profile.theme || "classic") : "classic";
+    setVal("profileFrameInput", savedFrame);
+    setVal("profileThemeInput", savedTheme);
+    setVal("pAvatarShape", profile.avatar_shape || "round");
+
+    // Aplica o gating ANTES de marcar como selecionado, para respeitar o cargo atual.
+    applyRoleGating();
+    syncSwatchSelection("profileFrameInput");
+    syncSwatchSelection("profileThemeInput");
+
     const streamField = safe("pStreamField");
     const canStream = isStreamerProfile(profile);
     if (streamField) streamField.hidden = !canStream;
     setVal("pStreamUrl", canStream ? (profile.stream_url || "") : "");
     refreshStreamHint();
 
-    const visibility = profile.visibility ||
-      (profile.is_private ? "private" : "public");
-    setVal("profileVisibilityInput", visibility);
-
+    const vis = profile.visibility || (profile.is_private ? "private" : "public");
+    setVal("profileVisibilityInput", vis);
     setChecked("profileShowStatsInput", profile.show_stats !== false);
     setChecked("profileShowActivityInput", profile.show_activity !== false);
 
@@ -1121,65 +1182,62 @@
     if (dialog && typeof dialog.showModal === "function") dialog.showModal();
   }
 
-  function imageData(file, width, height, maxDataLength) {
-    return new Promise((resolve, reject) => {
-      if (!file || !file.type.startsWith("image/")) { reject(new Error("Selecione um arquivo de imagem.")); return; }
-      if (file.size > MAX_IMAGE_BYTES) { reject(new Error("A imagem deve ter no máximo 8 MB.")); return; }
-      const objectUrl = URL.createObjectURL(file);
-      const image = new Image();
-      image.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-        const scale = Math.min(1, width / image.naturalWidth, height / image.naturalHeight);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-        const context2d = canvas.getContext("2d");
-        if (!context2d) { reject(new Error("Não foi possível processar esta imagem.")); return; }
-        context2d.drawImage(image, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          if (!blob) { reject(new Error("Não foi possível otimizar esta imagem.")); return; }
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = String(reader.result || "");
-            if (result.length > maxDataLength) {
-              reject(new Error("A imagem otimizada ainda ficou grande demais. Escolha outra imagem."));
-            } else resolve(result);
+  function imageData(file, w, h, maxLen) {
+    return new Promise((res, rej) => {
+      if (!file || !file.type.startsWith("image/")) return rej(new Error("Selecione um arquivo de imagem."));
+      if (file.size > MAX_IMAGE_BYTES) return rej(new Error("A imagem deve ter no máximo 8 MB."));
+      const u = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(u);
+        const s = Math.min(1, w / img.naturalWidth, h / img.naturalHeight);
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(img.naturalWidth * s));
+        c.height = Math.max(1, Math.round(img.naturalHeight * s));
+        const ctx = c.getContext("2d");
+        if (!ctx) return rej(new Error("Não foi possível processar esta imagem."));
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(b => {
+          if (!b) return rej(new Error("Não foi possível otimizar esta imagem."));
+          const r = new FileReader();
+          r.onload = () => {
+            const s = String(r.result || "");
+            if (s.length > maxLen) rej(new Error("A imagem otimizada ainda ficou grande demais. Escolha outra imagem."));
+            else res(s);
           };
-          reader.onerror = () => reject(new Error("Não foi possível ler esta imagem."));
-          reader.readAsDataURL(blob);
+          r.onerror = () => rej(new Error("Não foi possível ler esta imagem."));
+          r.readAsDataURL(b);
         }, "image/jpeg", 0.78);
       };
-      image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("O arquivo selecionado não pôde ser aberto como imagem.")); };
-      image.src = objectUrl;
+      img.onerror = () => { URL.revokeObjectURL(u); rej(new Error("O arquivo selecionado não pôde ser aberto como imagem.")); };
+      img.src = u;
     });
   }
-  function showImageError(message) {
-    const msg = safe("profileFormMessage");
-    if (!msg) return;
-    msg.textContent = message;
-    msg.classList.add("is-error");
+  function showImageError(msg) {
+    const m = safe("profileFormMessage"); if (!m) return;
+    m.textContent = msg; m.classList.add("is-error");
   }
 
   function saveProfile(event) {
     event.preventDefault();
     if (currentMode !== "self") return;
-    const displayName = safe("profileDisplayNameInput")?.value.trim();
-    if (!displayName) { showImageError("Informe um nome de exibição."); safe("profileDisplayNameInput")?.focus(); return; }
+    const dn = safe("profileDisplayNameInput")?.value.trim();
+    if (!dn) { showImageError("Informe um nome de exibição."); safe("profileDisplayNameInput")?.focus(); return; }
 
-    // Canal de stream (só streamers). Vazio = remove a associação.
     let streamUrl = "";
     if (isStreamerProfile(profile)) {
-      const rawStream = safe("pStreamUrl")?.value.trim() || "";
-      if (rawStream) {
-        const info = parseStreamUrl(rawStream);
-        if (!info) {
-          showImageError("Link do canal inválido. Use Twitch, YouTube ou Kick.");
-          safe("pStreamUrl")?.focus();
-          return;
-        }
+      const raw = safe("pStreamUrl")?.value.trim() || "";
+      if (raw) {
+        const info = parseStreamUrl(raw);
+        if (!info) { showImageError("Link do canal inválido. Use Twitch, YouTube ou Kick."); safe("pStreamUrl")?.focus(); return; }
         streamUrl = info.url;
       }
     }
+
+    const frame = safe("profileFrameInput")?.value || "default";
+    const theme = safe("profileThemeInput")?.value || "classic";
+    if (!isFrameAllowed(frame)) { showImageError("Você não tem acesso a esta moldura."); return; }
+    if (!isThemeAllowed(theme)) { showImageError("Você não tem acesso a este tema."); return; }
 
     const msg = safe("profileFormMessage");
     if (msg) { msg.textContent = "Salvando perfil…"; msg.classList.remove("is-error"); }
@@ -1189,28 +1247,26 @@
     if (stars != null && (isMythicPlusRank(rank) || rank === "")) rank = rankFromMythicStars(stars);
     const payloadStars = isMythicPlusRank(rank) ? stars : null;
 
-    const visibility = safe("profileVisibilityInput")?.value || "public";
-    const isPrivate = visibility === "private";
+    const vis = safe("profileVisibilityInput")?.value || "public";
+    const isPrivate = vis === "private";
 
     pendingStreamUrl = isStreamerProfile(profile) ? streamUrl : null;
 
+    const rawShape = (safe("pAvatarShape")?.value || profile.avatar_shape || "round");
+    const shape = AVATAR_SHAPES.has(String(rawShape).toLowerCase()) ? String(rawShape).toLowerCase() : "round";
+
     const ok = context?.send?.({
-      t: "profile_set",
-      display_name: displayName,
-      rank,
-      stars: payloadStars,
+      t:"profile_set",
+      display_name: dn, rank, stars: payloadStars,
       role: safe("pRole")?.value || "",
       hero: safe("pHero")?.value || "",
       gid: safe("pGid")?.value || "",
       bio: safe("pBio")?.value || "",
       title: safe("profileTitleInput")?.value || "",
       accent: safe("profileAccentInput")?.value || "",
-      frame: safe("profileFrameInput")?.value || "default",
-      theme: safe("profileThemeInput")?.value || "classic",
-      avatar: draftAvatar,
-      banner: draftBanner,
-      visibility,
-      is_private: isPrivate,
+      frame, theme, avatar_shape: shape,
+      avatar: draftAvatar, banner: draftBanner,
+      visibility: vis, is_private: isPrivate,
       show_stats: Boolean(safe("profileShowStatsInput")?.checked),
       show_activity: Boolean(safe("profileShowActivityInput")?.checked),
       stream_url: streamUrl,
@@ -1227,431 +1283,368 @@
     };
   }
   function savePrivacy() {
-    const message = safe("privacySettingsMessage");
-    if (!message) return;
-    message.textContent = "Salvando…";
-    message.classList.remove("is-error");
+    const m = safe("privacySettingsMessage"); if (!m) return;
+    m.textContent = "Salvando…"; m.classList.remove("is-error");
     const ok = context?.send?.({
-      t: "settings_set",
-      notifications: getNotifications(),
+      t:"settings_set", notifications: getNotifications(),
       is_private: Boolean(safe("cfgProfilePrivate")?.checked),
       show_stats: Boolean(safe("cfgShowStats")?.checked),
       show_activity: Boolean(safe("cfgShowActivity")?.checked),
     });
-    if (!ok) {
-      message.textContent = "A conexão caiu. Reconecte-se antes de salvar as preferências.";
-      message.classList.add("is-error");
-    }
+    if (!ok) { m.textContent = "A conexão caiu. Reconecte-se antes de salvar as preferências."; m.classList.add("is-error"); }
   }
   function saveNotifications() {
-    const message = safe("notificationSettingsMessage");
-    if (!message) return;
-    message.textContent = "Salvando…";
-    message.classList.remove("is-error");
+    const m = safe("notificationSettingsMessage"); if (!m) return;
+    m.textContent = "Salvando…"; m.classList.remove("is-error");
     const ok = context?.send?.({
-      t: "settings_set",
-      notifications: getNotifications(),
+      t:"settings_set", notifications: getNotifications(),
       is_private: Boolean(safe("cfgProfilePrivate")?.checked),
       show_stats: Boolean(safe("cfgShowStats")?.checked),
       show_activity: Boolean(safe("cfgShowActivity")?.checked),
     });
-    if (!ok) {
-      message.textContent = "A conexão caiu. Reconecte-se antes de salvar as preferências.";
-      message.classList.add("is-error");
-    }
+    if (!ok) { m.textContent = "A conexão caiu. Reconecte-se antes de salvar as preferências."; m.classList.add("is-error"); }
   }
   function submitPasswordChange(event) {
     event.preventDefault();
-    const current = safe("passwordCurrent")?.value || "";
-    const next = safe("passwordNew")?.value || "";
-    const confirmation = safe("passwordConfirm")?.value || "";
-    const message = safe("passwordChangeMessage");
-    if (!message) return;
-    message.classList.remove("is-error");
-    if (next.length < 10 || next.length > 128) {
-      message.textContent = "A nova senha deve ter entre 10 e 128 caracteres.";
-      message.classList.add("is-error");
-      return;
-    }
-    if (next !== confirmation) {
-      message.textContent = "A confirmação não corresponde à nova senha.";
-      message.classList.add("is-error");
-      safe("passwordConfirm")?.focus();
-      return;
-    }
-    message.textContent = "Alterando senha…";
-    const ok = context?.send?.({ t: "password_change", current, new: next });
-    if (!ok) {
-      message.textContent = "A conexão caiu. Reconecte-se antes de alterar sua senha.";
-      message.classList.add("is-error");
-    }
+    const cur = safe("passwordCurrent")?.value || "";
+    const nw  = safe("passwordNew")?.value || "";
+    const cf  = safe("passwordConfirm")?.value || "";
+    const m   = safe("passwordChangeMessage"); if (!m) return;
+    m.classList.remove("is-error");
+    if (nw.length < 10 || nw.length > 128) { m.textContent = "A nova senha deve ter entre 10 e 128 caracteres."; m.classList.add("is-error"); return; }
+    if (nw !== cf) { m.textContent = "A confirmação não corresponde à nova senha."; m.classList.add("is-error"); safe("passwordConfirm")?.focus(); return; }
+    m.textContent = "Alterando senha…";
+    const ok = context?.send?.({ t:"password_change", current: cur, new: nw });
+    if (!ok) { m.textContent = "A conexão caiu. Reconecte-se antes de alterar sua senha."; m.classList.add("is-error"); }
   }
 
+  // ─────────────────────────────────────────────────────────
+  // MOUNT
+  // ─────────────────────────────────────────────────────────
   function mount(options) {
     context = options || {};
 
-    const editBtn = safe("profileEditButton");
-    if (editBtn) editBtn.addEventListener("click", openEditor);
-    const settingsEdit = safe("settingsEditProfile");
-    if (settingsEdit) settingsEdit.addEventListener("click", () => { context?.openProfile?.(); openEditor(); });
-    const backBtn = safe("profileBack");
-    if (backBtn) backBtn.addEventListener("click", handleBack);
-    const msgBtn = safe("profileMessageBtn");
-    if (msgBtn) msgBtn.addEventListener("click", handleMessage);
-    const repBtn = safe("profileReportBtn");
-    if (repBtn) repBtn.addEventListener("click", handleReport);
-    const friendBtn = safe("profileFriendBtn");
-    if (friendBtn) friendBtn.addEventListener("click", handleFriendClick);
-    const goLiveBtn = safe("profileGoLiveBtn");
-    if (goLiveBtn) goLiveBtn.addEventListener("click", handleGoLive);
-    const streamInput = safe("pStreamUrl");
-    if (streamInput) streamInput.addEventListener("input", refreshStreamHint);
+    buildPicker(FRAME_CATALOG, "frame", "pfFramePicker", "profileFrameInput");
+    buildPicker(THEME_CATALOG, "theme", "pfThemePicker", "profileThemeInput");
 
-    const editorClose = safe("profileEditorClose");
-    if (editorClose) editorClose.addEventListener("click", () => safe("profileEditor")?.close());
-    const cancelBtn = safe("profileCancelButton");
-    if (cancelBtn) cancelBtn.addEventListener("click", () => safe("profileEditor")?.close());
+    safe("profileEditButton")?.addEventListener("click", openEditor);
+    safe("settingsEditProfile")?.addEventListener("click", () => { context?.openProfile?.(); openEditor(); });
+    safe("profileBack")?.addEventListener("click", handleBack);
+    safe("profileMessageBtn")?.addEventListener("click", handleMessage);
+    safe("profileReportBtn")?.addEventListener("click", handleReport);
+    safe("profileFriendBtn")?.addEventListener("click", handleFriendClick);
+    safe("profileGoLiveBtn")?.addEventListener("click", handleGoLive);
+    safe("pStreamUrl")?.addEventListener("input", refreshStreamHint);
+
+    safe("profileEditorClose")?.addEventListener("click", () => safe("profileEditor")?.close());
+    safe("profileCancelButton")?.addEventListener("click", () => safe("profileEditor")?.close());
 
     const form = safe("profileForm");
     if (form) form.addEventListener("submit", saveProfile);
-    const nameInput = safe("profileDisplayNameInput");
-    if (nameInput) nameInput.addEventListener("input", syncDraftPreviews);
+    safe("profileDisplayNameInput")?.addEventListener("input", syncDraftPreviews);
 
-    ["profileAccentInput", "profileFrameInput"].forEach(id => {
-      const el = safe(id);
-      if (!el) return;
-      el.addEventListener("input", () => {
-        const editor = safe("profileEditor");
-        const accent = safe("profileAccentInput")?.value;
-        if (editor && accent) editor.style.setProperty("--profile-accent", accent);
+    ["profileAccentInput","profileFrameInput"].forEach(id => {
+      safe(id)?.addEventListener("input", () => {
+        const ed = safe("profileEditor");
+        const a = safe("profileAccentInput")?.value;
+        if (ed && a) ed.style.setProperty("--profile-accent", a);
       });
     });
+    safe("profileFrameInput")?.addEventListener("change", () => syncSwatchSelection("profileFrameInput"));
+    safe("profileThemeInput")?.addEventListener("change", () => syncSwatchSelection("profileThemeInput"));
 
-    const rankSelect = safe("pRank");
-    if (rankSelect) rankSelect.addEventListener("change", () => { syncStarsField(); refreshRankPreview(); });
-    const starsInput = safe("pStars");
-    if (starsInput) starsInput.addEventListener("input", applyStarsToRank);
-    const heroSelect = safe("pHero");
-    if (heroSelect) heroSelect.addEventListener("change", refreshHeroPreview);
+    safe("pAvatarShape")?.addEventListener("change", () => applyAvatarShape(safe("pAvatarShape").value));
 
-    const avatarFile = safe("profileAvatarFile");
-    if (avatarFile) {
-      avatarFile.addEventListener("change", async (event) => {
-        try {
-          draftAvatar = await imageData(event.target.files[0], 360, 360, MAX_AVATAR_DATA_LENGTH);
-          const msg = safe("profileFormMessage");
-          if (msg) msg.textContent = "";
-          syncDraftPreviews();
-        } catch (error) { showImageError(error.message); event.target.value = ""; }
-      });
-    }
-    const bannerFile = safe("profileBannerFile");
-    if (bannerFile) {
-      bannerFile.addEventListener("change", async (event) => {
-        try {
-          draftBanner = await imageData(event.target.files[0], 1280, 460, MAX_BANNER_DATA_LENGTH);
-          const msg = safe("profileFormMessage");
-          if (msg) msg.textContent = "";
-          syncDraftPreviews();
-        } catch (error) { showImageError(error.message); event.target.value = ""; }
-      });
-    }
-    const removeAvatar = safe("profileRemoveAvatar");
-    if (removeAvatar) removeAvatar.addEventListener("click", () => {
-      draftAvatar = "";
-      const inp = safe("profileAvatarFile");
-      if (inp) inp.value = "";
-      syncDraftPreviews();
+    safe("pRank")?.addEventListener("change", () => { syncStarsField(); refreshRankPreview(); });
+    safe("pStars")?.addEventListener("input", applyStarsToRank);
+    safe("pHero")?.addEventListener("change", refreshHeroPreview);
+
+    safe("profileAvatarFile")?.addEventListener("change", async ev => {
+      try {
+        draftAvatar = await imageData(ev.target.files[0], 360, 360, MAX_AVATAR_DATA_LENGTH);
+        const m = safe("profileFormMessage"); if (m) m.textContent = "";
+        syncDraftPreviews();
+      } catch (err) { showImageError(err.message); ev.target.value = ""; }
     });
-    const removeBanner = safe("profileRemoveBanner");
-    if (removeBanner) removeBanner.addEventListener("click", () => {
-      draftBanner = "";
-      const inp = safe("profileBannerFile");
-      if (inp) inp.value = "";
-      syncDraftPreviews();
+    safe("profileBannerFile")?.addEventListener("change", async ev => {
+      try {
+        draftBanner = await imageData(ev.target.files[0], 1280, 460, MAX_BANNER_DATA_LENGTH);
+        const m = safe("profileFormMessage"); if (m) m.textContent = "";
+        syncDraftPreviews();
+      } catch (err) { showImageError(err.message); ev.target.value = ""; }
+    });
+    safe("profileRemoveAvatar")?.addEventListener("click", () => {
+      draftAvatar = ""; const i = safe("profileAvatarFile"); if (i) i.value = ""; syncDraftPreviews();
+    });
+    safe("profileRemoveBanner")?.addEventListener("click", () => {
+      draftBanner = ""; const i = safe("profileBannerFile"); if (i) i.value = ""; syncDraftPreviews();
     });
 
-    const savePriv = safe("savePrivacySettings");
-    if (savePriv) savePriv.addEventListener("click", savePrivacy);
-    const saveNotif = safe("saveNotificationSettings");
-    if (saveNotif) saveNotif.addEventListener("click", saveNotifications);
-    const pwForm = safe("passwordChangeForm");
-    if (pwForm) pwForm.addEventListener("submit", submitPasswordChange);
+    safe("savePrivacySettings")?.addEventListener("click", savePrivacy);
+    safe("saveNotificationSettings")?.addEventListener("click", saveNotifications);
+    safe("passwordChangeForm")?.addEventListener("submit", submitPasswordChange);
 
-    document.querySelectorAll("[data-toggle-password]").forEach(button => {
-      button.addEventListener("click", () => {
-        const input = safe(button.dataset.togglePassword);
-        if (!input) return;
-        const show = input.type === "password";
-        input.type = show ? "text" : "password";
-        button.textContent = show ? "Ocultar" : "Mostrar";
-        const label = button.closest("label")?.firstChild?.textContent?.trim() || "";
-        button.setAttribute("aria-label", (show ? "Ocultar " : "Mostrar ") + label);
+    document.querySelectorAll("[data-toggle-password]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const inp = safe(btn.dataset.togglePassword); if (!inp) return;
+        const show = inp.type === "password";
+        inp.type = show ? "text" : "password";
+        btn.textContent = show ? "Ocultar" : "Mostrar";
+        const label = btn.closest("label")?.firstChild?.textContent?.trim() || "";
+        btn.setAttribute("aria-label", (show ? "Ocultar " : "Mostrar ") + label);
       });
     });
 
     window.addEventListener("hero-catalog-ready", () => {
       populateHeroOptions();
-      const editor = safe("profileEditor");
-      if (editor && editor.open) refreshHeroPreview();
+      const ed = safe("profileEditor");
+      if (ed && ed.open) refreshHeroPreview();
     });
 
     watchSidebarBadge();
     setChromeVisibility();
+    applyRoleGating();
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // RESUMO DE PERFIL REUTILIZÁVEL (DM, LFG, dialogs)
-  // ─────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  // RESUMO DE PERFIL (DM, LFG, dialogs)
+  // ─────────────────────────────────────────────────────────
   let _summaryStylesInjected = false;
   function ensureSummaryStyles() {
     if (_summaryStylesInjected) return;
     if (document.getElementById("profile-summary-css")) { _summaryStylesInjected = true; return; }
-    const style = document.createElement("style");
-    style.id = "profile-summary-css";
-    style.textContent = `
-      .profile-summary { display:flex; flex-direction:column; gap:12px; min-width:0; }
-      .profile-summary-head { display:flex; align-items:center; gap:14px; min-width:0; }
-      .profile-summary-avatar { width:64px; height:64px; border-radius:50%; overflow:hidden; display:grid; place-items:center; flex:0 0 auto; background:linear-gradient(145deg,#262b34,#171a20); color:var(--profile-accent, var(--accent, #d4b45a)); font-weight:700; font-size:1.4rem; text-transform:uppercase; box-shadow:0 0 0 2px var(--profile-accent, var(--accent, #d4b45a)); }
-      .profile-summary-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
-      .profile-summary-id { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 auto; }
-      .profile-summary-name { display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0; }
-      .profile-summary-name b { font-size:1.15rem; overflow-wrap:anywhere; }
-      .profile-summary-nick { color:var(--muted, #9298a3); font-size:.82rem; }
-      .profile-summary-title { align-self:flex-start; margin-top:4px; padding:2px 8px; border-radius:999px; font-size:.72rem; font-weight:600; color:var(--profile-accent, var(--accent, #d4b45a)); background:rgba(255,255,255,.06); }
-      .profile-summary-status { display:inline-flex; align-items:center; gap:5px; font-size:.75rem; color:var(--muted, #9298a3); }
-      .profile-summary-status i { width:8px; height:8px; border-radius:50%; background:#6b7280; display:inline-block; }
-      .profile-summary-status.is-online i { background:#3ddc84; box-shadow:0 0 6px rgba(61,220,132,.7); }
-      .profile-summary-bio { margin:0; color:var(--muted, #9298a3); font-size:.9rem; line-height:1.5; overflow-wrap:anywhere; white-space:pre-wrap; }
-      .profile-summary-note { margin:0; padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.04); color:var(--muted, #9298a3); font-size:.9rem; }
-      .profile-summary-tags { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; }
-      .profile-summary-tag { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,.04); box-shadow:inset 0 0 0 1px rgba(255,255,255,.07); min-width:0; }
-      .profile-summary-tag-icon { width:30px; height:30px; flex:0 0 auto; display:grid; place-items:center; }
-      .profile-summary-tag-icon img { width:100%; height:100%; object-fit:contain; display:block; }
-      .profile-summary-tag-copy { display:flex; flex-direction:column; min-width:0; }
-      .profile-summary-tag-copy small { color:var(--muted, #9298a3); font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; }
-      .profile-summary-tag-copy b { font-size:.92rem; overflow-wrap:anywhere; }
-      .profile-summary-roles { display:flex; flex-wrap:wrap; gap:6px; }
-      .profile-summary-role { padding:2px 8px; border-radius:999px; font-size:.7rem; font-weight:700; letter-spacing:.04em; background:rgba(255,255,255,.07); }
-      .profile-summary-role[data-role="dev"]       { color:#f2b84b; }
-      .profile-summary-role[data-role="admin"]     { color:#f2b84b; }
-      .profile-summary-role[data-role="mod"]       { color:#f2b84b; }
-      .profile-summary-role[data-role="moderador"] { color:#f2b84b; }
-      .profile-summary-role[data-role="vip"]       { color:#4c8dff; }
-      .profile-summary-role[data-role="streamer"]  { color:#b46bff; }
-      .profile-summary-role[data-role="beta"]      { color:#ff9d2e; }
-      .profile-summary-role[data-role="membro"]    { color:#9298a3; }
-      .profile-summary-joined { color:var(--muted, #9298a3); font-size:.78rem; }
-      .profile-summary .profile-stream-btn { align-self:flex-start; }
+    const s = document.createElement("style");
+    s.id = "profile-summary-css";
+    s.textContent = `
+      .profile-summary{display:flex;flex-direction:column;gap:12px;min-width:0}
+      .profile-summary-head{display:flex;align-items:center;gap:14px;min-width:0}
+      .profile-summary-avatar{width:64px;height:64px;border-radius:var(--pf-avatar-radius,50%);overflow:hidden;display:grid;place-items:center;flex:0 0 auto;background:linear-gradient(145deg,#262b34,#171a20);color:var(--profile-accent,var(--accent,#d4b45a));font-weight:700;font-size:1.4rem;text-transform:uppercase;box-shadow:0 0 0 2px var(--profile-accent,var(--accent,#d4b45a))}
+      .profile-summary-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+      .profile-summary-id{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto}
+      .profile-summary-name{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+      .profile-summary-name b{font-size:1.15rem;overflow-wrap:anywhere}
+      .profile-summary-nick{color:var(--muted,#9298a3);font-size:.82rem}
+      .profile-summary-title{align-self:flex-start;margin-top:4px;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:600;color:var(--profile-accent,var(--accent,#d4b45a));background:rgba(255,255,255,.06)}
+      .profile-summary-status{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;color:var(--muted,#9298a3)}
+      .profile-summary-status i{width:8px;height:8px;border-radius:50%;background:#6b7280;display:inline-block}
+      .profile-summary-status.is-online i{background:#3ddc84;box-shadow:0 0 6px rgba(61,220,132,.7)}
+      .profile-summary-bio{margin:0;color:var(--muted,#9298a3);font-size:.9rem;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}
+      .profile-summary-note{margin:0;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);color:var(--muted,#9298a3);font-size:.9rem}
+      .profile-summary-tags{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+      .profile-summary-tag{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);min-width:0}
+      .profile-summary-tag-icon{width:30px;height:30px;flex:0 0 auto;display:grid;place-items:center}
+      .profile-summary-tag-icon img{width:100%;height:100%;object-fit:contain;display:block}
+      .profile-summary-tag-copy{display:flex;flex-direction:column;min-width:0}
+      .profile-summary-tag-copy small{color:var(--muted,#9298a3);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em}
+      .profile-summary-tag-copy b{font-size:.92rem;overflow-wrap:anywhere}
+      .profile-summary-roles{display:flex;flex-wrap:wrap;gap:6px}
+      .profile-summary-role{padding:2px 8px;border-radius:999px;font-size:.7rem;font-weight:700;letter-spacing:.04em;background:rgba(255,255,255,.07)}
+      .profile-summary-role[data-role="dev"],.profile-summary-role[data-role="admin"],.profile-summary-role[data-role="mod"],.profile-summary-role[data-role="moderador"]{color:#f2b84b}
+      .profile-summary-role[data-role="vip"]{color:#4c8dff}
+      .profile-summary-role[data-role="streamer"]{color:#b46bff}
+      .profile-summary-role[data-role="beta"]{color:#ff9d2e}
+      .profile-summary-role[data-role="membro"]{color:#9298a3}
+      .profile-summary-joined{color:var(--muted,#9298a3);font-size:.78rem}
+      .profile-summary .profile-stream-btn{align-self:flex-start}
     `;
-    document.head.appendChild(style);
+    document.head.appendChild(s);
     _summaryStylesInjected = true;
   }
-
   function summaryRankIcon(rank) {
-    const candidates = rankCandidatesForRank(rank);
-    if (!candidates.length) return null;
-    const wrap = node("span", null, "profile-summary-tag-icon");
-    const img = node("img"); img.alt = ""; img.loading = "lazy";
-    loadImageWithFallback(img, candidates);
-    wrap.append(img);
-    return wrap;
+    const c = rankCandidatesForRank(rank); if (!c.length) return null;
+    const w = node("span", null, "profile-summary-tag-icon");
+    const img = node("img"); img.alt=""; img.loading="lazy";
+    loadImageWithFallback(img, c); w.append(img);
+    return w;
   }
   function summaryHeroIcon(name) {
-    const url = heroImageUrl(name);
-    if (!url) return null;
-    const wrap = node("span", null, "profile-summary-tag-icon");
-    const img = node("img"); img.alt = ""; img.loading = "lazy";
+    const url = heroImageUrl(name); if (!url) return null;
+    const w = node("span", null, "profile-summary-tag-icon");
+    const img = node("img"); img.alt=""; img.loading="lazy";
     img.src = url; img.onerror = () => { img.hidden = true; };
-    wrap.append(img);
-    return wrap;
+    w.append(img);
+    return w;
   }
   function summaryTag(label, value, icon) {
     const item = node("span", null, "profile-summary-tag");
     if (icon) item.append(icon);
-    const copy = node("span", null, "profile-summary-tag-copy");
-    copy.append(node("small", label), node("b", value));
-    item.append(copy);
+    const c = node("span", null, "profile-summary-tag-copy");
+    c.append(node("small", label), node("b", value));
+    item.append(c);
     return item;
   }
-
   function createProfileSummary(data, options) {
-    ensureSummaryStyles();
-    ensureInlineBadgeStyles();
+    ensureSummaryStyles(); ensureInlineBadgeStyles();
     const d = data && typeof data === "object" ? data : {};
     const opts = options || {};
     const nick = d.username || d.nick || opts.nick || "";
-    const displayName = d.display_name || d.display || nick || "Jogador";
-
+    const dn = d.display_name || d.display || nick || "Jogador";
     const root = node("div", null, "profile-summary");
 
     const head = node("div", null, "profile-summary-head");
-    head.append(createAvatar({ ...d, display_name: displayName, username: nick }, "profile-summary-avatar"));
+    head.append(createAvatar({ ...d, display_name: dn, username: nick }, "profile-summary-avatar"));
     const identity = node("div", null, "profile-summary-id");
     const nameRow = node("div", null, "profile-summary-name");
-    nameRow.append(node("b", displayName));
-
+    nameRow.append(node("b", dn));
     const role = roleFromProfile(d);
     const def = badgeDefForRole(role);
     if (def) {
-      const badge = node("span", null, "profile-verified-badge-inline");
-      badge.setAttribute("role", "img");
-      badge.dataset.badge = ROLE_TO_BADGE[role] || "";
-      badge.dataset.role = role;
+      const b = node("span", null, "profile-verified-badge-inline");
+      b.setAttribute("role","img"); b.dataset.badge = ROLE_TO_BADGE[role] || ""; b.dataset.role = role;
       if (def.emoji) {
-        badge.textContent = def.emoji;
-        badge.style.color = "";
-        badge.style.fontSize = "18px";
-        badge.style.lineHeight = "1";
-        badge.style.filter = `drop-shadow(0 0 5px ${def.color}aa)`;
+        b.textContent = def.emoji; b.style.color = ""; b.style.fontSize = "18px";
+        b.style.lineHeight = "1"; b.style.filter = `drop-shadow(0 0 5px ${def.color}aa)`;
       } else {
-        badge.innerHTML = def.svg;
-        badge.style.color = def.color;
-        badge.style.filter = `drop-shadow(0 0 5px ${def.color}88)`;
+        b.innerHTML = def.svg; b.style.color = def.color;
+        b.style.filter = `drop-shadow(0 0 5px ${def.color}88)`;
       }
-      const label = badgeLabelForRole(role);
-      badge.setAttribute("aria-label", label);
-      badge.setAttribute("title", label);
-      nameRow.append(badge);
+      const l = badgeLabelForRole(role);
+      b.setAttribute("aria-label", l); b.setAttribute("title", l);
+      nameRow.append(b);
     }
-
     identity.append(nameRow, node("small", "@" + (nick || "jogador"), "profile-summary-nick"));
     if (!d.details_hidden && d.title) identity.append(node("span", d.title, "profile-summary-title"));
-    const onlineFlag = typeof d.online === "boolean" ? d.online
+    const online = typeof d.online === "boolean" ? d.online
       : typeof opts.online === "boolean" ? opts.online : null;
-    if (onlineFlag !== null) {
-      const status = node("span", null, "profile-summary-status" + (onlineFlag ? " is-online" : ""));
-      status.append(node("i"), document.createTextNode(onlineFlag ? "Online agora" : "Offline"));
-      identity.append(status);
+    if (online !== null) {
+      const s = node("span", null, "profile-summary-status" + (online ? " is-online" : ""));
+      s.append(node("i"), document.createTextNode(online ? "Online agora" : "Offline"));
+      identity.append(s);
     }
-    head.append(identity);
-    root.append(head);
-
+    head.append(identity); root.append(head);
     if (d.details_hidden) {
-      root.append(node("p", "🔒 Este perfil é " +
-        (d.visibility === "friends" ? "visível apenas para amigos." : "privado."), "profile-summary-note"));
+      root.append(node("p", "🔒 Este perfil é " + (d.visibility === "friends" ? "visível apenas para amigos." : "privado."), "profile-summary-note"));
       return root;
     }
     if (d.is_private && !opts.isSelf) {
       root.append(node("p", "Este jogador mantém o perfil privado.", "profile-summary-note"));
       return root;
     }
-
     if (d.bio) root.append(node("p", d.bio, "profile-summary-bio"));
-
-    const streamData = streamInfo(d);
-    if (streamData) root.append(createStreamLink(streamData, "profile-stream-btn"));
-
+    const sd = streamInfo(d);
+    if (sd) root.append(createStreamLink(sd, "profile-stream-btn"));
     const tags = node("div", null, "profile-summary-tags");
     if (d.rank) {
       const stars = profileStars(d);
-      tags.append(summaryTag("Rank", stars == null ? d.rank : d.rank + " · " + stars + " ★",
-        summaryRankIcon(d.rank)));
+      tags.append(summaryTag("Rank", stars == null ? d.rank : d.rank + " · " + stars + " ★", summaryRankIcon(d.rank)));
     }
     if (d.game_role) tags.append(summaryTag("Função principal", d.game_role, null));
     if (d.hero) tags.append(summaryTag("Herói principal", d.hero, summaryHeroIcon(d.hero)));
     if (d.gid) tags.append(summaryTag("ID no jogo", d.gid, null));
     if (tags.childElementCount) root.append(tags);
     else root.append(node("p", "Este jogador ainda não preencheu os dados de jogo.", "profile-summary-note"));
-
     const roles = Array.isArray(d.community_roles) ? d.community_roles : [];
     if (roles.length) {
       const box = node("div", null, "profile-summary-roles");
-      roles.forEach(roleName => {
-        const chip = node("span", String(roleName), "profile-summary-role");
-        chip.dataset.role = String(roleName).toLocaleLowerCase("pt-BR");
+      roles.forEach(rn => {
+        const chip = node("span", String(rn), "profile-summary-role");
+        chip.dataset.role = String(rn).toLowerCase();
         box.append(chip);
       });
       root.append(box);
     }
-
     if (d.joined_at) root.append(node("small", formatJoined(d.joined_at), "profile-summary-joined"));
     return root;
   }
 
   function setProfile(nextProfile, username) {
-    const expectedStream = pendingStreamUrl;
+    const expected = pendingStreamUrl;
     pendingStreamUrl = null;
     renderProfile(nextProfile, username);
-
-    // Diagnóstico: o navegador enviou o canal, mas o servidor devolveu o perfil sem ele.
-    if (expectedStream && nextProfile && !nextProfile.stream_url) {
-      console.warn("[ProfileUI] O servidor não devolveu stream_url após o profile_set. " +
-        "O backend precisa gravar e retornar esse campo.", { enviado: expectedStream });
+    if (expected && nextProfile && !nextProfile.stream_url) {
+      console.warn("[ProfileUI] O servidor não devolveu stream_url após o profile_set.", { enviado: expected });
       context?.toast?.("O servidor não salvou o canal. É preciso atualizar o backend (campo stream_url).");
     }
-
-    const dialog = safe("profileEditor");
-    if (dialog && dialog.open) {
-      dialog.close();
-      context?.toast?.("Perfil atualizado com sucesso.");
-    }
+    const d = safe("profileEditor");
+    if (d && d.open) { d.close(); context?.toast?.("Perfil atualizado com sucesso."); }
   }
   function settingsSaved(nextProfile) {
     renderProfile(nextProfile, context?.getUsername?.());
-    const pmsg = safe("privacySettingsMessage");
-    if (pmsg) { pmsg.textContent = "Preferências salvas."; pmsg.classList.remove("is-error"); }
-    const nmsg = safe("notificationSettingsMessage");
-    if (nmsg) { nmsg.textContent = "Preferências salvas."; nmsg.classList.remove("is-error"); }
+    const p = safe("privacySettingsMessage");
+    if (p) { p.textContent = "Preferências salvas."; p.classList.remove("is-error"); }
+    const n = safe("notificationSettingsMessage");
+    if (n) { n.textContent = "Preferências salvas."; n.classList.remove("is-error"); }
   }
   function showError(targetId, message) {
-    const target = safe(targetId);
-    if (!target) return;
-    target.textContent = message;
-    target.classList.add("is-error");
+    const t = safe(targetId); if (!t) return;
+    t.textContent = message; t.classList.add("is-error");
   }
 
+  /* [v20] — diagnóstico do cargo (rode no console: ProfileUI.debugRole()) */
+  function debugRole() {
+    const data = selfProfile || profile || {};
+    const roles = rolesFromProfile(data);
+    const best = roleFromProfile(data);
+    console.group("[ProfileUI] Diagnóstico de cargo");
+    console.log("data.role              →", data.role);
+    console.log("data.community_roles   →", data.community_roles);
+    console.log("data.communityRoles    →", data.communityRoles);
+    console.log("data.roles             →", data.roles);
+    console.log("rolesFromProfile(data) →", roles);
+    console.log("roleFromProfile(data)  →", best);
+    console.log("userRoles()            →", userRoles());
+    console.log("É dev?                 →", roles.includes("dev"));
+    console.groupEnd();
+    return { roles, best };
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // API PÚBLICA
+  // ─────────────────────────────────────────────────────────
   window.ProfileUI = {
     createAvatar, mount, renderProfile, setProfile, settingsSaved, showError,
     renderOtherProfile, returnToSelf, getMode, getCurrentUserId,
 
-    roleFromProfile,
-    hasAnyBadge,
-    badgeKeyForRole, badgeColorForRole, badgeLabelForRole, badgeSvgForRole,
-    badgeEmojiForRole,
+    // cargos
+    roleFromProfile, rolesFromProfile, hasAnyBadge,
+    badgeKeyForRole, badgeColorForRole, badgeLabelForRole, badgeSvgForRole, badgeEmojiForRole,
     renderVerifiedBadge, renderSidebarVerifiedBadge,
     renderSidebarUsername, looksLikeSameName,
     hasVerifiedRole, verifiedRoleKey, verifiedRoleLabel,
 
     applyFriendshipStatus, handleFriendClick,
-
-    rankBasesFor, rankImageCandidatesFromBases, rankCandidatesForRank,
-    heroImageUrl, RANK_OPTIONS,
-
+    rankBasesFor, rankImageCandidatesFromBases, rankCandidatesForRank, heroImageUrl, RANK_OPTIONS,
     createProfileSummary, profileStars, formatJoined,
-
-    // streamers
     parseStreamUrl, liveUrlFor, isStreamerProfile, streamInfo, createStreamLink,
+    applyAvatarShape, applyAccent, AVATAR_SHAPES,
+
+    // gating
+    FRAME_CATALOG, THEME_CATALOG, TIER_ACCESS,
+    userRoles, userRoleKey, requirementsForItem, userCanUse,
+    isFrameAllowed, isThemeAllowed, applyRoleGating, syncSwatchSelection,
+
+    // debug
+    debugRole,
   };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       if (window.__selfProfile) {
         renderSidebarVerifiedBadge(window.__selfProfile);
-        renderSidebarUsername(window.__selfProfile,
-          window.__selfProfile.username, window.__selfProfile.display_name);
+        renderSidebarUsername(window.__selfProfile, window.__selfProfile.username, window.__selfProfile.display_name);
+        applyAvatarShape(window.__selfProfile.avatar_shape || "round");
       }
     });
-  } else {
-    if (window.__selfProfile) {
-      renderSidebarVerifiedBadge(window.__selfProfile);
-      renderSidebarUsername(window.__selfProfile,
-        window.__selfProfile.username, window.__selfProfile.display_name);
-    }
+  } else if (window.__selfProfile) {
+    renderSidebarVerifiedBadge(window.__selfProfile);
+    renderSidebarUsername(window.__selfProfile, window.__selfProfile.username, window.__selfProfile.display_name);
+    applyAvatarShape(window.__selfProfile.avatar_shape || "round");
   }
 
-  document.addEventListener("profile:self-updated", (ev) => {
-    const data = ev?.detail?.profile;
-    if (data) {
-      renderSidebarVerifiedBadge(data);
-      renderSidebarUsername(data, data.username, data.display_name);
+  document.addEventListener("profile:self-updated", ev => {
+    const d = ev?.detail?.profile;
+    if (d) {
+      renderSidebarVerifiedBadge(d);
+      renderSidebarUsername(d, d.username, d.display_name);
+      applyAvatarShape(d.avatar_shape || "round");
     }
   });
-  window.addEventListener("profile:self-updated", (ev) => {
-    const data = ev?.detail?.profile;
-    if (data) {
-      renderSidebarVerifiedBadge(data);
-      renderSidebarUsername(data, data.username, data.display_name);
+  window.addEventListener("profile:self-updated", ev => {
+    const d = ev?.detail?.profile;
+    if (d) {
+      renderSidebarVerifiedBadge(d);
+      renderSidebarUsername(d, d.username, d.display_name);
+      applyAvatarShape(d.avatar_shape || "round");
     }
   });
 })();
