@@ -1,5 +1,5 @@
 /* Reusable profile presentation and editor interactions.
-   v20 — detecção de cargo multi-fonte · DEV é super-user
+   v23 — ícone da rota no card + resumo de perfil
 */
 (() => {
   const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -43,74 +43,89 @@
   ];
   const AVATAR_SHAPES = new Set(["round","squircle","square"]);
 
-  /* ═══ CATÁLOGOS DE PERSONALIZAÇÃO ═══ */
-  const ROLE_LABELS = {
-    dev:"Dev", admin:"Admin", mod:"Moderador",
-    vip:"VIP", streamer:"Streamer", beta:"Beta",
-  };
+  /* ═══ CATÁLOGOS ═══ */
+  const ROLE_LABELS = { dev:"Dev", admin:"Admin", mod:"Moderador", vip:"VIP", streamer:"Streamer", beta:"Beta" };
   const ROLE_ORDER = ["vip","beta","streamer","mod","admin","dev"];
 
   const FRAME_CATALOG = [
-    { value:"default",     label:"Clássica",   tier:"free" },
-    { value:"elite",       label:"Elite",      tier:"free" },
-    { value:"shadow",      label:"Sombra",     tier:"free" },
-    { value:"obsidian",    label:"Obsidiana",  tier:"free" },
-    { value:"ice",         label:"Gelo",       tier:"free" },
-    { value:"frost",       label:"Geada",      tier:"free" },
-    { value:"neon",        label:"Neon",       tier:"free" },
-    { value:"holo",        label:"Holo",       tier:"free" },
-    { value:"gold",        label:"Ouro",       tier:"vip" },
-    { value:"platinum",    label:"Platina",    tier:"vip" },
-    { value:"royal",       label:"Real",       tier:"vip" },
-    { value:"celestial",   label:"Celestial",  tier:"vip" },
-    { value:"dragon",      label:"Dragão",     tier:"vip" },
-    { value:"rainbow",     label:"Arco-íris",  tier:"vip" },
-    { value:"sun",         label:"Sol",        tier:"vip" },
-    { value:"sakura",      label:"Sakura",     tier:"vip" },
-    { value:"emerald",     label:"Esmeralda",  tier:"vip" },
-    { value:"toxic",       label:"Tóxica",     tier:"vip" },
-    { value:"blood",       label:"Sangue",     tier:"vip" },
-    { value:"crimson",     label:"Carmesim",   tier:"vip" },
-    { value:"fire",        label:"Fogo",       tier:"vip" },
-    { value:"lightning",   label:"Raio",       tier:"streamer" },
-    { value:"live-pulse",  label:"Live",       tier:"streamer" },
-    { value:"beta-circuit",    label:"Circuito",    tier:"beta" },
-    { value:"beta-construct",  label:"Construto",   tier:"beta" },
-    { value:"guardian",    label:"Guardião",   tier:"mod" },
-    { value:"crown",       label:"Coroa",      tier:"admin" },
-    { value:"void",        label:"Vazio",      tier:"dev" },
-    { value:"plasma",      label:"Plasma",     tier:"dev" },
-    { value:"galaxy",      label:"Galáxia",    tier:"dev" },
+    { value:"default", label:"Clássica",   tier:"free" },
+    { value:"elite",   label:"Elite",      tier:"free" },
+    { value:"shadow",  label:"Sombra",     tier:"free" },
+    { value:"obsidian",label:"Obsidiana",  tier:"free" },
+    { value:"ice",     label:"Gelo",       tier:"free" },
+    { value:"frost",   label:"Geada",      tier:"free" },
+    { value:"neon",    label:"Neon",       tier:"free" },
+    { value:"holo",    label:"Holo",       tier:"free" },
+    { value:"gold",    label:"Ouro",       tier:"vip" },
+    { value:"platinum",label:"Platina",    tier:"vip" },
+    { value:"royal",   label:"Real",       tier:"vip" },
+    { value:"celestial",label:"Celestial", tier:"vip" },
+    { value:"dragon",  label:"Dragão",     tier:"vip" },
+    { value:"rainbow", label:"Arco-íris",  tier:"vip" },
+    { value:"sun",     label:"Sol",        tier:"vip" },
+    { value:"sakura",  label:"Sakura",     tier:"vip" },
+    { value:"emerald", label:"Esmeralda",  tier:"vip" },
+    { value:"toxic",   label:"Tóxica",     tier:"vip" },
+    { value:"blood",   label:"Sangue",     tier:"vip" },
+    { value:"crimson", label:"Carmesim",   tier:"vip" },
+    { value:"fire",    label:"Fogo",       tier:"vip" },
+    { value:"lightning", label:"Raio",     tier:"streamer" },
+    { value:"live-pulse",label:"Live",     tier:"streamer" },
+    { value:"beta-circuit",   label:"Circuito",  tier:"beta" },
+    { value:"beta-construct", label:"Construto", tier:"beta" },
+    { value:"guardian",label:"Guardião",   tier:"mod" },
+    { value:"crown",   label:"Coroa",      tier:"admin" },
+    { value:"void",    label:"Vazio",      tier:"dev" },
+    { value:"plasma",  label:"Plasma",     tier:"dev" },
+    { value:"galaxy",  label:"Galáxia",    tier:"dev" },
   ];
 
   const THEME_CATALOG = [
-    { value:"classic",  label:"Clássico",    tier:"free" },
-    { value:"arena",    label:"Arena",       tier:"free" },
-    { value:"ocean",    label:"Oceano",      tier:"free" },
-    { value:"aurora",   label:"Aurora",      tier:"free" },
-    { value:"sunset",   label:"Pôr do sol",  tier:"free" },
-    { value:"forest",   label:"Floresta",    tier:"free" },
-    { value:"sakura",   label:"Sakura",      tier:"free" },
-    { value:"cyber",    label:"Cyber",       tier:"free" },
-    { value:"mythic",   label:"Mítico",      tier:"free" },
-    { value:"mono",     label:"Mono",        tier:"free" },
-    { value:"galaxy",   label:"Galáxia",     tier:"vip" },
-    { value:"volcanic", label:"Vulcânico",   tier:"vip" },
-    { value:"arctic",   label:"Ártico",      tier:"vip" },
-    { value:"desert",   label:"Deserto",     tier:"vip" },
-    { value:"eclipse",  label:"Eclipse",     tier:"vip" },
-    { value:"royal",    label:"Real",        tier:"vip" },
-    { value:"neon",     label:"Neon",        tier:"vip" },
-    { value:"matrix",   label:"Matrix",      tier:"beta" },
-    { value:"livestream", label:"Live",      tier:"streamer" },
-    { value:"sentinel", label:"Sentinela",   tier:"mod" },
-    { value:"throne",   label:"Trono",       tier:"admin" },
-    { value:"toxic",    label:"Tóxico",      tier:"dev" },
-    { value:"candy",    label:"Doce",        tier:"dev" },
+    { value:"classic", label:"Clássico",   tier:"free" },
+    { value:"arena",   label:"Arena",      tier:"free" },
+    { value:"ocean",   label:"Oceano",     tier:"free" },
+    { value:"aurora",  label:"Aurora",     tier:"free" },
+    { value:"sunset",  label:"Pôr do sol", tier:"free" },
+    { value:"forest",  label:"Floresta",   tier:"free" },
+    { value:"sakura",  label:"Sakura",     tier:"free" },
+    { value:"cyber",   label:"Cyber",      tier:"free" },
+    { value:"mythic",  label:"Mítico",     tier:"free" },
+    { value:"mono",    label:"Mono",       tier:"free" },
+    { value:"galaxy",  label:"Galáxia",    tier:"vip" },
+    { value:"volcanic",label:"Vulcânico",  tier:"vip" },
+    { value:"arctic",  label:"Ártico",     tier:"vip" },
+    { value:"desert",  label:"Deserto",    tier:"vip" },
+    { value:"eclipse", label:"Eclipse",    tier:"vip" },
+    { value:"royal",   label:"Real",       tier:"vip" },
+    { value:"neon",    label:"Neon",       tier:"vip" },
+    { value:"matrix",  label:"Matrix",     tier:"beta" },
+    { value:"livestream", label:"Live",    tier:"streamer" },
+    { value:"sentinel",label:"Sentinela",  tier:"mod" },
+    { value:"throne",  label:"Trono",      tier:"admin" },
+    { value:"toxic",   label:"Tóxico",     tier:"dev" },
+    { value:"candy",   label:"Doce",       tier:"dev" },
   ];
 
-  // TIER → cargos que desbloqueiam. `dev` está em TODAS por padrão,
-  // mas `userCanUse` também tem bypass extra de dev (super-user).
+  const ROLE_IMAGE_DIR = "/static/assets/rotas/";
+  const ROLE_CATALOG = [
+    { value:"Qualquer",  label:"Qualquer",  icon:"" },
+    { value:"Jungle",    label:"Selva",     icon:"selva.jpg" },
+    { value:"Mid",       label:"Mid",       icon:"mid.jpg" },
+    { value:"Gold lane", label:"Gold",      icon:"gold.jpg" },
+    { value:"EXP lane",  label:"EXP",       icon:"exp.jpg" },
+    { value:"Roam",      label:"Roam",      icon:"roam.jpg" },
+  ];
+  function roleImageUrl(item) {
+    if (!item || !item.icon) return "";
+    return ROLE_IMAGE_DIR + item.icon;
+  }
+  /* [v11] — atalho: dado o value da rota ("Mid", "Roam", …), devolve a URL da imagem. */
+  function roleImageFor(value) {
+    if (!value) return "";
+    const item = ROLE_CATALOG.find(r => r.value === value);
+    return item ? roleImageUrl(item) : "";
+  }
+
   const TIER_ACCESS = {
     free:     null,
     vip:      ["vip","beta","streamer","mod","admin","dev"],
@@ -122,7 +137,7 @@
   };
 
   // ─────────────────────────────────────────────────────────
-  // RANKS / HELPERS BÁSICOS
+  // HELPERS BÁSICOS
   // ─────────────────────────────────────────────────────────
   function normalizeRank(v) {
     return String(v || "").toLocaleLowerCase("pt-BR").normalize("NFD")
@@ -250,7 +265,7 @@
   }
 
   // ─────────────────────────────────────────────────────────
-  // SELOS (staff / vip / streamer / beta)
+  // SELOS
   // ─────────────────────────────────────────────────────────
   const BADGE_DEFS = {
     staff: { color:"#f2b84b",
@@ -265,7 +280,6 @@
   };
   const ROLE_TO_BADGE = { dev:"staff", admin:"staff", mod:"staff", vip:"vip", streamer:"streamer", beta:"beta" };
 
-  /* [v20 FIX] — agrega TODAS as fontes de cargo do perfil. */
   function rolesFromProfile(data) {
     if (!data) return [];
     const out = new Set();
@@ -273,27 +287,17 @@
       if (!raw) return;
       let k = String(raw).toLocaleLowerCase("pt-BR").trim();
       if (!k) return;
-      // normaliza variações comuns
       if (k === "moderador" || k === "moderator" || k === "moderação" || k === "moderacao") k = "mod";
       else if (k === "administrador" || k === "administrator") k = "admin";
       else if (k === "desenvolvedor" || k === "developer") k = "dev";
       else if (k === "beta tester" || k === "betatester" || k === "tester") k = "beta";
-      // reconhece só os cargos que a gente usa para gating
       if (ROLE_TO_BADGE[k]) out.add(k);
-      // também aceita "membro" (não bloqueia gating)
       else if (k === "membro" || k === "member" || k === "user" || k === "usuário" || k === "usuario") out.add("membro");
     };
-    // 1) campo role
     push(data.role);
-    // 2) arrays (cobre camelCase/snake_case/roles)
-    const lists = [
-      data.community_roles,
-      data.communityRoles,
-      data.roles,
-      data.cargos,
-    ];
-    lists.forEach(l => { if (Array.isArray(l)) l.forEach(push); });
-    // 3) flags booleanas
+    [data.community_roles, data.communityRoles, data.roles, data.cargos].forEach(l => {
+      if (Array.isArray(l)) l.forEach(push);
+    });
     if (data.is_dev || data.isDev || data.dev) out.add("dev");
     if (data.is_admin || data.isAdmin || data.admin) out.add("admin");
     if (data.is_mod || data.isMod || data.mod) out.add("mod");
@@ -302,62 +306,49 @@
     if (data.is_beta || data.isBeta || data.beta) out.add("beta");
     return Array.from(out);
   }
-
-  /* [v20 FIX] — "melhor" cargo (para exibir o selo). */
   const ROLE_PRIORITY = ["dev","admin","mod","streamer","vip","beta"];
   function roleFromProfile(data) {
     const roles = rolesFromProfile(data);
     for (const p of ROLE_PRIORITY) if (roles.includes(p)) return p;
     return roles[0] || "";
   }
-
-  const badgeKeyForRole     = r => ROLE_TO_BADGE[String(r||"").toLowerCase()] || null;
-  const badgeDefForRole     = r => { const k = badgeKeyForRole(r); return k ? BADGE_DEFS[k] : null; };
-  const badgeColorForRole   = r => { const d = badgeDefForRole(r); return d ? d.color : "#4c8dff"; };
+  const badgeKeyForRole   = r => ROLE_TO_BADGE[String(r||"").toLowerCase()] || null;
+  const badgeDefForRole   = r => { const k = badgeKeyForRole(r); return k ? BADGE_DEFS[k] : null; };
+  const badgeColorForRole = r => { const d = badgeDefForRole(r); return d ? d.color : "#4c8dff"; };
   function badgeLabelForRole(r) {
     const d = badgeDefForRole(r);
     if (!d) return "Conta verificada";
     const k = String(r||"").toLowerCase();
     return d.label[k] || d.defaultLabel;
   }
-  const badgeSvgForRole     = r => { const d = badgeDefForRole(r); return d ? (d.svg || "") : ""; };
-  const badgeEmojiForRole   = r => { const d = badgeDefForRole(r); return d && d.emoji ? d.emoji : ""; };
-  const hasAnyBadge         = d => Boolean(badgeDefForRole(roleFromProfile(d)));
-  const hasVerifiedRole     = d => hasAnyBadge(d);
-  const verifiedRoleKey     = d => roleFromProfile(d) || "user";
-  const verifiedRoleLabel   = k => badgeLabelForRole(k);
+  const badgeSvgForRole   = r => { const d = badgeDefForRole(r); return d ? (d.svg || "") : ""; };
+  const badgeEmojiForRole = r => { const d = badgeDefForRole(r); return d && d.emoji ? d.emoji : ""; };
+  const hasAnyBadge       = d => Boolean(badgeDefForRole(roleFromProfile(d)));
+  const hasVerifiedRole   = d => hasAnyBadge(d);
+  const verifiedRoleKey   = d => roleFromProfile(d) || "user";
+  const verifiedRoleLabel = k => badgeLabelForRole(k);
 
   function renderVerifiedBadge(data) {
     const badge = safe("profileVerifiedBadge");
     if (!badge) return;
     const role = roleFromProfile(data);
     const def = badgeDefForRole(role);
-    if (!def) {
-      badge.hidden = true;
-      badge.removeAttribute("data-badge");
-      badge.removeAttribute("data-role");
-      return;
-    }
+    if (!def) { badge.hidden = true; badge.removeAttribute("data-badge"); badge.removeAttribute("data-role"); return; }
     badge.hidden = false;
     badge.dataset.badge = ROLE_TO_BADGE[role] || "";
     badge.dataset.role = role;
     if (def.emoji) {
-      badge.innerHTML = "";
-      badge.textContent = def.emoji;
-      badge.style.color = "";
-      badge.style.fontSize = "22px";
-      badge.style.lineHeight = "1";
+      badge.innerHTML = ""; badge.textContent = def.emoji;
+      badge.style.color = ""; badge.style.fontSize = "22px"; badge.style.lineHeight = "1";
       badge.style.filter = `drop-shadow(0 0 6px ${def.color}aa)`;
     } else {
       badge.innerHTML = def.svg;
-      badge.style.fontSize = "";
-      badge.style.lineHeight = "";
+      badge.style.fontSize = ""; badge.style.lineHeight = "";
       badge.style.color = def.color;
       badge.style.filter = `drop-shadow(0 0 6px ${def.color}88)`;
     }
     const label = badgeLabelForRole(role);
-    badge.setAttribute("aria-label", label);
-    badge.setAttribute("title", label);
+    badge.setAttribute("aria-label", label); badge.setAttribute("title", label);
     badge.style.animation = "none"; void badge.offsetWidth; badge.style.animation = "";
   }
 
@@ -382,7 +373,6 @@
     document.head.appendChild(s);
     _inlineBadgeStylesInjected = true;
   }
-
   function renderSidebarVerifiedBadge(data) {
     ensureInlineBadgeStyles();
     const nameEl = safe("sidebarDisplayName");
@@ -407,22 +397,20 @@
     b.dataset.role = role;
     if (def.emoji) {
       b.textContent = def.emoji;
-      b.style.color = ""; b.style.fontSize = "18px"; b.style.lineHeight = "1";
-      b.style.filter = `drop-shadow(0 0 5px ${def.color}aa)`;
+      b.style.color=""; b.style.fontSize="18px"; b.style.lineHeight="1";
+      b.style.filter=`drop-shadow(0 0 5px ${def.color}aa)`;
     } else {
       b.innerHTML = def.svg;
       b.style.color = def.color;
       b.style.filter = `drop-shadow(0 0 5px ${def.color}88)`;
     }
     const label = badgeLabelForRole(role);
-    b.setAttribute("aria-label", label);
-    b.setAttribute("title", label);
+    b.setAttribute("aria-label", label); b.setAttribute("title", label);
     nameEl.classList.add("has-verified-badge-support");
     nameEl.append(b);
     b.style.animation = "none"; void b.offsetWidth; b.style.animation = "";
     return true;
   }
-
   function renderSidebarUsername(data, username, displayName) {
     const el = safe("sidebarUsername"); if (!el) return;
     const nick = (data?.username || username || data?.nick || "").trim();
@@ -431,7 +419,6 @@
     if (name && looksLikeSameName(name, nick)) { el.hidden = true; el.textContent = ""; return; }
     el.hidden = false; el.textContent = "@" + nick;
   }
-
   function watchSidebarBadge() {
     if (watchSidebarBadge.__installed) return;
     watchSidebarBadge.__installed = true;
@@ -450,24 +437,18 @@
   // ─────────────────────────────────────────────────────────
   // ROLE GATING
   // ─────────────────────────────────────────────────────────
-  /* [v20 FIX] — agora devolve a lista completa do usuário. */
-  function userRoles() {
-    return rolesFromProfile(selfProfile || profile || {});
-  }
-  function userRoleKey() {
-    return roleFromProfile(selfProfile || profile || {});
-  }
+  function userRoles() { return rolesFromProfile(selfProfile || profile || {}); }
+  function userRoleKey() { return roleFromProfile(selfProfile || profile || {}); }
   function requirementsForItem(item) {
     if (!item || !item.tier || item.tier === "free") return null;
     const list = TIER_ACCESS[item.tier];
     return Array.isArray(list) && list.length ? list : null;
   }
-  /* [v20 FIX] — permite se QUALQUER cargo do usuário casar; dev é super-user. */
-  function userCanUse(requiredRoles) {
-    if (!requiredRoles || !requiredRoles.length) return true;
+  function userCanUse(required) {
+    if (!required || !required.length) return true;
     const mine = userRoles();
     if (mine.includes("dev")) return true;
-    return requiredRoles.some(r => mine.includes(r));
+    return required.some(r => mine.includes(r));
   }
   function labelForRequirements(required) {
     if (!required || !required.length) return "";
@@ -495,7 +476,7 @@
   }
 
   // ─────────────────────────────────────────────────────────
-  // SWATCH PICKERS
+  // SWATCH PICKERS (frames / temas)
   // ─────────────────────────────────────────────────────────
   const TIER_LABELS = {
     free:"Grátis para todos", vip:"VIP & superiores", beta:"Beta Testers",
@@ -527,7 +508,6 @@
     btn.append(art, name);
     return btn;
   }
-
   function buildPicker(catalog, kind, containerId, selectId) {
     const container = safe(containerId);
     if (!container) return;
@@ -559,18 +539,235 @@
       select.dispatchEvent(new Event("change", { bubbles: true }));
       syncSwatchSelection(selectId);
     });
-    container.querySelectorAll(".pf-swatch").forEach(btn => {
-      btn.addEventListener("keydown", ev => {
-        if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); btn.click(); }
-      });
-    });
   }
-
   function syncSwatchSelection(selectId) {
     const select = safe(selectId); if (!select) return;
     const current = select.value;
     const containerId = selectId === "profileFrameInput" ? "pfFramePicker" : "pfThemePicker";
     const container = safe(containerId); if (!container) return;
+    container.querySelectorAll(".pf-swatch").forEach(btn => {
+      btn.setAttribute("aria-checked", String(btn.dataset.value === current));
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // PICKER DE RANK
+  // ─────────────────────────────────────────────────────────
+  function buildRankSwatch(opt) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pf-swatch";
+    btn.dataset.value = opt.value;
+    btn.setAttribute("role","radio");
+    btn.setAttribute("aria-checked","false");
+    const art = document.createElement("span");
+    art.className = "pf-swatch-art pf-swatch-rank";
+    const candidates = (opt.bases && opt.bases.length)
+      ? rankImageCandidatesFromBases(opt.bases)
+      : [];
+    if (candidates.length) {
+      const img = document.createElement("img");
+      img.alt = ""; img.loading = "lazy";
+      loadImageWithFallback(img, candidates);
+      art.append(img);
+    } else {
+      art.classList.add("is-empty");
+      art.textContent = "—";
+    }
+    const name = document.createElement("span");
+    name.className = "pf-swatch-name";
+    name.textContent = opt.label;
+    btn.append(art, name);
+    return btn;
+  }
+  function buildRankPicker() {
+    const container = safe("pfRankPicker");
+    if (!container) return;
+    container.replaceChildren();
+    container.append(buildRankSwatch({ value:"", label:"Sem rank", bases:[] }));
+    RANK_OPTIONS.forEach(opt => container.append(buildRankSwatch(opt)));
+    container.addEventListener("click", ev => {
+      const btn = ev.target.closest(".pf-swatch");
+      if (!btn || btn.disabled) return;
+      const select = safe("pRank");
+      if (!select) return;
+      select.value = btn.dataset.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
+  function syncRankSelection() {
+    const select = safe("pRank");
+    const container = safe("pfRankPicker");
+    if (!select || !container) return;
+    const current = select.value;
+    container.querySelectorAll(".pf-swatch").forEach(btn => {
+      btn.setAttribute("aria-checked", String(btn.dataset.value === current));
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // PICKER DE HERÓI (com busca)
+  // ─────────────────────────────────────────────────────────
+  function buildHeroSwatch(hero) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pf-swatch";
+    btn.dataset.value = hero.name || "";
+    btn.dataset.heroName = String(hero.name || "").toLocaleLowerCase("pt-BR");
+    btn.setAttribute("role","radio");
+    btn.setAttribute("aria-checked","false");
+    const art = document.createElement("span");
+    art.className = "pf-swatch-art pf-swatch-hero";
+    const url = hero.name ? heroImageUrl(hero.name) : "";
+    if (url) {
+      const img = document.createElement("img");
+      img.alt = ""; img.loading = "lazy"; img.decoding = "async";
+      img.src = url;
+      img.onerror = () => {
+        img.hidden = true;
+        art.classList.add("is-empty");
+        art.textContent = String(hero.name || "?").slice(0, 2).toUpperCase();
+      };
+      art.append(img);
+    } else {
+      art.classList.add("is-empty");
+      art.textContent = hero.name ? String(hero.name).slice(0, 2).toUpperCase() : "—";
+    }
+    const name = document.createElement("span");
+    name.className = "pf-swatch-name";
+    name.textContent = hero.label || hero.name || "Nenhum";
+    btn.append(art, name);
+    return btn;
+  }
+  function buildHeroPicker() {
+    const container = safe("pfHeroPicker");
+    if (!container) return;
+    container.replaceChildren();
+    const catalog = Array.isArray(window.HERO_CATALOG) ? window.HERO_CATALOG : [];
+    if (!catalog.length) {
+      const ph = document.createElement("div");
+      ph.className = "pf-hero-empty";
+      ph.textContent = "Carregando catálogo de heróis…";
+      container.append(ph);
+      const counter = safe("pfHeroCount"); if (counter) counter.textContent = "";
+      return;
+    }
+    const sorted = [...catalog].filter(h => h && h.name)
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), "pt-BR"));
+    container.append(buildHeroSwatch({ name:"", label:"Nenhum" }));
+    sorted.forEach(h => container.append(buildHeroSwatch(h)));
+    const counter = safe("pfHeroCount");
+    if (counter) counter.textContent = sorted.length + " heróis";
+    container.addEventListener("click", ev => {
+      const btn = ev.target.closest(".pf-swatch");
+      if (!btn || btn.disabled) return;
+      const select = safe("pHero");
+      if (!select) return;
+      select.value = btn.dataset.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
+  function syncHeroSelection() {
+    const select = safe("pHero");
+    const container = safe("pfHeroPicker");
+    if (!select || !container) return;
+    const current = select.value;
+    container.querySelectorAll(".pf-swatch").forEach(btn => {
+      btn.setAttribute("aria-checked", String(btn.dataset.value === current));
+    });
+  }
+  function filterHeroes(query) {
+    const container = safe("pfHeroPicker");
+    if (!container) return;
+    const q = String(query || "").toLocaleLowerCase("pt-BR").trim();
+    let visible = 0;
+    container.querySelectorAll(".pf-swatch").forEach(btn => {
+      const isNone = btn.dataset.value === "";
+      const name = btn.dataset.heroName || "";
+      const show = !q || isNone || name.includes(q);
+      btn.hidden = !show;
+      if (show && !isNone) visible++;
+    });
+    const counter = safe("pfHeroCount");
+    if (counter) {
+      if (q) counter.textContent = visible + (visible === 1 ? " resultado" : " resultados");
+      else {
+        const total = container.querySelectorAll(".pf-swatch:not([data-value=''])").length;
+        counter.textContent = total + " heróis";
+      }
+    }
+    let empty = container.querySelector(".pf-hero-empty");
+    if (visible === 0 && q) {
+      if (!empty) {
+        empty = document.createElement("div");
+        empty.className = "pf-hero-empty";
+        empty.textContent = "Nenhum herói encontrado.";
+        container.append(empty);
+      }
+    } else if (empty) {
+      empty.remove();
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // PICKER DE ROTA
+  // ─────────────────────────────────────────────────────────
+  function buildRoleSwatch(item) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pf-swatch";
+    btn.dataset.value = item.value;
+    btn.setAttribute("role","radio");
+    btn.setAttribute("aria-checked","false");
+    const art = document.createElement("span");
+    art.className = "pf-swatch-art pf-swatch-role";
+    const url = roleImageUrl(item);
+    if (url) {
+      const img = document.createElement("img");
+      img.alt = ""; img.loading = "lazy"; img.decoding = "async";
+      img.src = url;
+      img.onerror = () => {
+        img.hidden = true;
+        art.classList.add("is-empty");
+        const fb = document.createElement("span");
+        fb.className = "pf-swatch-role-label";
+        fb.textContent = item.label;
+        art.append(fb);
+      };
+      art.append(img);
+      const overlay = document.createElement("span");
+      overlay.className = "pf-swatch-role-label";
+      overlay.textContent = item.label;
+      art.append(overlay);
+    } else {
+      art.classList.add("is-empty");
+    }
+    const name = document.createElement("span");
+    name.className = "pf-swatch-name";
+    name.textContent = item.label;
+    btn.append(art, name);
+    return btn;
+  }
+  function buildRolePicker() {
+    const container = safe("pfRolePicker");
+    if (!container) return;
+    container.replaceChildren();
+    ROLE_CATALOG.forEach(item => container.append(buildRoleSwatch(item)));
+    container.addEventListener("click", ev => {
+      const btn = ev.target.closest(".pf-swatch");
+      if (!btn || btn.disabled) return;
+      const select = safe("pRole");
+      if (!select) return;
+      select.value = btn.dataset.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      syncRoleSelection();
+    });
+  }
+  function syncRoleSelection() {
+    const select = safe("pRole");
+    const container = safe("pfRolePicker");
+    if (!select || !container) return;
+    const current = select.value || "Qualquer";
     container.querySelectorAll(".pf-swatch").forEach(btn => {
       btn.setAttribute("aria-checked", String(btn.dataset.value === current));
     });
@@ -614,9 +811,7 @@
   }
   function isStreamerProfile(data) {
     if (!data) return false;
-    const roles = rolesFromProfile(data);
-    if (roles.includes("streamer")) return true;
-    return false;
+    return rolesFromProfile(data).includes("streamer");
   }
   function streamInfo(data) {
     if (!data || data.details_hidden || !isStreamerProfile(data)) return null;
@@ -706,7 +901,7 @@
   }
 
   // ─────────────────────────────────────────────────────────
-  // RENDER — DETALHES DO CARD
+  // RENDER
   // ─────────────────────────────────────────────────────────
   function buildGameTag(label, value, icon) {
     const item = node("span", null, "profile-game-tag");
@@ -723,7 +918,7 @@
       const c = rankCandidatesForRank(profile.rank);
       let icon = null;
       if (c.length) {
-        const wrap = node("span", null, "profile-game-tag-icon");
+        const wrap = node("span", null, "profile-game-tag-icon profile-game-tag-icon--role");
         const img = node("img"); img.alt=""; img.loading="lazy";
         loadImageWithFallback(img, c); wrap.append(img); icon = wrap;
       }
@@ -731,7 +926,22 @@
       const v = stars == null ? profile.rank : profile.rank + " · " + stars + " ★";
       box.append(buildGameTag("Rank", v, icon));
     }
-    if (profile.game_role) box.append(buildGameTag("Função principal", profile.game_role, null));
+
+    /* [v11] — agora com ícone da rota, igual ao rank e ao herói. */
+    if (profile.game_role) {
+      const roleImg = roleImageFor(profile.game_role);
+      let icon = null;
+      if (roleImg) {
+        const wrap = node("span", null, "profile-game-tag-icon");
+        const img = node("img");
+        img.alt=""; img.loading="lazy"; img.decoding="async";
+        img.src = roleImg;
+        img.onerror = () => { img.hidden = true; };
+        wrap.append(img); icon = wrap;
+      }
+      box.append(buildGameTag("Função principal", profile.game_role, icon));
+    }
+
     if (profile.hero) {
       const url = heroImageUrl(profile.hero);
       let icon = null;
@@ -895,9 +1105,6 @@
     if (!ok) context?.toast?.("A conexão caiu. Reconecte-se antes de continuar.");
   }
 
-  // ─────────────────────────────────────────────────────────
-  // APLICAÇÃO DO CARD
-  // ─────────────────────────────────────────────────────────
   function applyProfileCard(data, username, options = {}) {
     const displayName = data.display_name || username || "Jogador";
     setText("profileDisplayName", displayName);
@@ -1100,7 +1307,7 @@
     const stars = parseStarsValue(input.value);
     if (stars == null) return;
     const next = rankFromMythicStars(stars);
-    if (select.value !== next) { populateRankOptions(next); refreshRankPreview(); }
+    if (select.value !== next) { populateRankOptions(next); refreshRankPreview(); syncRankSelection(); }
   }
   function refreshRankPreview() {
     const s = safe("pRank"), img = safe("pRankPreviewImage"), wrap = safe("pRankPreview");
@@ -1155,10 +1362,15 @@
     setVal("profileThemeInput", savedTheme);
     setVal("pAvatarShape", profile.avatar_shape || "round");
 
-    // Aplica o gating ANTES de marcar como selecionado, para respeitar o cargo atual.
     applyRoleGating();
     syncSwatchSelection("profileFrameInput");
     syncSwatchSelection("profileThemeInput");
+
+    syncRankSelection();
+    syncHeroSelection();
+    syncRoleSelection();
+    const heroSearch = safe("pfHeroSearch");
+    if (heroSearch) { heroSearch.value = ""; filterHeroes(""); }
 
     const streamField = safe("pStreamField");
     const canStream = isStreamerProfile(profile);
@@ -1326,6 +1538,9 @@
 
     buildPicker(FRAME_CATALOG, "frame", "pfFramePicker", "profileFrameInput");
     buildPicker(THEME_CATALOG, "theme", "pfThemePicker", "profileThemeInput");
+    buildRankPicker();
+    buildHeroPicker();
+    buildRolePicker();
 
     safe("profileEditButton")?.addEventListener("click", openEditor);
     safe("settingsEditProfile")?.addEventListener("click", () => { context?.openProfile?.(); openEditor(); });
@@ -1355,9 +1570,19 @@
 
     safe("pAvatarShape")?.addEventListener("change", () => applyAvatarShape(safe("pAvatarShape").value));
 
-    safe("pRank")?.addEventListener("change", () => { syncStarsField(); refreshRankPreview(); });
+    safe("pRank")?.addEventListener("change", () => { syncStarsField(); refreshRankPreview(); syncRankSelection(); });
     safe("pStars")?.addEventListener("input", applyStarsToRank);
-    safe("pHero")?.addEventListener("change", refreshHeroPreview);
+    safe("pHero")?.addEventListener("change", () => { refreshHeroPreview(); syncHeroSelection(); });
+    safe("pRole")?.addEventListener("change", () => syncRoleSelection());
+
+    const heroSearch = safe("pfHeroSearch");
+    if (heroSearch) {
+      let timer = 0;
+      heroSearch.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => filterHeroes(heroSearch.value), 120);
+      });
+    }
 
     safe("profileAvatarFile")?.addEventListener("change", async ev => {
       try {
@@ -1397,6 +1622,10 @@
 
     window.addEventListener("hero-catalog-ready", () => {
       populateHeroOptions();
+      buildHeroPicker();
+      syncHeroSelection();
+      const search = safe("pfHeroSearch");
+      if (search) filterHeroes(search.value);
       const ed = safe("profileEditor");
       if (ed && ed.open) refreshHeroPreview();
     });
@@ -1404,10 +1633,14 @@
     watchSidebarBadge();
     setChromeVisibility();
     applyRoleGating();
+
+    syncRankSelection();
+    syncHeroSelection();
+    syncRoleSelection();
   }
 
   // ─────────────────────────────────────────────────────────
-  // RESUMO DE PERFIL (DM, LFG, dialogs)
+  // RESUMO DE PERFIL
   // ─────────────────────────────────────────────────────────
   let _summaryStylesInjected = false;
   function ensureSummaryStyles() {
@@ -1432,7 +1665,7 @@
       .profile-summary-note{margin:0;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);color:var(--muted,#9298a3);font-size:.9rem}
       .profile-summary-tags{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
       .profile-summary-tag{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);min-width:0}
-      .profile-summary-tag-icon{width:30px;height:30px;flex:0 0 auto;display:grid;place-items:center}
+      .profile-summary-tag-icon{width:30px;height:30px;flex:0 0 auto;display:grid;place-items:center;border-radius:8px;overflow:hidden}
       .profile-summary-tag-icon img{width:100%;height:100%;object-fit:contain;display:block}
       .profile-summary-tag-copy{display:flex;flex-direction:column;min-width:0}
       .profile-summary-tag-copy small{color:var(--muted,#9298a3);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em}
@@ -1461,6 +1694,15 @@
     const url = heroImageUrl(name); if (!url) return null;
     const w = node("span", null, "profile-summary-tag-icon");
     const img = node("img"); img.alt=""; img.loading="lazy";
+    img.src = url; img.onerror = () => { img.hidden = true; };
+    w.append(img);
+    return w;
+  }
+  /* [v11] — ícone da rota no resumo (DM, LFG, etc.). */
+  function summaryRoleIcon(value) {
+    const url = roleImageFor(value); if (!url) return null;
+    const w = node("span", null, "profile-summary-tag-icon");
+    const img = node("img"); img.alt=""; img.loading="lazy"; img.decoding="async";
     img.src = url; img.onerror = () => { img.hidden = true; };
     w.append(img);
     return w;
@@ -1528,7 +1770,8 @@
       const stars = profileStars(d);
       tags.append(summaryTag("Rank", stars == null ? d.rank : d.rank + " · " + stars + " ★", summaryRankIcon(d.rank)));
     }
-    if (d.game_role) tags.append(summaryTag("Função principal", d.game_role, null));
+    /* [v11] — agora com ícone da rota também no resumo. */
+    if (d.game_role) tags.append(summaryTag("Função principal", d.game_role, summaryRoleIcon(d.game_role)));
     if (d.hero) tags.append(summaryTag("Herói principal", d.hero, summaryHeroIcon(d.hero)));
     if (d.gid) tags.append(summaryTag("ID no jogo", d.gid, null));
     if (tags.childElementCount) root.append(tags);
@@ -1570,7 +1813,6 @@
     t.textContent = message; t.classList.add("is-error");
   }
 
-  /* [v20] — diagnóstico do cargo (rode no console: ProfileUI.debugRole()) */
   function debugRole() {
     const data = selfProfile || profile || {};
     const roles = rolesFromProfile(data);
@@ -1578,11 +1820,8 @@
     console.group("[ProfileUI] Diagnóstico de cargo");
     console.log("data.role              →", data.role);
     console.log("data.community_roles   →", data.community_roles);
-    console.log("data.communityRoles    →", data.communityRoles);
-    console.log("data.roles             →", data.roles);
     console.log("rolesFromProfile(data) →", roles);
     console.log("roleFromProfile(data)  →", best);
-    console.log("userRoles()            →", userRoles());
     console.log("É dev?                 →", roles.includes("dev"));
     console.groupEnd();
     return { roles, best };
@@ -1594,26 +1833,22 @@
   window.ProfileUI = {
     createAvatar, mount, renderProfile, setProfile, settingsSaved, showError,
     renderOtherProfile, returnToSelf, getMode, getCurrentUserId,
-
-    // cargos
     roleFromProfile, rolesFromProfile, hasAnyBadge,
     badgeKeyForRole, badgeColorForRole, badgeLabelForRole, badgeSvgForRole, badgeEmojiForRole,
     renderVerifiedBadge, renderSidebarVerifiedBadge,
     renderSidebarUsername, looksLikeSameName,
     hasVerifiedRole, verifiedRoleKey, verifiedRoleLabel,
-
     applyFriendshipStatus, handleFriendClick,
     rankBasesFor, rankImageCandidatesFromBases, rankCandidatesForRank, heroImageUrl, RANK_OPTIONS,
     createProfileSummary, profileStars, formatJoined,
     parseStreamUrl, liveUrlFor, isStreamerProfile, streamInfo, createStreamLink,
     applyAvatarShape, applyAccent, AVATAR_SHAPES,
-
-    // gating
     FRAME_CATALOG, THEME_CATALOG, TIER_ACCESS,
     userRoles, userRoleKey, requirementsForItem, userCanUse,
     isFrameAllowed, isThemeAllowed, applyRoleGating, syncSwatchSelection,
-
-    // debug
+    buildRankPicker, buildHeroPicker, syncRankSelection, syncHeroSelection, filterHeroes,
+    // [v11]
+    ROLE_CATALOG, roleImageUrl, roleImageFor, buildRolePicker, syncRoleSelection, summaryRoleIcon,
     debugRole,
   };
 

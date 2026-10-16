@@ -1,4 +1,4 @@
-<!-- profile.html — Destiny · Player Card (v8) -->
+<!-- profile.html — Destiny · Player Card (v9) -->
 <link rel="stylesheet" href="/static/css/profile.css">
 
 <style id="profile-verified-css">
@@ -157,6 +157,7 @@
 
       <div class="profile-editor-body">
 
+        <!-- ══════════ IDENTIDADE (inalterada) ══════════ -->
         <div class="profile-tab-panel" role="tabpanel" id="panel-identity" aria-labelledby="tab-identity">
           <div class="profile-form-grid">
             <label>Foto de perfil
@@ -186,39 +187,61 @@
           </div>
         </div>
 
+        <!-- ══════════ MOBILE LEGENDS (NOVO — pickers visuais) ══════════ -->
         <div class="profile-tab-panel" role="tabpanel" id="panel-game" aria-labelledby="tab-game" hidden>
-          <div class="profile-form-grid">
-            <label>Rank
-              <div class="profile-picker">
-                <select id="pRank" aria-describedby="pRankHint"><option value="">Sem rank informado</option></select>
-                <span class="profile-picker-preview" id="pRankPreview" aria-hidden="true"><img id="pRankPreviewImage" alt="" loading="lazy" decoding="async"></span>
-              </div>
-              <small id="pRankHint">Selecione seu elo. A imagem aparece no topo do seu card.</small>
-            </label>
-            <label id="pStarsField">Estrelas
-              <input id="pStars" type="number" min="0" max="9999" step="1" inputmode="numeric" placeholder="0" aria-describedby="pStarsHint">
-              <small id="pStarsHint">Depois do MD10 no Mítico, informe suas estrelas. 0–24 Mítico, 25–49 Honra Mítica, 50–99 Glória Mítica, 100+ Imortal.</small>
-            </label>
-            <label>Role principal
-              <select id="pRole">
-                <option>Qualquer</option><option>Jungle</option><option>Mid</option>
-                <option>Gold lane</option><option>EXP lane</option><option>Roam</option>
-              </select>
-            </label>
-            <label>Herói principal
-              <div class="profile-picker">
-                <select id="pHero" aria-describedby="pHeroHint"><option value="">Nenhum herói selecionado</option></select>
-                <span class="profile-picker-preview" id="pHeroPreview" aria-hidden="true"><img id="pHeroPreviewImage" alt="" loading="lazy" decoding="async"></span>
-              </div>
-              <small id="pHeroHint">Escolha seu herói principal no catálogo oficial.</small>
-            </label>
-            <label class="is-wide">ID no jogo
-              <input id="pGid" maxlength="20">
-            </label>
-          </div>
-        </div>
+  <div class="profile-form-grid">
 
-        <!-- ══════════ ABA APARÊNCIA — SWATCHES ══════════ -->
+    <!-- RANK -->
+    <fieldset class="pf-picker-fieldset is-wide">
+      <legend>Rank</legend>
+      <select id="pRank" hidden aria-describedby="pRankHint"><option value="">Sem rank informado</option></select>
+      <div id="pfRankPicker" class="pf-picker-grid" role="radiogroup" aria-label="Escolha seu rank"></div>
+      <small id="pRankHint">Selecione seu elo. A imagem aparece no topo do seu card.</small>
+    </fieldset>
+
+    <!-- ESTRELAS -->
+    <label id="pStarsField" class="is-wide">Estrelas
+      <input id="pStars" type="number" min="0" max="9999" step="1" inputmode="numeric" placeholder="0" aria-describedby="pStarsHint">
+      <small id="pStarsHint">Depois do MD10 no Mítico, informe suas estrelas. 0–24 Mítico, 25–49 Honra Mítica, 50–99 Glória Mítica, 100+ Imortal.</small>
+    </label>
+
+    <!-- ROTA PRINCIPAL (novo picker visual) -->
+    <fieldset class="pf-picker-fieldset is-wide">
+      <legend>Rota principal</legend>
+      <select id="pRole" hidden aria-describedby="pRoleHint">
+        <option>Qualquer</option>
+        <option>Jungle</option>
+        <option>Mid</option>
+        <option>Gold lane</option>
+        <option>EXP lane</option>
+        <option>Roam</option>
+      </select>
+      <div id="pfRolePicker" class="pf-picker-grid" role="radiogroup" aria-label="Escolha sua rota principal"></div>
+      <small id="pRoleHint">Escolha a rota em que você joga com mais frequência.</small>
+    </fieldset>
+
+    <!-- HERÓI -->
+    <fieldset class="pf-picker-fieldset is-wide">
+      <legend>Herói principal</legend>
+      <select id="pHero" hidden aria-describedby="pHeroHint"><option value="">Nenhum herói selecionado</option></select>
+      <div class="pf-hero-toolbar">
+        <input id="pfHeroSearch" class="pf-hero-search" type="search"
+               placeholder="Buscar herói…" aria-label="Buscar herói"
+               autocomplete="off" spellcheck="false">
+        <span class="pf-hero-count" id="pfHeroCount" aria-live="polite"></span>
+      </div>
+      <div id="pfHeroPicker" class="pf-picker-grid pf-picker-grid--dense" role="radiogroup" aria-label="Escolha seu herói principal"></div>
+      <small id="pHeroHint">Escolha seu herói principal no catálogo oficial.</small>
+    </fieldset>
+
+    <!-- ID -->
+    <label class="is-wide">ID no jogo
+      <input id="pGid" maxlength="20">
+    </label>
+  </div>
+</div>
+
+        <!-- ══════════ APARÊNCIA (v8) ══════════ -->
         <div class="profile-tab-panel" role="tabpanel" id="panel-look" aria-labelledby="tab-look" hidden>
           <div class="profile-form-grid">
             <label>Cor de destaque
@@ -237,7 +260,6 @@
 
           <fieldset class="pf-picker-fieldset" style="margin-top:18px">
             <legend>Moldura do card</legend>
-            <!-- Select real (escondido). O JS lê e escreve aqui. -->
             <select id="profileFrameInput" hidden>
               <option value="default">default</option>
               <option value="elite">elite</option>
@@ -270,7 +292,7 @@
               <option value="plasma">plasma</option>
               <option value="galaxy">galaxy</option>
             </select>
-            <div id="pfFramePicker" role="radiogroup" aria-label="Molduras do card"><!-- preenchido pelo JS --></div>
+            <div id="pfFramePicker" role="radiogroup" aria-label="Molduras do card"></div>
           </fieldset>
 
           <fieldset class="pf-picker-fieldset" style="margin-top:18px">
@@ -300,10 +322,11 @@
               <option value="toxic">toxic</option>
               <option value="candy">candy</option>
             </select>
-            <div id="pfThemePicker" role="radiogroup" aria-label="Temas do perfil"><!-- preenchido pelo JS --></div>
+            <div id="pfThemePicker" role="radiogroup" aria-label="Temas do perfil"></div>
           </fieldset>
         </div>
 
+        <!-- ══════════ PRIVACIDADE ══════════ -->
         <div class="profile-tab-panel" role="tabpanel" id="panel-privacy" aria-labelledby="tab-privacy" hidden>
           <fieldset class="profile-privacy-fieldset">
             <legend>Quem pode ver seu perfil</legend>
@@ -320,6 +343,7 @@
           </fieldset>
         </div>
 
+        <!-- ══════════ STREAM ══════════ -->
         <div class="profile-tab-panel" role="tabpanel" id="panel-stream" aria-labelledby="tab-stream" hidden>
           <div class="profile-form-grid">
             <label id="pStreamField" class="is-wide" hidden>Canal de stream
