@@ -1,5 +1,6 @@
 /* ============================================================================
    PROFILE + SETTINGS — Destiny (MLBB) · v11 + expansão v26 + partículas v27
+   + MODO LITE (v28) controlado por perf.js → html[data-perf="lite"|"full"]
    - Pickers visuais: rank, herói e ROTA principal
    - Ícone da rota maior (CSS-only, via :has) — sem depender do JS
    - Temas com impacto visual real
@@ -442,7 +443,8 @@ button.pf-social-item:hover, a.pf-social-item:hover { background: color-mix(in s
 .profile-privacy-fieldset { display: grid; gap: 14px; margin: 0; padding: 0; border: 0; }
 .profile-privacy-fieldset legend { padding: 0; margin-bottom: 10px; font-weight: 700; }
 .profile-check { flex-direction: row !important; align-items: center; gap: 10px !important; }
-.profile-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--profile-accent); }
+.profile-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--profile-accent); flex: 0 0 auto; }
+.profile-check span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .profile-form-message { min-height: 1.2em; margin: 0; padding: 0 22px; color: #3ecf8e; font-size: .84rem; }
 .profile-form-message.is-error { color: #ff6b6b; }
 .profile-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px 18px; border-top: 1px solid rgba(140,155,210,.16); background: #0d1224; }
@@ -640,7 +642,6 @@ button.pf-social-item:hover, a.pf-social-item:hover { background: color-mix(in s
 
 /* ═══════════════════════════════════════════════════════════════
    EXPANSÃO v26 — 40 novas molduras + 30 novos temas
-   Cole no FINAL de /static/css/profile.css
    Regras:
    • --frame-border / --frame-ring são SEMPRE uma camada única (o
      shorthand do card só aplica "border-box" na última camada).
@@ -1035,7 +1036,6 @@ button.pf-social-item:hover, a.pf-social-item:hover { background: color-mix(in s
 
 /* ═══════════════════════════════════════════════════════════════
    EXPANSÃO v27 — 12 molduras de PARTÍCULAS (estilo Véu de Sakura)
-   Cole no FINAL do profile.css (depois do v26).
 
    Como funciona: cada moldura define borda em gradiente + brilho e
    escolhe uma camada de partículas via variáveis:
@@ -1161,39 +1161,103 @@ button.pf-social-item:hover, a.pf-social-item:hover { background: color-mix(in s
 
 @media (prefers-reduced-motion: reduce) {
   :is(.profile-card,.profile-preview-card)::before { animation: none !important; }
-}/* ===== MODO LEVE (so CSS) - celular / toque / tela estreita ===== */
-@media (pointer: coarse), (max-width: 820px) {
-  /* molduras e particulas ficam estaticas */
-  [data-frame],
-  [data-frame]::before,
-  [data-frame]::after,
-  .profile-card::after,
-  .profile-avatar-wrap::before,
-  .profile-status.is-online i,
-  .profile-stream-btn.is-live,
-  [data-theme="glitch"] .profile-card::after {
-    animation: none !important;
-  }
-
-  /* blend mode e blur sao caros em GPU de celular */
-  .profile-card::after,
-  .profile-preview-card::after {
-    mix-blend-mode: normal;
-    opacity: calc(var(--th-pattern-opacity, .35) * .45);
-  }
-  .profile-page::before,
-  .profile-avatar-wrap::before {
-    filter: none;
-  }
-  .profile-toolbar .profile-subtle-button,
-  .profile-toolbar .profile-friend-btn,
-  .profile-toolbar .profile-golive {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background: rgba(10, 14, 26, .82);
-  }
-  .profile-dialog::backdrop {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   MODO LITE (v28) — controlado por /static/js/perf.js
+   html[data-perf="lite"]  → celular / aparelho fraco / escolha do usuário
+   html[data-perf="full"]  → tudo ligado
+   (substitui o antigo bloco @media (pointer: coarse) "MODO LEVE")
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 1) Zero animação: molduras, partículas, halos, pulsos, selos */
+html[data-perf="lite"] [data-frame],
+html[data-perf="lite"] [data-frame]::before,
+html[data-perf="lite"] [data-frame]::after,
+html[data-perf="lite"] .profile-card::after,
+html[data-perf="lite"] .profile-preview-card::after,
+html[data-perf="lite"] .profile-avatar-wrap::before,
+html[data-perf="lite"] .profile-status.is-online i,
+html[data-perf="lite"] .profile-stream-btn.is-live,
+html[data-perf="lite"] .profile-verified-badge,
+html[data-perf="lite"] .profile-verified-badge-inline,
+html[data-perf="lite"] .profile-rank-badge,
+html[data-perf="lite"] .profile-primary.is-saving::before,
+html[data-perf="lite"] [data-theme="glitch"] .profile-card::after {
+  animation: none !important;
+}
+html[data-perf="lite"] .profile-page *,
+html[data-perf="lite"] .profile-dialog * {
+  transition: none !important;
+}
+html[data-perf="lite"] .profile-game-tag:hover,
+html[data-perf="lite"] .profile-stat-card:hover,
+html[data-perf="lite"] .profile-badge:hover,
+html[data-perf="lite"] .pf-swatch:hover:not(:disabled) { transform: none; }
+
+/* 2) Efeitos caros de GPU: blur, backdrop-filter, blend, drop-shadow */
+html[data-perf="lite"] .profile-page::before,
+html[data-perf="lite"] .profile-avatar-wrap::before { filter: none; }
+
+html[data-perf="lite"] .profile-card::after,
+html[data-perf="lite"] .profile-preview-card::after {
+  mix-blend-mode: normal;
+  opacity: calc(var(--th-pattern-opacity, .35) * .45);
+}
+html[data-perf="lite"] .profile-toolbar .profile-subtle-button,
+html[data-perf="lite"] .profile-toolbar .profile-friend-btn,
+html[data-perf="lite"] .profile-toolbar .profile-golive {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: rgba(10,14,26,.82);
+}
+html[data-perf="lite"] .profile-dialog::backdrop {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: rgba(4,7,16,.88);
+}
+html[data-perf="lite"] .profile-rank-image,
+html[data-perf="lite"] .pf-swatch-rank img,
+html[data-perf="lite"] .profile-preview-rank img { filter: none; }
+html[data-perf="lite"] .profile-verified-badge,
+html[data-perf="lite"] .profile-verified-badge-inline { filter: none !important; }
+
+/* 3) Sombras enormes e blur gigante viram sombra simples */
+html[data-perf="lite"] .profile-card,
+html[data-perf="lite"] .profile-preview-card {
+  box-shadow: 0 10px 22px -16px rgba(0,0,0,.8);
+}
+html[data-perf="lite"] .profile-avatar {
+  box-shadow: 0 0 0 4px var(--pf-surface, #0d1224);
+}
+html[data-perf="lite"] .profile-preview-avatar {
+  box-shadow: 0 0 0 3px var(--pf-surface, #0d1224);
+}
+html[data-perf="lite"] .profile-rank-badge,
+html[data-perf="lite"] .profile-rank-emblem,
+html[data-perf="lite"] .pf-swatch-frame { box-shadow: none; }
+
+/* 4) Editor: painéis escondidos saem do layout (antes ficavam
+      empilhados com visibility:hidden, todos medidos a cada mudança) */
+html[data-perf="lite"] .profile-tab-panel[hidden] { display: none !important; }
+html[data-perf="lite"] .profile-tab-panel { transition: none; }
+
+/* 5) Pickers: ~115 molduras + ~65 temas + heróis.
+      Só renderiza o que está na tela. */
+html[data-perf="lite"] .pf-swatch {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
+}
+/* Miniatura de tema vira degradê simples (sem padrões repetidos) */
+html[data-perf="lite"] .pf-swatch-theme {
+  background: linear-gradient(135deg, var(--th-a), var(--th-b));
+}
+
+/* 6) Partículas v27 e véu de sakura: sem camada extra no modo lite
+      (a borda e o brilho da moldura continuam) */
+html[data-perf="lite"] :is(.profile-card,.profile-preview-card):is(
+  [data-frame="nevasca"],[data-frame="bolhas"],[data-frame="vagalumes"],
+  [data-frame="brasas"],[data-frame="outono"],[data-frame="chuva-estelar"],
+  [data-frame="rosas"],[data-frame="confete"],[data-frame="chuva-de-codigo"],
+  [data-frame="chuva-de-moedas"],[data-frame="poeira-de-ouro"],[data-frame="chuva-glitch"],
+  [data-frame="sakura-veil"]
+)::before { display: none; }

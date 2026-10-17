@@ -1,4 +1,4 @@
-<!-- profile.html — Destiny · Player Card (v11 · inclui molduras/temas v26 e partículas v27) -->
+<!-- profile.html — Destiny · Player Card (v12 · molduras/temas v26 + partículas v27 + toggle de modo lite) -->
 <link rel="stylesheet" href="/static/css/profile.css">
 
 <style id="profile-verified-css">
@@ -244,6 +244,16 @@
         <!-- ══════════ APARÊNCIA ══════════ -->
         <div class="profile-tab-panel" role="tabpanel" id="panel-look" aria-labelledby="tab-look" hidden>
           <div class="profile-form-grid">
+
+            <!-- [v12] MODO LITE · sincronizado por /static/js/perf.js
+                 (SEM id de propósito: o editor ignora campos sem id ao detectar "alterações não salvas") -->
+            <label class="profile-check is-wide">
+              <input type="checkbox" data-perf-toggle>
+              <span>Efeitos animados
+                <small>Molduras, partículas e brilhos em movimento. Desligue se o site estiver pesado no celular.</small>
+              </span>
+            </label>
+
             <label>Cor de destaque
               <input id="profileAccentInput" type="color">
               <small>Sobrepõe a accent do tema. Só é usada se você escolher uma cor.</small>
