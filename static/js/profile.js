@@ -1,5 +1,8 @@
 /* Reusable profile presentation and editor interactions.
-   v23 — ícone da rota no card + resumo de perfil
+   v24 — correção de acesso a molduras/temas + catálogos v26/v27
+   • options dos <select> são garantidas pelo JS (HTML e catálogo nunca dessincronizam)
+   • mensagem de acesso negado indica o cargo exigido + diagnóstico no console
+   • prévia do editor acompanha o tema escolhido
 */
 (() => {
   const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -105,6 +108,155 @@
     { value:"toxic",   label:"Tóxico",     tier:"dev" },
     { value:"candy",   label:"Doce",       tier:"dev" },
   ];
+
+  // ═══ EXPANSÃO v26 + v27 (molduras e temas) ═══
+  // ─────── v26: NOVAS MOLDURAS ───────
+  // free
+  FRAME_CATALOG.push(
+    { value:"lava", label:"Lava", tier:"free" },
+    { value:"tsunami", label:"Tsunami", tier:"free" },
+    { value:"rocha", label:"Rocha", tier:"free" },
+    { value:"vendaval", label:"Vendaval", tier:"free" },
+    { value:"aco-escovado", label:"Aço Escovado", tier:"free" },
+    { value:"cobre", label:"Cobre", tier:"free" },
+    { value:"folha", label:"Veias de Folha", tier:"free" },
+    { value:"ambar", label:"Âmbar", tier:"free" },
+    { value:"perigo", label:"Perigo", tier:"free" },
+    { value:"vhs", label:"VHS", tier:"free" },
+    { value:"arcade", label:"Arcade", tier:"free" },
+    { value:"monolito", label:"Monolito", tier:"free" }
+  );
+  // vip
+  FRAME_CATALOG.push(
+    { value:"nebula", label:"Nebulosa", tier:"vip" },
+    { value:"cometa", label:"Cometa", tier:"vip" },
+    { value:"buraco-negro", label:"Buraco Negro", tier:"vip" },
+    { value:"supernova", label:"Supernova", tier:"vip" },
+    { value:"titanio", label:"Titânio", tier:"vip" },
+    { value:"ouro-branco", label:"Ouro Branco", tier:"vip" },
+    { value:"coral", label:"Coral", tier:"vip" },
+    { value:"madeira", label:"Madeira", tier:"vip" },
+    { value:"farao", label:"Faraó", tier:"vip" },
+    { value:"sakura-veil", label:"Véu de Sakura", tier:"vip" },
+    { value:"asteca", label:"Asteca", tier:"vip" },
+    { value:"runas", label:"Runas Nórdicas", tier:"vip" },
+    { value:"arabesco", label:"Arabesco", tier:"vip" },
+    { value:"holograma", label:"Holograma", tier:"vip" },
+    { value:"campeao", label:"Campeão", tier:"vip" }
+  );
+  // beta
+  FRAME_CATALOG.push(
+    { value:"cartucho", label:"Cartucho", tier:"beta" },
+    { value:"disquete", label:"Disquete", tier:"beta" },
+    { value:"fluxo-de-dados", label:"Fluxo de Dados", tier:"beta" },
+    { value:"colecionador", label:"Colecionador", tier:"beta" }
+  );
+  // streamer
+  FRAME_CATALOG.push(
+    { value:"epico", label:"Épico", tier:"streamer" },
+    { value:"chroma-key", label:"Chroma Key", tier:"streamer" },
+    { value:"holofote", label:"Holofote", tier:"streamer" }
+  );
+  // mod
+  FRAME_CATALOG.push(
+    { value:"aegis", label:"Égide", tier:"mod" },
+    { value:"veredito", label:"Veredito", tier:"mod" }
+  );
+  // admin
+  FRAME_CATALOG.push(
+    { value:"lendario", label:"Lendário", tier:"admin" },
+    { value:"soberano", label:"Soberano", tier:"admin" }
+  );
+  // dev
+  FRAME_CATALOG.push(
+    { value:"portal", label:"Portal", tier:"dev" },
+    { value:"glitch-rgb", label:"Glitch RGB", tier:"dev" }
+  );
+
+  // ─────── v26: NOVAS TEMAS ───────
+  // free
+  THEME_CATALOG.push(
+    { value:"tempestade", label:"Tempestade", tier:"free" },
+    { value:"tundra", label:"Tundra", tier:"free" },
+    { value:"selva", label:"Selva", tier:"free" },
+    { value:"savana", label:"Savana", tier:"free" },
+    { value:"caverna", label:"Caverna", tier:"free" },
+    { value:"marmore", label:"Mármore", tier:"free" },
+    { value:"concreto", label:"Concreto", tier:"free" },
+    { value:"fliperama", label:"Fliperama", tier:"free" },
+    { value:"calmaria", label:"Calmaria", tier:"free" },
+    { value:"rio", label:"Rio de Janeiro", tier:"free" }
+  );
+  // vip
+  THEME_CATALOG.push(
+    { value:"furia", label:"Fúria", tier:"vip" },
+    { value:"euforia", label:"Euforia", tier:"vip" },
+    { value:"medieval", label:"Medieval", tier:"vip" },
+    { value:"art-deco", label:"Anos 20", tier:"vip" },
+    { value:"toquio-noturno", label:"Tóquio Noturna", tier:"vip" },
+    { value:"nova-york", label:"Nova York", tier:"vip" },
+    { value:"veneza", label:"Veneza", tier:"vip" },
+    { value:"cairo", label:"Cairo", tier:"vip" },
+    { value:"feerico", label:"Feérico", tier:"vip" },
+    { value:"angelical", label:"Angelical", tier:"vip" },
+    { value:"abissal", label:"Abissal", tier:"vip" },
+    { value:"veludo", label:"Veludo", tier:"vip" }
+  );
+  // beta
+  THEME_CATALOG.push(
+    { value:"onirico", label:"Onírico", tier:"beta" },
+    { value:"saudade", label:"Saudade", tier:"beta" },
+    { value:"rpg-antigo", label:"RPG Antigo", tier:"beta" }
+  );
+  // streamer
+  THEME_CATALOG.push(
+    { value:"battle-royale", label:"Battle Royale", tier:"streamer" },
+    { value:"fliperama-neon", label:"Fliperama Neon", tier:"streamer" }
+  );
+  // mod
+  THEME_CATALOG.push(
+    { value:"fps-tatico", label:"FPS Tático", tier:"mod" }
+  );
+  // admin
+  THEME_CATALOG.push(
+    { value:"demoniaco", label:"Demoníaco", tier:"admin" }
+  );
+  // dev
+  THEME_CATALOG.push(
+    { value:"glitch", label:"Glitch", tier:"dev" }
+  );
+
+  // ─────── v27: MOLDURAS DE PARTÍCULAS ───────
+  // free
+  FRAME_CATALOG.push(
+    { value:"nevasca", label:"Nevasca", tier:"free" },
+    { value:"bolhas", label:"Bolhas", tier:"free" },
+    { value:"vagalumes", label:"Vaga-lumes", tier:"free" }
+  );
+  // vip
+  FRAME_CATALOG.push(
+    { value:"brasas", label:"Brasas", tier:"vip" },
+    { value:"outono", label:"Outono", tier:"vip" },
+    { value:"chuva-estelar", label:"Chuva Estelar", tier:"vip" },
+    { value:"rosas", label:"Pétalas de Rosa", tier:"vip" },
+    { value:"confete", label:"Confete", tier:"vip" }
+  );
+  // beta
+  FRAME_CATALOG.push(
+    { value:"chuva-de-codigo", label:"Chuva de Código", tier:"beta" }
+  );
+  // streamer
+  FRAME_CATALOG.push(
+    { value:"chuva-de-moedas", label:"Chuva de Moedas", tier:"streamer" }
+  );
+  // admin
+  FRAME_CATALOG.push(
+    { value:"poeira-de-ouro", label:"Poeira de Ouro", tier:"admin" }
+  );
+  // dev
+  FRAME_CATALOG.push(
+    { value:"chuva-glitch", label:"Chuva Glitch", tier:"dev" }
+  );
 
   const ROLE_IMAGE_DIR = "/static/assets/rotas/";
   const ROLE_CATALOG = [
@@ -437,8 +589,10 @@
   // ─────────────────────────────────────────────────────────
   // ROLE GATING
   // ─────────────────────────────────────────────────────────
-  function userRoles() { return rolesFromProfile(selfProfile || profile || {}); }
-  function userRoleKey() { return roleFromProfile(selfProfile || profile || {}); }
+  /* [v24] fallback para window.__selfProfile: evita "sem cargo" falso quando
+     o editor abre antes do primeiro renderProfile() */
+  function userRoles() { return rolesFromProfile(selfProfile || window.__selfProfile || profile || {}); }
+  function userRoleKey() { return roleFromProfile(selfProfile || window.__selfProfile || profile || {}); }
   function requirementsForItem(item) {
     if (!item || !item.tier || item.tier === "free") return null;
     const list = TIER_ACCESS[item.tier];
@@ -474,6 +628,12 @@
     const item = THEME_CATALOG.find(i => i.value === value);
     return !item ? true : userCanUse(requirementsForItem(item));
   }
+  /* [v24] mensagem de acesso negado com o cargo exigido */
+  function accessMessage(kind, item) {
+    const need = labelForRequirements(requirementsForItem(item));
+    return "Você não tem acesso a " + (kind === "frame" ? "esta moldura" : "este tema") +
+      (need ? " (exige o cargo " + need + " ou superior)." : ".");
+  }
 
   // ─────────────────────────────────────────────────────────
   // SWATCH PICKERS (frames / temas)
@@ -483,6 +643,19 @@
     streamer:"Streamers", mod:"Moderação", admin:"Admin", dev:"Dev",
   };
   const TIER_ORDER = ["free","vip","beta","streamer","mod","admin","dev"];
+
+  /* [v24] garante que cada item do catálogo exista como <option> no <select> escondido.
+     Sem isso, select.value = "x" falhava em silêncio quando o HTML não tinha a option. */
+  function ensureSelectOptions(selectId, catalog) {
+    const sel = safe(selectId); if (!sel) return;
+    const have = new Set(Array.from(sel.options).map(o => o.value));
+    catalog.forEach(it => {
+      if (have.has(it.value)) return;
+      const o = document.createElement("option");
+      o.value = it.value; o.textContent = it.value;
+      sel.append(o); have.add(it.value);
+    });
+  }
 
   function buildSwatch(item, kind) {
     const btn = document.createElement("button");
@@ -548,6 +721,12 @@
     container.querySelectorAll(".pf-swatch").forEach(btn => {
       btn.setAttribute("aria-checked", String(btn.dataset.value === current));
     });
+  }
+  /* [v24] a prévia do editor acompanha o tema escolhido */
+  function syncPreviewTheme() {
+    const card = safe("profilePreviewCard");
+    const theme = safe("profileThemeInput")?.value;
+    if (card && theme) card.dataset.theme = theme;
   }
 
   // ─────────────────────────────────────────────────────────
@@ -1365,6 +1544,7 @@
     applyRoleGating();
     syncSwatchSelection("profileFrameInput");
     syncSwatchSelection("profileThemeInput");
+    syncPreviewTheme();
 
     syncRankSelection();
     syncHeroSelection();
@@ -1448,8 +1628,17 @@
 
     const frame = safe("profileFrameInput")?.value || "default";
     const theme = safe("profileThemeInput")?.value || "classic";
-    if (!isFrameAllowed(frame)) { showImageError("Você não tem acesso a esta moldura."); return; }
-    if (!isThemeAllowed(theme)) { showImageError("Você não tem acesso a este tema."); return; }
+    /* [v24] mensagem com o cargo exigido + diagnóstico no console */
+    if (!isFrameAllowed(frame)) {
+      const item = FRAME_CATALOG.find(i => i.value === frame);
+      console.warn("[ProfileUI] moldura negada pelo cliente", { frame, tier: item?.tier, seusCargos: userRoles() });
+      showImageError(accessMessage("frame", item)); return;
+    }
+    if (!isThemeAllowed(theme)) {
+      const item = THEME_CATALOG.find(i => i.value === theme);
+      console.warn("[ProfileUI] tema negado pelo cliente", { theme, tier: item?.tier, seusCargos: userRoles() });
+      showImageError(accessMessage("theme", item)); return;
+    }
 
     const msg = safe("profileFormMessage");
     if (msg) { msg.textContent = "Salvando perfil…"; msg.classList.remove("is-error"); }
@@ -1536,6 +1725,10 @@
   function mount(options) {
     context = options || {};
 
+    /* [v24] o <select> sempre tem todas as options do catálogo */
+    ensureSelectOptions("profileFrameInput", FRAME_CATALOG);
+    ensureSelectOptions("profileThemeInput", THEME_CATALOG);
+
     buildPicker(FRAME_CATALOG, "frame", "pfFramePicker", "profileFrameInput");
     buildPicker(THEME_CATALOG, "theme", "pfThemePicker", "profileThemeInput");
     buildRankPicker();
@@ -1566,7 +1759,7 @@
       });
     });
     safe("profileFrameInput")?.addEventListener("change", () => syncSwatchSelection("profileFrameInput"));
-    safe("profileThemeInput")?.addEventListener("change", () => syncSwatchSelection("profileThemeInput"));
+    safe("profileThemeInput")?.addEventListener("change", () => { syncSwatchSelection("profileThemeInput"); syncPreviewTheme(); });
 
     safe("pAvatarShape")?.addEventListener("change", () => applyAvatarShape(safe("pAvatarShape").value));
 
@@ -1814,7 +2007,7 @@
   }
 
   function debugRole() {
-    const data = selfProfile || profile || {};
+    const data = selfProfile || window.__selfProfile || profile || {};
     const roles = rolesFromProfile(data);
     const best = roleFromProfile(data);
     console.group("[ProfileUI] Diagnóstico de cargo");
@@ -1849,6 +2042,8 @@
     buildRankPicker, buildHeroPicker, syncRankSelection, syncHeroSelection, filterHeroes,
     // [v11]
     ROLE_CATALOG, roleImageUrl, roleImageFor, buildRolePicker, syncRoleSelection, summaryRoleIcon,
+    // [v24]
+    accessMessage, ensureSelectOptions,
     debugRole,
   };
 

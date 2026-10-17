@@ -5,11 +5,16 @@ Mantém os catálogos em SINCRONIA com profile.js:
     FRAME_CATALOG / THEME_CATALOG  (no cliente)
     FRAME_TIERS   / THEME_TIERS    (aqui)
 
+Inclui as expansões v26 (molduras/temas) e v27 (molduras de partículas).
+
 Regras:
   · Cada moldura/tema pertence a um "tier".
   · Um tier exige um conjunto de papéis (TIER_ACCESS).
   · "dev" é super-user: passa em tudo.
   · Valor desconhecido = rejeitado (cai no default).
+  · Valor conhecido mas sem acesso = rejeitado (cai no default).
+    [FIX] antes devolvia o valor pedido, o que anulava a sanitização
+    feita em profile() quando o usuário perdia o cargo.
 """
 from __future__ import annotations
 
@@ -26,21 +31,60 @@ FRAME_TIERS: dict[str, str] = {
     # ── free ──
     "default": "free", "elite": "free", "shadow": "free", "obsidian": "free",
     "ice": "free", "frost": "free", "neon": "free", "holo": "free",
+    # v26
+    "lava": "free", "tsunami": "free", "rocha": "free", "vendaval": "free",
+    "aco-escovado": "free", "cobre": "free", "folha": "free", "ambar": "free",
+    "perigo": "free", "vhs": "free", "arcade": "free", "monolito": "free",
+    # v27 (partículas)
+    "nevasca": "free", "bolhas": "free", "vagalumes": "free",
+
     # ── vip ──
     "gold": "vip", "platinum": "vip", "royal": "vip", "celestial": "vip",
     "dragon": "vip", "rainbow": "vip", "sun": "vip", "sakura": "vip",
     "emerald": "vip", "toxic": "vip", "blood": "vip", "crimson": "vip",
     "fire": "vip",
+    # v26
+    "nebula": "vip", "cometa": "vip", "buraco-negro": "vip", "supernova": "vip",
+    "titanio": "vip", "ouro-branco": "vip", "coral": "vip", "madeira": "vip",
+    "farao": "vip", "sakura-veil": "vip", "asteca": "vip", "runas": "vip",
+    "arabesco": "vip", "holograma": "vip", "campeao": "vip",
+    # v27 (partículas)
+    "brasas": "vip", "outono": "vip", "chuva-estelar": "vip",
+    "rosas": "vip", "confete": "vip",
+
     # ── streamer ──
     "lightning": "streamer", "live-pulse": "streamer",
+    # v26
+    "epico": "streamer", "chroma-key": "streamer", "holofote": "streamer",
+    # v27
+    "chuva-de-moedas": "streamer",
+
     # ── beta ──
     "beta-circuit": "beta", "beta-construct": "beta",
+    # v26
+    "cartucho": "beta", "disquete": "beta", "fluxo-de-dados": "beta",
+    "colecionador": "beta",
+    # v27
+    "chuva-de-codigo": "beta",
+
     # ── mod ──
     "guardian": "mod",
+    # v26
+    "aegis": "mod", "veredito": "mod",
+
     # ── admin ──
     "crown": "admin",
+    # v26
+    "lendario": "admin", "soberano": "admin",
+    # v27
+    "poeira-de-ouro": "admin",
+
     # ── dev ──
     "void": "dev", "plasma": "dev", "galaxy": "dev",
+    # v26
+    "portal": "dev", "glitch-rgb": "dev",
+    # v27
+    "chuva-glitch": "dev",
 }
 
 THEME_TIERS: dict[str, str] = {
@@ -48,19 +92,44 @@ THEME_TIERS: dict[str, str] = {
     "classic": "free", "arena": "free", "ocean": "free", "aurora": "free",
     "sunset": "free", "forest": "free", "sakura": "free", "cyber": "free",
     "mythic": "free", "mono": "free",
+    # v26
+    "tempestade": "free", "tundra": "free", "selva": "free", "savana": "free",
+    "caverna": "free", "marmore": "free", "concreto": "free",
+    "fliperama": "free", "calmaria": "free", "rio": "free",
+
     # ── vip ──
     "galaxy": "vip", "volcanic": "vip", "arctic": "vip", "desert": "vip",
     "eclipse": "vip", "royal": "vip", "neon": "vip",
+    # v26
+    "furia": "vip", "euforia": "vip", "medieval": "vip", "art-deco": "vip",
+    "toquio-noturno": "vip", "nova-york": "vip", "veneza": "vip",
+    "cairo": "vip", "feerico": "vip", "angelical": "vip", "abissal": "vip",
+    "veludo": "vip",
+
     # ── beta ──
     "matrix": "beta",
+    # v26
+    "onirico": "beta", "saudade": "beta", "rpg-antigo": "beta",
+
     # ── streamer ──
     "livestream": "streamer",
+    # v26
+    "battle-royale": "streamer", "fliperama-neon": "streamer",
+
     # ── mod ──
     "sentinel": "mod",
+    # v26
+    "fps-tatico": "mod",
+
     # ── admin ──
     "throne": "admin",
+    # v26
+    "demoniaco": "admin",
+
     # ── dev ──
     "toxic": "dev", "candy": "dev",
+    # v26
+    "glitch": "dev",
 }
 
 # ─────────────────────────────────────────────────────────
@@ -87,6 +156,7 @@ def _resolve(mapping: dict[str, str], value, default: str, role: str) -> tuple[b
       · Valor vazio → default, sempre permitido.
       · Valor desconhecido → não permitido, default.
       · Valor conhecido → checa TIER_ACCESS. Dev passa sempre.
+      · Sem acesso → não permitido, default.
     """
     v = str(value or "").strip()
     if not v:
@@ -99,7 +169,9 @@ def _resolve(mapping: dict[str, str], value, default: str, role: str) -> tuple[b
     allowed = TIER_ACCESS.get(tier)
     if not allowed:
         return True, v
-    return role in allowed, v
+    if role in allowed:
+        return True, v
+    return False, default
 
 
 def frame_allowed(role: str, value) -> tuple[bool, str]:

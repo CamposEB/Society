@@ -30,7 +30,6 @@
 <link rel="stylesheet" href="/static/css/hero-official.css">
 <link rel="stylesheet" href="/static/css/command-palette.css">
 <link rel="stylesheet" href="/static/css/moderation.css">
-<link rel="stylesheet" href="/static/css/admin-v2.css"> 
 <!-- 🆕 admin-v2: DEPOIS do moderation.css -->
 <link rel="stylesheet" href="/static/css/admin-v2.css">
 <link rel="stylesheet" href="/static/css/meta-builds.css">
@@ -38,6 +37,52 @@
 <link rel="stylesheet" href="/static/css/lobby.css">
 <link rel="stylesheet" href="/static/css/guide.css">
 <link rel="stylesheet" href="/static/css/topbar.css">
+<!-- 🆕 tela de login: DEPOIS do base.css (e dos demais) para sobrescrever o #login antigo -->
+<link rel="stylesheet" href="/static/css/login.css">
+<style>
+/* modo visitante */
+.guest-login-button{width:100%;margin-top:8px;background:transparent;color:inherit;border:1px dashed var(--muted,#8a8a93);border-radius:10px;padding:10px 14px;font:inherit;cursor:pointer}
+.guest-login-button:hover:not(:disabled){border-style:solid}
+.guest-login-button:disabled{opacity:.6;cursor:wait}
+.guest-login-note{display:block;margin-top:8px;color:var(--muted,#8a8a93)}
+.guest-banner{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60;display:flex;gap:12px;align-items:center;justify-content:space-between;width:max-content;max-width:min(92vw,560px);padding:10px 14px;border-radius:12px;background:rgba(20,20,26,.96);border:1px solid rgba(139,114,255,.55);box-shadow:0 8px 28px rgba(0,0,0,.45);font-size:.9rem;color:#eee}
+.guest-banner[hidden]{display:none}
+.guest-banner button{flex:none;border:0;border-radius:8px;padding:8px 12px;background:#8b72ff;color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.guest-banner.is-pulse{animation:guestPulse .6s ease}
+@keyframes guestPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.04)}}
+body.is-guest #nav button[data-t="dm"],
+body.is-guest #nav button[data-t="quiz"],
+body.is-guest #nav button[data-t="settings"],
+body.is-guest #mobileNav button[data-t="dm"]{opacity:.55}
+@media (min-width:900px){.guest-banner{bottom:24px}}
+</style>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Interceptor WebSocket — reemite mensagens do servidor como
+   evento "society:ws" para que o lobby possa escutá-las sem
+   tocar no app.js. Não altera o comportamento original.
+   ══════════════════════════════════════════════════════════════ */
+(function () {
+  var Native = window.WebSocket;
+  if (!Native) return;
+  function Wrapped(url, protocols) {
+    var ws = protocols !== undefined ? new Native(url, protocols) : new Native(url);
+    window.__societyWs = ws;
+    ws.addEventListener("message", function (ev) {
+      var data;
+      try { data = JSON.parse(ev.data); } catch (e) { return; }
+      window.dispatchEvent(new CustomEvent("society:ws", { detail: data }));
+    });
+    return ws;
+  }
+  Wrapped.prototype = Native.prototype;
+  Wrapped.CONNECTING = Native.CONNECTING;
+  Wrapped.OPEN       = Native.OPEN;
+  Wrapped.CLOSING    = Native.CLOSING;
+  Wrapped.CLOSED     = Native.CLOSED;
+  window.WebSocket = Wrapped;
+})();
+</script>
 </head>
 <body>
 
@@ -64,44 +109,93 @@
   <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
 </svg>
 
+<!-- ═════════ LOGIN / CADASTRO ═════════
+     Estrutura nova: #login é só o contêiner (app.js alterna display block/none nele).
+     O layout em duas colunas fica em .login-shell. Todos os IDs foram mantidos. -->
 <form id="login" onsubmit="return false">
-  <div class="logo big"><img src="/static/img/logo.png" alt="Society MLBB"></div>
-  <small style="color:var(--muted)">O ponto de encontro da comunidade de MLBB</small>
-  <div class="auth-tabs" role="tablist" aria-label="Acesso à comunidade">
-    <button id="authLoginTab" class="auth-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="authLoginPanel">Entrar</button>
-    <button id="authRegisterTab" class="auth-tab" type="button" role="tab" aria-selected="false" aria-controls="authRegisterPanel">Criar conta</button>
+  <div class="login-shell">
+
+    <!-- coluna de apresentação -->
+    <aside class="login-intro" aria-label="Sobre a Society MLBB">
+      <div class="logo big"><img src="/static/img/logo.png" alt="Society MLBB"></div>
+      <p class="login-eyebrow">O ponto de encontro da comunidade de MLBB</p>
+      <h1 class="login-title">Jogue melhor.<br><span>Suba junto.</span></h1>
+      <p class="login-lead">Meta atualizada pela própria comunidade, builds testadas em partida e parceiros de duo no seu rank. Tudo num lugar só.</p>
+      <ul class="login-features">
+        <li>
+          <span class="login-feature-icon"><svg aria-hidden="true" focusable="false"><use href="#i-chart"/></svg></span>
+          <span><b>Meta por rota</b><small>Heróis em alta em cada lane</small></span>
+        </li>
+        <li>
+          <span class="login-feature-icon"><svg aria-hidden="true" focusable="false"><use href="#i-build"/></svg></span>
+          <span><b>Builds</b><small>Itens e emblemas da comunidade</small></span>
+        </li>
+        <li>
+          <span class="login-feature-icon"><svg aria-hidden="true" focusable="false"><use href="#i-duo"/></svg></span>
+          <span><b>Procurar duo</b><small>Parceiros no seu rank e horário</small></span>
+        </li>
+        <li>
+          <span class="login-feature-icon"><svg aria-hidden="true" focusable="false"><use href="#i-trophy"/></svg></span>
+          <span><b>Torneios</b><small>Campeonatos da comunidade</small></span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- cartão de acesso -->
+    <div class="login-card">
+      <div class="login-card-head">
+        <h2>Bem-vindo à Society</h2>
+        <p>Entre ou crie sua conta em segundos.</p>
+      </div>
+
+      <div class="auth-tabs" role="tablist" aria-label="Acesso à comunidade">
+        <button id="authLoginTab" class="auth-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="authLoginPanel">Entrar</button>
+        <button id="authRegisterTab" class="auth-tab" type="button" role="tab" aria-selected="false" aria-controls="authRegisterPanel">Criar conta</button>
+      </div>
+      <p id="googleAuthMessage" class="google-auth-message" role="status" aria-live="polite"></p>
+
+      <section id="authLoginPanel" class="auth-panel" role="tabpanel" aria-labelledby="authLoginTab">
+        <button id="googleLogin" class="google-login-button" type="button" hidden>
+          <svg class="google-g" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          <span>Entrar com Google</span>
+        </button>
+        <div class="auth-divider" aria-hidden="true"><span>ou entre com nick e senha</span></div>
+        <label for="nick">Nick
+          <input id="nick" placeholder="Seu nick" maxlength="14" autocomplete="username">
+        </label>
+        <label for="password">Senha
+          <input id="password" placeholder="Sua senha" maxlength="128" type="password" autocomplete="current-password">
+        </label>
+        <button id="enter" type="button">Entrar</button>
+        <div class="auth-divider" aria-hidden="true"><span>ou</span></div>
+        <button id="guestLogin" class="guest-login-button" type="button">Continuar como visitante</button>
+        <small class="guest-login-note">Visitantes exploram meta, builds, heróis e torneios. Para conversar, enviar mensagens e anunciar duo, crie uma conta.</small>
+      </section>
+
+      <section id="authRegisterPanel" class="auth-panel" role="tabpanel" aria-labelledby="authRegisterTab" hidden>
+        <label for="registerNick">Escolha seu nick
+          <input id="registerNick" placeholder="3 a 14 letras, números ou _" maxlength="14" autocomplete="username">
+        </label>
+        <label for="registerPassword">Crie uma senha
+          <input id="registerPassword" placeholder="Pelo menos 10 caracteres" maxlength="128" type="password" autocomplete="new-password">
+        </label>
+        <label for="registerPasswordConfirm">Confirme a senha
+          <input id="registerPasswordConfirm" placeholder="Digite a senha novamente" maxlength="128" type="password" autocomplete="new-password">
+        </label>
+        <button id="createPasswordAccount" type="button">Criar conta com senha</button>
+        <div class="auth-divider" aria-hidden="true"><span>ou crie com Google</span></div>
+        <button id="googleRegister" class="google-login-button" type="button" hidden>
+          <svg class="google-g" width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          <span>Criar conta com Google</span>
+        </button>
+        <small class="auth-register-note">Senhas são armazenadas somente como hash seguro.</small>
+      </section>
+
+      <p id="err"></p>
+      <small id="loginHelp" style="color:var(--muted)">Contas antigas continuam disponíveis enquanto o login Google é configurado.</small>
+    </div>
+
   </div>
-  <p id="googleAuthMessage" class="google-auth-message" role="status" aria-live="polite"></p>
-  <section id="authLoginPanel" class="auth-panel" role="tabpanel" aria-labelledby="authLoginTab">
-    <p class="google-link-note">Entre com sua conta Google ou use seu nick e senha.</p>
-    <button id="googleLogin" class="google-login-button" type="button" hidden>Entrar com Google</button>
-    <div class="auth-divider" aria-hidden="true"><span>ou entre com nick e senha</span></div>
-    <label for="nick">Nick
-      <input id="nick" placeholder="Seu nick" maxlength="14" autocomplete="username">
-    </label>
-    <label for="password">Senha
-      <input id="password" placeholder="Sua senha" maxlength="128" type="password" autocomplete="current-password">
-    </label>
-    <button id="enter" type="button">Entrar com senha</button>
-  </section>
-  <section id="authRegisterPanel" class="auth-panel" role="tabpanel" aria-labelledby="authRegisterTab" hidden>
-    <p class="google-link-note">Crie uma conta com nick e senha ou use o Google.</p>
-    <label for="registerNick">Escolha seu nick
-      <input id="registerNick" placeholder="3 a 14 letras, números ou _" maxlength="14" autocomplete="username">
-    </label>
-    <label for="registerPassword">Crie uma senha
-      <input id="registerPassword" placeholder="Pelo menos 10 caracteres" maxlength="128" type="password" autocomplete="new-password">
-    </label>
-    <label for="registerPasswordConfirm">Confirme a senha
-      <input id="registerPasswordConfirm" placeholder="Digite a senha novamente" maxlength="128" type="password" autocomplete="new-password">
-    </label>
-    <button id="createPasswordAccount" type="button">Criar conta com senha</button>
-    <div class="auth-divider" aria-hidden="true"><span>ou crie com Google</span></div>
-    <button id="googleRegister" class="google-login-button" type="button" hidden>Criar conta com Google</button>
-    <small class="auth-register-note">Senhas são armazenadas somente como hash seguro.</small>
-  </section>
-  <p id="err"></p>
-  <small id="loginHelp" style="color:var(--muted)">Contas antigas continuam disponíveis enquanto o login Google é configurado.</small>
 </form>
 
 <dialog id="googleProfileDialog" class="google-profile-dialog" aria-labelledby="googleProfileTitle">
@@ -113,6 +207,24 @@
     </label>
     <div class="google-profile-actions">
       <button id="googleProfileCancel" type="button" class="google-profile-cancel">Cancelar</button>
+      <button type="submit">Criar conta</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="registerPromptDialog" class="google-profile-dialog" aria-labelledby="registerPromptTitle">
+  <form id="registerPromptForm" novalidate>
+    <h2 id="registerPromptTitle">Criar sua conta</h2>
+    <p>O nick <b id="registerPromptNick"></b> ainda não existe. Vamos criá-lo agora com a senha que você digitou.</p>
+    <label for="registerPromptName">Nome de exibição
+      <input id="registerPromptName" maxlength="28" autocomplete="name" required>
+    </label>
+    <label for="registerPromptConfirm">Confirme a senha
+      <input id="registerPromptConfirm" type="password" maxlength="128" autocomplete="off" required>
+    </label>
+    <p id="registerPromptError" class="google-auth-message" role="alert"></p>
+    <div class="google-profile-actions">
+      <button id="registerPromptCancel" type="button" class="google-profile-cancel">Cancelar</button>
       <button type="submit">Criar conta</button>
     </div>
   </form>
@@ -189,6 +301,10 @@
     </button>
   </div>
 </header>
+<div id="guestBanner" class="guest-banner" role="status" hidden>
+  <span>Você está navegando como <b>visitante</b>. Crie uma conta para conversar, mandar mensagens e anunciar duo.</span>
+  <button id="guestSignup" type="button">Criar conta</button>
+</div>
 <h1 id="pageTitle"></h1>
 
 <section id="tab-home" class="tab on">
@@ -553,7 +669,6 @@
 <script src="/static/js/topbar.js"></script>
 <script src="/static/js/retri-trainer.js"></script>
 <script src="/static/js/tools.js"></script>
-<script src="/static/js/admin-panel.js"></script>
 <!-- 🆕 admin-panel: precisa vir DEPOIS do app.js (usa window.appSend / window.Society) -->
 <script src="/static/js/admin-panel.js"></script>
 <script src="/static/js/dm-extras.js" defer></script>

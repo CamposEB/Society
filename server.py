@@ -72,6 +72,25 @@ if not DEV_NICKS:
 VALID_ROLES = ("user", "beta", "streamer", "vip", "admin", "mod", "dev")
 VALID_VISIBILITIES = ("public", "friends", "private")
 
+# ─── VISITANTES (guest) ───
+# Visitantes são contas temporárias: existem só enquanto o WebSocket está
+# aberto (linha em `users` criada no login e apagada na desconexão/boot).
+# Podem explorar conteúdo público; qualquer outra ação é bloqueada no servidor.
+GUEST_PREFIX = "guest_"
+GUEST_NICKS = set()
+GUEST_MAX_ONLINE = 150          # visitantes simultâneos
+GUEST_CREATE_WINDOW = 600       # janela (s) para limitar criação por IP
+GUEST_CREATE_MAX = 8            # visitantes por IP dentro da janela
+GUEST_CREATIONS = {}
+GUEST_ALLOWED_TYPES = {
+    "move", "chat", "room", "room_list", "profile_view", "role_status",
+    "community_meta_list", "community_build_list", "tournament_list",
+    "lfg_list", "streamers_list",
+}
+# pedidos de leitura bloqueados que o cliente faz sozinho: não geram aviso
+GUEST_SILENT_SUFFIXES = ("_list", "_feed", "_seen", "_notifications", "_unread")
+GUEST_RESTRICTED_MESSAGE = "Crie uma conta gratuita para usar este recurso."
+
 MUTE_ACTIONS = {"mute_10m", "mute_1h", "mute_24h"}
 STATUS_BY_ACTION = {"review": "reviewed", "dismiss": "dismissed", "close": "resolved"}
 MUTE_DURATIONS = {"mute_10m": 600, "mute_1h": 3600, "mute_24h": 86400}
@@ -567,6 +586,7 @@ def profile(nick, viewer=None):
         "vip": "VIP",
         "streamer": "STREAMER",
         "beta": "BETA",
+        "guest": "VISITANTE",
     }
     community_roles = [ROLE_LABELS[role]] if role in ROLE_LABELS else ["MEMBRO"]
     verified = role in ("dev", "admin", "mod", "vip", "streamer")
@@ -574,8 +594,9 @@ def profile(nick, viewer=None):
     # [v23] Sanitiza frame/tema/avatar_shape na LEITURA — protege contra
     # downgrade/upgrade de cargo. Se o usuário perdeu o papel que dava
     # acesso, o card cai no default e o cliente reflete isso na hora.
-    _, safe_frame = profile_customization.frame_allowed(role, data.get("frame"))
-    _, safe_theme = profile_customization.theme_allowed(role, data.get("theme"))
+    cust_role = "user" if role == "guest" else role
+    _, safe_frame = profile_customization.frame_allowed(cust_role, data.get("frame"))
+    _, safe_theme = profile_customization.theme_allowed(cust_role, data.get("theme"))
     safe_shape = profile_customization.normalize_avatar_shape(data.get("avatar_shape"))
 
     result = {
@@ -590,6 +611,7 @@ def profile(nick, viewer=None):
         "online": nick in online,
         "role": role,
         "verified": verified,
+        "is_guest": nick in GUEST_NICKS,
         "friendship_status": friendship,
         "avatar": data.get("avatar", ""),
         "banner": data.get("banner", ""),
@@ -954,6 +976,8 @@ def validate_registration_payload(message):
     password = message.get("password", "")
     if not re.fullmatch(r"[A-Za-z0-9_]{3,14}", raw_nick):
         raise IdentityError("O nick deve ter 3 a 14 letras, números ou underline.")
+    if raw_nick.lower().startswith(GUEST_PREFIX):
+        raise IdentityError("Esse nick é reservado. Escolha outro.")
     if not valid_password(password):
         raise IdentityError("A senha deve ter entre 10 e 128 caracteres.")
     legacy_credential = str(message.get("legacy_credential", ""))
@@ -962,8 +986,21 @@ def validate_registration_payload(message):
     return raw_nick, raw_nick.lower(), password, legacy_credential
 
 
+def clean_display_name(value, fallback):
+    """Nome exibido no perfil. None => usa o fallback (o próprio nick)."""
+    if value is None:
+        return fallback
+    if not isinstance(value, str):
+        raise IdentityError("Informe um nome válido para exibição.")
+    name = value.strip()
+    if not 1 <= len(name) <= 28 or any(unicodedata.category(ch) == "Cc" for ch in name):
+        raise IdentityError("O nome de exibição deve ter de 1 a 28 caracteres.")
+    return name
+
+
 def register_password_account(message):
     raw_nick, nick, password, legacy_credential = validate_registration_payload(message)
+    display_name = clean_display_name(message.get("display_name"), raw_nick)
     user = get_user(nick)
     if user:
         if user["password_hash"]:
@@ -981,7 +1018,7 @@ def register_password_account(message):
         db.execute(
             "INSERT INTO users(nick,display,pin,pin_salt,password_hash,password_salt,joined_at) "
             "VALUES(?,?,?,?,?,?,?)",
-            (nick, raw_nick, "", "", hash_secret(password, password_salt), password_salt,
+            (nick, display_name, "", "", hash_secret(password, password_salt), password_salt,
              datetime.datetime.now().astimezone().isoformat(timespec="seconds")),
         )
         db.commit()
@@ -1000,6 +1037,13 @@ def register_password_account(message):
         raise
 
 
+class AccountNotFound(IdentityError):
+    """Login por senha com nick inexistente: o cliente oferece criar a conta."""
+    def __init__(self, nick):
+        super().__init__("Conta não encontrada.")
+        self.nick = nick
+
+
 def password_login_account(message):
     raw = str(message.get("nick", "")).strip()
     password = message.get("password", "")
@@ -1007,9 +1051,11 @@ def password_login_account(message):
             or not isinstance(password, str) or not 1 <= len(password) <= 128):
         raise IdentityError("Informe seu nick e sua senha.")
     nick = raw.lower()
+    if nick.startswith(GUEST_PREFIX):
+        raise IdentityError("Esse nick é reservado. Escolha outro.")
     user = get_user(nick)
     if not user:
-        raise IdentityError("Conta não encontrada. Abra “Criar conta” para se cadastrar.")
+        raise AccountNotFound(raw)
     if not user["password_hash"]:
         raise IdentityError(
             "Sua conta antiga ainda não tem senha. Use “Criar conta” e informe o PIN antigo uma única vez."
@@ -1078,6 +1124,8 @@ def _local_list_accounts():
     result = []
     for row in rows:
         nick = row["nick"]
+        if nick.startswith(GUEST_PREFIX):
+            continue
         data = json.loads(row["profile_data"] or "{}")
         stored_role = data.get("_role")
 
@@ -1119,6 +1167,8 @@ def _local_list_accounts():
 def role_for(nick):
     if not nick:
         return "user"
+    if nick in GUEST_NICKS:
+        return "guest"
     if nick in DEV_NICKS:
         return "dev"
     local = _local_role_get(nick)
@@ -1261,6 +1311,8 @@ async def online_rewards():
         await asyncio.sleep(COIN_EVERY)
         today = time.strftime("%Y-%m-%d")
         for nick in list(online):
+            if nick in GUEST_NICKS:
+                continue
             u = get_user(nick)
             earned = u["earned"] if u["day"] == today else 0
             if earned < DAILY_ONLINE_CAP:
@@ -1278,6 +1330,11 @@ async def online_rewards():
 
 @asynccontextmanager
 async def lifespan(app):
+    try:
+        db.execute("DELETE FROM users WHERE substr(nick,1,6)=?", (GUEST_PREFIX,))
+        db.commit()
+    except Exception as exc:
+        print(f"⚠️  Falha ao limpar visitantes órfãos: {exc}")
     task = asyncio.create_task(online_rewards())
     try:
         yield
@@ -1324,7 +1381,10 @@ async def bot_coins(body: BotCoins, x_bot_key: str = Header("")):
 
 @app.get("/api/ranking")
 def ranking():
-    rows = db.execute("SELECT display, coins FROM users ORDER BY coins DESC LIMIT 10").fetchall()
+    rows = db.execute(
+        "SELECT display, coins FROM users WHERE substr(nick,1,6) <> ? ORDER BY coins DESC LIMIT 10",
+        (GUEST_PREFIX,),
+    ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -1365,7 +1425,7 @@ class GoogleProfileRequired(IdentityError):
 def create_google_profile_account(uid, profile_name):
     slug = unicodedata.normalize("NFKD", profile_name).encode("ascii", "ignore").decode("ascii")
     base = re.sub(r"[^A-Za-z0-9]+", "_", slug).strip("_").lower()[:5].rstrip("_")
-    if len(base) < 3:
+    if len(base) < 3 or base == "guest":
         base = "player"
 
     for _ in range(10):
@@ -1401,6 +1461,8 @@ def google_login_account(message):
     legacy_credential = str(message.get("legacy_credential", ""))
     if raw_nick and not re.fullmatch(r"[A-Za-z0-9_]{3,14}", raw_nick):
         raise IdentityError("Escolha um nick com 3 a 14 letras, números ou underline.")
+    if raw_nick and raw_nick.lower().startswith(GUEST_PREFIX):
+        raise IdentityError("Esse nick é reservado. Escolha outro.")
     if password and not valid_password(password):
         raise IdentityError("A senha deve ter entre 10 e 128 caracteres.")
     if legacy_credential and not re.fullmatch(r"\d{4}", legacy_credential):
@@ -1493,6 +1555,54 @@ def google_login_account(message):
     return nick, account.get("role", "user"), True
 
 
+def create_guest_account(ws):
+    """Cria um visitante temporário. Limita por IP e por total simultâneo."""
+    client = ws.client
+    ip = client.host if client else "unknown"
+    now = time.monotonic()
+    recent = [t for t in GUEST_CREATIONS.get(ip, []) if now - t < GUEST_CREATE_WINDOW]
+    if len(recent) >= GUEST_CREATE_MAX:
+        GUEST_CREATIONS[ip] = recent
+        raise IdentityError(
+            "Muitos acessos como visitante deste dispositivo. Aguarde alguns minutos ou crie uma conta.")
+    if len(GUEST_NICKS) >= GUEST_MAX_ONLINE:
+        raise IdentityError(
+            "O modo visitante está lotado agora. Tente novamente em instantes ou crie uma conta.")
+    for _ in range(10):
+        nick = GUEST_PREFIX + secrets.token_hex(3)
+        if nick not in GUEST_NICKS and not get_user(nick):
+            break
+    else:
+        raise IdentityError("Não foi possível iniciar o modo visitante. Tente novamente.")
+
+    display = "Visitante " + str(1000 + secrets.randbelow(9000))
+    db.execute(
+        "INSERT INTO users(nick,display,pin,pin_salt,password_hash,password_salt,joined_at) "
+        "VALUES(?,?,?,?,?,?,?)",
+        (nick, display, "", "", "", "",
+         datetime.datetime.now().astimezone().isoformat(timespec="seconds")),
+    )
+    db.commit()
+    GUEST_NICKS.add(nick)
+    recent.append(now)
+    GUEST_CREATIONS[ip] = recent
+    if len(GUEST_CREATIONS) > 5000:
+        for addr, stamps in list(GUEST_CREATIONS.items()):
+            if not [t for t in stamps if now - t < GUEST_CREATE_WINDOW]:
+                GUEST_CREATIONS.pop(addr, None)
+    return nick
+
+
+def remove_guest_account(nick):
+    GUEST_NICKS.discard(nick)
+    try:
+        db.execute("DELETE FROM users WHERE nick=?", (nick,))
+        db.execute("DELETE FROM activity WHERE nick=?", (nick,))
+        db.commit()
+    except Exception as exc:
+        print(f"⚠️  [remove_guest_account] {nick}: {exc}")
+
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     await ws.accept()
@@ -1501,7 +1611,7 @@ async def ws_endpoint(ws: WebSocket):
         msg = json.loads(await ws.receive_text())
         if msg.get("t") == "session_login":
             token_nick = validate_session_token(str(msg.get("token", "")))
-            if not token_nick:
+            if not token_nick or token_nick.startswith(GUEST_PREFIX):
                 await ws.send_text(json.dumps({"t": "session_invalid"}))
                 return await ws.close()
             user = get_user(token_nick)
@@ -1535,6 +1645,13 @@ async def ws_endpoint(ws: WebSocket):
                     "profile_name": profile_message.get("profile_name"),
                 })
             attempt_key = None
+        elif msg.get("t") == "guest_login":
+            auth_provider = "guest"
+            key = create_guest_account(ws)
+            nick = key            # garante a limpeza no `finally` mesmo se algo falhar depois
+            role = "guest"
+            created = False
+            attempt_key = None
         elif msg.get("t") == "password_register":
             auth_provider = "password"
             key, role, created = register_password_account(msg)
@@ -1563,6 +1680,23 @@ async def ws_endpoint(ws: WebSocket):
                 return await ws.close()
             try:
                 key, role, created = password_login_account(msg)
+            except AccountNotFound as missing:
+                # nick não existe: pede o nome de exibição e cria a conta
+                await ws.send_text(json.dumps({
+                    "t": "register_required",
+                    "nick": missing.nick,
+                    "suggested_name": missing.nick,
+                }))
+                reply = json.loads(await ws.receive_text())
+                if reply.get("t") != "register_complete":
+                    raise IdentityError("Cadastro cancelado.")
+                if reply.get("password_confirm") != msg.get("password"):
+                    raise IdentityError("A confirmação não corresponde à senha.")
+                key, role, created = register_password_account({
+                    "nick": msg.get("nick"),
+                    "password": msg.get("password"),
+                    "display_name": reply.get("profile_name"),
+                })
             except IdentityError:
                 record_login_failure(attempt_key)
                 raise
@@ -1597,15 +1731,18 @@ async def ws_endpoint(ws: WebSocket):
             "is_vip": role == "vip",
             "is_streamer": role == "streamer",
             "is_beta": role == "beta",
+            "is_guest": role == "guest",
             "role": role,
             "auth_provider": auth_provider,
-            "token": create_session_token(nick),
+            "token": "" if role == "guest" else create_session_token(nick),
             "players": [public(n) for n in online if online[n]["room"] == "lobby"]
         }))
         await send(nick, {"t": "tournaments", "list": tournament_list(nick)})
-        await send(nick, friends_summary(nick))
+        if nick not in GUEST_NICKS:
+            await send(nick, friends_summary(nick))
         await send(nick, {"t": "streamers_live", "list": streamers_live_list()})
-        await social.send_initial(nick)
+        if nick not in GUEST_NICKS:
+            await social.send_initial(nick)
         current_mute = mute_status(nick)
         if current_mute:
             await send(nick, {"t": "moderation_notice",
@@ -1616,6 +1753,10 @@ async def ws_endpoint(ws: WebSocket):
         while True:
             m = json.loads(await ws.receive_text())
             t, p = m.get("t"), online[nick]
+            if nick in GUEST_NICKS and t not in GUEST_ALLOWED_TYPES:
+                if not (isinstance(t, str) and t.endswith(GUEST_SILENT_SUFFIXES)):
+                    await send(nick, {"t": "guest_restricted", "m": GUEST_RESTRICTED_MESSAGE})
+                continue
             if t in social.WS_TYPES:
                 await social.handle(nick, m)
                 continue
@@ -1654,7 +1795,7 @@ async def ws_endpoint(ws: WebSocket):
                 await send(nick, friends_summary(nick))
             elif t == "friend_request":
                 target = str(m.get("nick", "")).strip().lower()
-                if target == nick or not get_user(target):
+                if target == nick or not get_user(target) or target in GUEST_NICKS:
                     await send(nick, {"t": "friend_error", "m": "Jogador inválido."})
                     continue
                 status = friendship_status(nick, target)
@@ -2420,7 +2561,7 @@ async def ws_endpoint(ws: WebSocket):
                     await send(nick, {"t": "moderation_notice", "m": "Sua conta está silenciada temporariamente.",
                                       "until": muted["muted_until"]})
                     continue
-                if (not text or other == nick or not get_user(other) or time.time() - p["last_dm"] < 1
+                if (not text or other == nick or not get_user(other) or other in GUEST_NICKS or time.time() - p["last_dm"] < 1
                         or db.execute("SELECT 1 FROM blocks WHERE a=? AND b=?", (other, nick)).fetchone()):
                     continue
                 p["last_dm"] = time.time()
@@ -2555,6 +2696,8 @@ async def ws_endpoint(ws: WebSocket):
         if nick and nick in online and online[nick].get("ws") is ws:
             await bc_room(nick, {"t": "leave", "nick": nick}, skip=nick)
             del online[nick]
+        if nick and nick in GUEST_NICKS:
+            remove_guest_account(nick)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -2661,6 +2804,8 @@ def users_search(q: str = "", viewer: str = ""):
     result = []
     for row in rows:
         other = row["nick"]
+        if other.startswith(GUEST_PREFIX):
+            continue
         if viewer and other == viewer:
             continue
         data = json.loads(row["profile_data"] or "{}")

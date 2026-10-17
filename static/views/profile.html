@@ -1,4 +1,4 @@
-<!-- profile.html — Destiny · Player Card (v9) -->
+<!-- profile.html — Destiny · Player Card (v11 · inclui molduras/temas v26 e partículas v27) -->
 <link rel="stylesheet" href="/static/css/profile.css">
 
 <style id="profile-verified-css">
@@ -157,7 +157,7 @@
 
       <div class="profile-editor-body">
 
-        <!-- ══════════ IDENTIDADE (inalterada) ══════════ -->
+        <!-- ══════════ IDENTIDADE ══════════ -->
         <div class="profile-tab-panel" role="tabpanel" id="panel-identity" aria-labelledby="tab-identity">
           <div class="profile-form-grid">
             <label>Foto de perfil
@@ -187,61 +187,61 @@
           </div>
         </div>
 
-        <!-- ══════════ MOBILE LEGENDS (NOVO — pickers visuais) ══════════ -->
+        <!-- ══════════ MOBILE LEGENDS (pickers visuais) ══════════ -->
         <div class="profile-tab-panel" role="tabpanel" id="panel-game" aria-labelledby="tab-game" hidden>
-  <div class="profile-form-grid">
+          <div class="profile-form-grid">
 
-    <!-- RANK -->
-    <fieldset class="pf-picker-fieldset is-wide">
-      <legend>Rank</legend>
-      <select id="pRank" hidden aria-describedby="pRankHint"><option value="">Sem rank informado</option></select>
-      <div id="pfRankPicker" class="pf-picker-grid" role="radiogroup" aria-label="Escolha seu rank"></div>
-      <small id="pRankHint">Selecione seu elo. A imagem aparece no topo do seu card.</small>
-    </fieldset>
+            <!-- RANK -->
+            <fieldset class="pf-picker-fieldset is-wide">
+              <legend>Rank</legend>
+              <select id="pRank" hidden aria-describedby="pRankHint"><option value="">Sem rank informado</option></select>
+              <div id="pfRankPicker" class="pf-picker-grid" role="radiogroup" aria-label="Escolha seu rank"></div>
+              <small id="pRankHint">Selecione seu elo. A imagem aparece no topo do seu card.</small>
+            </fieldset>
 
-    <!-- ESTRELAS -->
-    <label id="pStarsField" class="is-wide">Estrelas
-      <input id="pStars" type="number" min="0" max="9999" step="1" inputmode="numeric" placeholder="0" aria-describedby="pStarsHint">
-      <small id="pStarsHint">Depois do MD10 no Mítico, informe suas estrelas. 0–24 Mítico, 25–49 Honra Mítica, 50–99 Glória Mítica, 100+ Imortal.</small>
-    </label>
+            <!-- ESTRELAS -->
+            <label id="pStarsField" class="is-wide">Estrelas
+              <input id="pStars" type="number" min="0" max="9999" step="1" inputmode="numeric" placeholder="0" aria-describedby="pStarsHint">
+              <small id="pStarsHint">Depois do MD10 no Mítico, informe suas estrelas. 0–24 Mítico, 25–49 Honra Mítica, 50–99 Glória Mítica, 100+ Imortal.</small>
+            </label>
 
-    <!-- ROTA PRINCIPAL (novo picker visual) -->
-    <fieldset class="pf-picker-fieldset is-wide">
-      <legend>Rota principal</legend>
-      <select id="pRole" hidden aria-describedby="pRoleHint">
-        <option>Qualquer</option>
-        <option>Jungle</option>
-        <option>Mid</option>
-        <option>Gold lane</option>
-        <option>EXP lane</option>
-        <option>Roam</option>
-      </select>
-      <div id="pfRolePicker" class="pf-picker-grid" role="radiogroup" aria-label="Escolha sua rota principal"></div>
-      <small id="pRoleHint">Escolha a rota em que você joga com mais frequência.</small>
-    </fieldset>
+            <!-- ROTA PRINCIPAL -->
+            <fieldset class="pf-picker-fieldset is-wide">
+              <legend>Rota principal</legend>
+              <select id="pRole" hidden aria-describedby="pRoleHint">
+                <option>Qualquer</option>
+                <option>Jungle</option>
+                <option>Mid</option>
+                <option>Gold lane</option>
+                <option>EXP lane</option>
+                <option>Roam</option>
+              </select>
+              <div id="pfRolePicker" class="pf-picker-grid" role="radiogroup" aria-label="Escolha sua rota principal"></div>
+              <small id="pRoleHint">Escolha a rota em que você joga com mais frequência.</small>
+            </fieldset>
 
-    <!-- HERÓI -->
-    <fieldset class="pf-picker-fieldset is-wide">
-      <legend>Herói principal</legend>
-      <select id="pHero" hidden aria-describedby="pHeroHint"><option value="">Nenhum herói selecionado</option></select>
-      <div class="pf-hero-toolbar">
-        <input id="pfHeroSearch" class="pf-hero-search" type="search"
-               placeholder="Buscar herói…" aria-label="Buscar herói"
-               autocomplete="off" spellcheck="false">
-        <span class="pf-hero-count" id="pfHeroCount" aria-live="polite"></span>
-      </div>
-      <div id="pfHeroPicker" class="pf-picker-grid pf-picker-grid--dense" role="radiogroup" aria-label="Escolha seu herói principal"></div>
-      <small id="pHeroHint">Escolha seu herói principal no catálogo oficial.</small>
-    </fieldset>
+            <!-- HERÓI -->
+            <fieldset class="pf-picker-fieldset is-wide">
+              <legend>Herói principal</legend>
+              <select id="pHero" hidden aria-describedby="pHeroHint"><option value="">Nenhum herói selecionado</option></select>
+              <div class="pf-hero-toolbar">
+                <input id="pfHeroSearch" class="pf-hero-search" type="search"
+                       placeholder="Buscar herói…" aria-label="Buscar herói"
+                       autocomplete="off" spellcheck="false">
+                <span class="pf-hero-count" id="pfHeroCount" aria-live="polite"></span>
+              </div>
+              <div id="pfHeroPicker" class="pf-picker-grid pf-picker-grid--dense" role="radiogroup" aria-label="Escolha seu herói principal"></div>
+              <small id="pHeroHint">Escolha seu herói principal no catálogo oficial.</small>
+            </fieldset>
 
-    <!-- ID -->
-    <label class="is-wide">ID no jogo
-      <input id="pGid" maxlength="20">
-    </label>
-  </div>
-</div>
+            <!-- ID -->
+            <label class="is-wide">ID no jogo
+              <input id="pGid" maxlength="20">
+            </label>
+          </div>
+        </div>
 
-        <!-- ══════════ APARÊNCIA (v8) ══════════ -->
+        <!-- ══════════ APARÊNCIA ══════════ -->
         <div class="profile-tab-panel" role="tabpanel" id="panel-look" aria-labelledby="tab-look" hidden>
           <div class="profile-form-grid">
             <label>Cor de destaque
@@ -291,6 +291,86 @@
               <option value="void">void</option>
               <option value="plasma">plasma</option>
               <option value="galaxy">galaxy</option>
+              <!-- Molduras v26 -->
+              <optgroup label="Grátis">
+                <option value="lava">lava</option>
+                <option value="tsunami">tsunami</option>
+                <option value="rocha">rocha</option>
+                <option value="vendaval">vendaval</option>
+                <option value="aco-escovado">aco-escovado</option>
+                <option value="cobre">cobre</option>
+                <option value="folha">folha</option>
+                <option value="ambar">ambar</option>
+                <option value="perigo">perigo</option>
+                <option value="vhs">vhs</option>
+                <option value="arcade">arcade</option>
+                <option value="monolito">monolito</option>
+              </optgroup>
+              <optgroup label="VIP">
+                <option value="nebula">nebula</option>
+                <option value="cometa">cometa</option>
+                <option value="buraco-negro">buraco-negro</option>
+                <option value="supernova">supernova</option>
+                <option value="titanio">titanio</option>
+                <option value="ouro-branco">ouro-branco</option>
+                <option value="coral">coral</option>
+                <option value="madeira">madeira</option>
+                <option value="farao">farao</option>
+                <option value="sakura-veil">sakura-veil</option>
+                <option value="asteca">asteca</option>
+                <option value="runas">runas</option>
+                <option value="arabesco">arabesco</option>
+                <option value="holograma">holograma</option>
+                <option value="campeao">campeao</option>
+              </optgroup>
+              <optgroup label="Beta">
+                <option value="cartucho">cartucho</option>
+                <option value="disquete">disquete</option>
+                <option value="fluxo-de-dados">fluxo-de-dados</option>
+                <option value="colecionador">colecionador</option>
+              </optgroup>
+              <optgroup label="Streamer">
+                <option value="epico">epico</option>
+                <option value="chroma-key">chroma-key</option>
+                <option value="holofote">holofote</option>
+              </optgroup>
+              <optgroup label="Moderação">
+                <option value="aegis">aegis</option>
+                <option value="veredito">veredito</option>
+              </optgroup>
+              <optgroup label="Admin">
+                <option value="lendario">lendario</option>
+                <option value="soberano">soberano</option>
+              </optgroup>
+              <optgroup label="Dev">
+                <option value="portal">portal</option>
+                <option value="glitch-rgb">glitch-rgb</option>
+              </optgroup>
+              <!-- Molduras v27 (partículas) -->
+              <optgroup label="Grátis · partículas">
+                <option value="nevasca">nevasca</option>
+                <option value="bolhas">bolhas</option>
+                <option value="vagalumes">vagalumes</option>
+              </optgroup>
+              <optgroup label="VIP · partículas">
+                <option value="brasas">brasas</option>
+                <option value="outono">outono</option>
+                <option value="chuva-estelar">chuva-estelar</option>
+                <option value="rosas">rosas</option>
+                <option value="confete">confete</option>
+              </optgroup>
+              <optgroup label="Beta · partículas">
+                <option value="chuva-de-codigo">chuva-de-codigo</option>
+              </optgroup>
+              <optgroup label="Streamer · partículas">
+                <option value="chuva-de-moedas">chuva-de-moedas</option>
+              </optgroup>
+              <optgroup label="Admin · partículas">
+                <option value="poeira-de-ouro">poeira-de-ouro</option>
+              </optgroup>
+              <optgroup label="Dev · partículas">
+                <option value="chuva-glitch">chuva-glitch</option>
+              </optgroup>
             </select>
             <div id="pfFramePicker" role="radiogroup" aria-label="Molduras do card"></div>
           </fieldset>
@@ -321,6 +401,51 @@
               <option value="throne">throne</option>
               <option value="toxic">toxic</option>
               <option value="candy">candy</option>
+              <!-- Temas v26 -->
+              <optgroup label="Grátis">
+                <option value="tempestade">tempestade</option>
+                <option value="tundra">tundra</option>
+                <option value="selva">selva</option>
+                <option value="savana">savana</option>
+                <option value="caverna">caverna</option>
+                <option value="marmore">marmore</option>
+                <option value="concreto">concreto</option>
+                <option value="fliperama">fliperama</option>
+                <option value="calmaria">calmaria</option>
+                <option value="rio">rio</option>
+              </optgroup>
+              <optgroup label="VIP">
+                <option value="furia">furia</option>
+                <option value="euforia">euforia</option>
+                <option value="medieval">medieval</option>
+                <option value="art-deco">art-deco</option>
+                <option value="toquio-noturno">toquio-noturno</option>
+                <option value="nova-york">nova-york</option>
+                <option value="veneza">veneza</option>
+                <option value="cairo">cairo</option>
+                <option value="feerico">feerico</option>
+                <option value="angelical">angelical</option>
+                <option value="abissal">abissal</option>
+                <option value="veludo">veludo</option>
+              </optgroup>
+              <optgroup label="Beta">
+                <option value="onirico">onirico</option>
+                <option value="saudade">saudade</option>
+                <option value="rpg-antigo">rpg-antigo</option>
+              </optgroup>
+              <optgroup label="Streamer">
+                <option value="battle-royale">battle-royale</option>
+                <option value="fliperama-neon">fliperama-neon</option>
+              </optgroup>
+              <optgroup label="Moderação">
+                <option value="fps-tatico">fps-tatico</option>
+              </optgroup>
+              <optgroup label="Admin">
+                <option value="demoniaco">demoniaco</option>
+              </optgroup>
+              <optgroup label="Dev">
+                <option value="glitch">glitch</option>
+              </optgroup>
             </select>
             <div id="pfThemePicker" role="radiogroup" aria-label="Temas do perfil"></div>
           </fieldset>

@@ -1,0 +1,536 @@
+/* ═══════════════════════════════════════════════════════════════
+   login.css — tela de login/cadastro (static/css/login.css)  ·  v2
+   Carregar DEPOIS do base.css. Só usa IDs/classes já existentes,
+   então auth.js e app.js continuam funcionando sem alterações.
+   Obs.: app.js alterna #login entre display:block e none — o layout
+   em colunas vive dentro de .login-shell, não no #login.
+
+   O que mudou nesta versão:
+   · coluna da esquerda alinhada à esquerda (antes herdava text-align
+     e margens automáticas do base.css e ficava meio centralizada)
+   · espaços vazios do cartão removidos (mensagens vazias colapsam)
+   · logo com brilho "respirando" (único movimento contínuo da tela)
+   · lista de destaques virou um painel único com divisórias
+   · campos, abas e botões redesenhados, foco bem visível
+   · fundo com malha sutil, brilho vermelho do torii e dourado da marca
+   · respeita prefers-reduced-motion
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ───────── contêiner e fundo ───────── */
+form#login{
+  --lg-red:#d62834;
+  --lg-gold:#d6b358;
+  --lg-gold-hi:#f3dc92;
+  --lg-gold-lo:#c4952f;
+  --lg-line:var(--border,#26262e);
+  --lg-radius:14px;
+
+  display:block;
+  width:min(1080px,94vw);
+  margin:clamp(12px,4vh,48px) auto 32px;
+  padding:0;
+  background:none;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  position:relative;
+  text-align:left;
+}
+
+form#login::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:
+    /* malha fina, some nas bordas */
+    linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px) 0 0/44px 44px,
+    linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px) 0 0/44px 44px,
+    /* brilho vermelho (torii) atrás da apresentação */
+    radial-gradient(55% 55% at 22% 30%,rgba(214,40,52,.22),transparent 72%),
+    /* dourado da marca no canto oposto */
+    radial-gradient(45% 45% at 94% 96%,rgba(214,179,88,.15),transparent 70%),
+    radial-gradient(30% 30% at 74% 8%,rgba(214,179,88,.06),transparent 70%);
+  -webkit-mask-image:radial-gradient(120% 100% at 50% 40%,#000 55%,transparent 100%);
+          mask-image:radial-gradient(120% 100% at 50% 40%,#000 55%,transparent 100%);
+}
+
+.login-shell{
+  display:grid;
+  grid-template-columns:minmax(0,1.12fr) minmax(0,430px);
+  gap:clamp(28px,6vw,80px);
+  align-items:center;
+  min-height:min(740px,calc(100dvh - 72px));
+}
+
+/* ───────── coluna de apresentação ───────── */
+form#login .login-intro{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:20px;
+  text-align:left;
+  animation:loginRise .6s ease both;
+}
+
+/* logo: alinhada à esquerda de verdade (margin:0 anula o auto do base.css) */
+form#login .logo.big{
+  position:relative;
+  align-self:flex-start;
+  margin:0 0 4px;
+  width:112px;
+  height:112px;
+  border-radius:26px;
+  overflow:visible;
+  background:none;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 14px 46px rgba(214,40,52,.38);
+  animation:loginGlow 5s ease-in-out infinite;
+}
+form#login .logo.big img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:inherit;
+}
+/* anel dourado fino ao redor da logo */
+form#login .logo.big::after{
+  content:"";
+  position:absolute;
+  inset:-7px;
+  border-radius:32px;
+  border:1px solid rgba(214,179,88,.28);
+  pointer-events:none;
+}
+
+form#login .login-eyebrow{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:0;
+  color:var(--lg-gold);
+  font-size:.86rem;
+  font-weight:600;
+  letter-spacing:.02em;
+  text-transform:none;
+  text-align:left;
+}
+form#login .login-eyebrow::before{
+  content:"";
+  flex:none;
+  width:30px;
+  height:2px;
+  border-radius:2px;
+  background:linear-gradient(90deg,var(--lg-red),var(--lg-gold));
+}
+
+form#login .login-title{
+  margin:0;
+  text-align:left;
+  font-family:"Rajdhani","Outfit",system-ui,sans-serif;
+  font-size:clamp(2.6rem,5.8vw,4.5rem);
+  font-weight:700;
+  line-height:.98;
+  letter-spacing:-.015em;
+  color:var(--text,#f2f2f5);
+  text-wrap:balance;
+}
+form#login .login-title span{
+  background:linear-gradient(95deg,var(--lg-gold-hi),var(--lg-gold) 55%,var(--lg-gold-lo));
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:transparent;
+}
+
+form#login .login-lead{
+  margin:0;
+  max-width:48ch;
+  text-align:left;
+  color:var(--text-soft,#b4b4bf);
+  font-size:1.05rem;
+  line-height:1.65;
+}
+
+/* destaques: um painel só, com divisórias — em vez de 4 cartões iguais */
+form#login .login-features{
+  list-style:none;
+  margin:8px 0 0;
+  padding:0;
+  width:100%;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1px;
+  background:var(--lg-line);
+  border:1px solid var(--lg-line);
+  border-radius:16px;
+  overflow:hidden;
+}
+form#login .login-features li{
+  display:flex;
+  align-items:center;
+  gap:13px;
+  padding:14px 16px;
+  background:var(--panel,#111116);
+  transition:background .2s ease;
+}
+form#login .login-features li:hover{
+  background:linear-gradient(135deg,rgba(214,179,88,.09),var(--panel,#111116) 70%);
+}
+form#login .login-feature-icon{
+  flex:none;
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  color:var(--lg-gold);
+  background:rgba(214,179,88,.11);
+  box-shadow:inset 0 0 0 1px rgba(214,179,88,.16);
+}
+form#login .login-feature-icon svg{
+  width:22px;
+  height:22px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+form#login .login-features b{
+  display:block;
+  font-size:.92rem;
+  font-weight:600;
+  color:var(--text,#f2f2f5);
+}
+form#login .login-features small{
+  display:block;
+  margin-top:2px;
+  color:var(--muted,#8a8a93);
+  font-size:.76rem;
+  line-height:1.35;
+}
+
+/* ───────── cartão de acesso ───────── */
+form#login .login-card{
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  padding:30px 28px 22px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:22px;
+  background:
+    radial-gradient(120% 60% at 0% 0%,rgba(214,40,52,.09),transparent 60%),
+    linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.008)),
+    var(--panel,#111116);
+  box-shadow:
+    0 30px 80px rgba(0,0,0,.6),
+    0 0 0 1px rgba(0,0,0,.4),
+    inset 0 1px 0 rgba(255,255,255,.06);
+  animation:loginRise .6s .12s ease both;
+}
+/* filete superior vermelho → dourado */
+form#login .login-card::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:3px;
+  background:linear-gradient(90deg,transparent,var(--lg-gold) 30%,var(--lg-red) 70%,transparent);
+}
+
+form#login .login-card-head h2{
+  margin:0;
+  font-family:"Rajdhani","Outfit",system-ui,sans-serif;
+  font-size:1.8rem;
+  font-weight:700;
+  line-height:1.1;
+  letter-spacing:-.005em;
+  color:var(--text,#f2f2f5);
+}
+form#login .login-card-head p{
+  margin:5px 0 0;
+  color:var(--muted,#8a8a93);
+  font-size:.88rem;
+}
+
+/* abas Entrar / Criar conta */
+form#login .auth-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:4px;
+  padding:4px;
+  margin:0;
+  border:1px solid var(--lg-line);
+  border-radius:13px;
+  background:rgba(0,0,0,.38);
+}
+form#login .auth-tab{
+  min-height:42px;
+  margin:0;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:var(--text-soft,#b4b4bf);
+  font:inherit;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow:none;
+  transition:background .2s ease,color .2s ease;
+}
+form#login .auth-tab:hover:not(.is-active){
+  background:rgba(255,255,255,.05);
+  color:var(--text,#f2f2f5);
+}
+form#login .auth-tab.is-active,
+form#login .auth-tab[aria-selected="true"]{
+  background:linear-gradient(180deg,#e2c46c,var(--lg-gold) 55%,#c9a24a);
+  color:#17130a;
+  box-shadow:0 4px 14px rgba(214,179,88,.28),inset 0 1px 0 rgba(255,255,255,.35);
+}
+form#login .auth-tab:focus-visible{
+  outline:2px solid var(--lg-gold-hi);
+  outline-offset:2px;
+}
+
+/* mensagens vazias não ocupam espaço (era o buraco entre abas e botão Google) */
+#googleAuthMessage:empty,
+#err:empty,
+#registerPromptError:empty{display:none}
+#googleAuthMessage,
+#err{
+  margin:0;
+  font-size:.84rem;
+  line-height:1.4;
+  text-align:center;
+}
+#err{color:#ff7b84}
+
+/* painéis: espaçamento uniforme */
+form#login .auth-panel{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin:0;
+}
+form#login .auth-panel[hidden]{display:none}
+form#login .google-login-button[hidden]{display:none}
+
+form#login .auth-panel label{
+  display:grid;
+  gap:7px;
+  margin:0;
+  color:var(--text-soft,#b4b4bf);
+  font-size:.84rem;
+  font-weight:600;
+}
+form#login .auth-panel input{
+  width:100%;
+  min-height:48px;
+  margin:0;
+  padding:0 14px;
+  border:1px solid var(--lg-line);
+  border-radius:12px;
+  background:rgba(0,0,0,.38);
+  color:var(--text,#f2f2f5);
+  font:inherit;
+  font-weight:400;
+  transition:border-color .2s ease,box-shadow .2s ease,background .2s ease;
+}
+form#login .auth-panel input::placeholder{color:var(--muted,#8a8a93);opacity:.8}
+form#login .auth-panel input:hover{border-color:var(--border-soft,#3a3a45)}
+
+/* foco claro, contorno visível para teclado */
+form#login .auth-panel input:focus,
+form#login .auth-panel input:focus-visible,
+.google-profile-dialog input:focus,
+.google-profile-dialog input:focus-visible{
+  outline:none;
+  border-color:var(--lg-gold);
+  background:rgba(0,0,0,.5);
+  box-shadow:0 0 0 3px rgba(214,179,88,.22);
+}
+
+/* botão Google */
+form#login .google-login-button{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  width:100%;
+  min-height:50px;
+  margin:0;
+  border:0;
+  border-radius:12px;
+  font:inherit;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.35);
+  transition:transform .15s ease,box-shadow .2s ease;
+}
+form#login .google-login-button:hover:not(:disabled){
+  transform:translateY(-1px);
+  box-shadow:0 10px 24px rgba(0,0,0,.45);
+}
+form#login .google-login-button:focus-visible{
+  outline:2px solid var(--lg-gold-hi);
+  outline-offset:2px;
+}
+
+/* botões principais */
+form#login #enter,
+form#login #createPasswordAccount{
+  min-height:50px;
+  margin:2px 0 0;
+  border:0;
+  border-radius:12px;
+  background:linear-gradient(180deg,#e6c970,var(--lg-gold) 55%,#c9a24a);
+  color:#17130a;
+  font:inherit;
+  font-size:1rem;
+  font-weight:700;
+  letter-spacing:.02em;
+  cursor:pointer;
+  box-shadow:0 10px 26px rgba(214,179,88,.26),inset 0 1px 0 rgba(255,255,255,.4);
+  transition:transform .15s ease,box-shadow .2s ease,filter .2s ease;
+}
+form#login #enter:hover:not(:disabled),
+form#login #createPasswordAccount:hover:not(:disabled){
+  transform:translateY(-1px);
+  filter:brightness(1.05);
+  box-shadow:0 14px 32px rgba(214,179,88,.36),inset 0 1px 0 rgba(255,255,255,.45);
+}
+form#login #enter:active:not(:disabled),
+form#login #createPasswordAccount:active:not(:disabled){transform:none}
+form#login #enter:focus-visible,
+form#login #createPasswordAccount:focus-visible{
+  outline:2px solid var(--lg-gold-hi);
+  outline-offset:3px;
+}
+form#login #enter:disabled,
+form#login #createPasswordAccount:disabled{opacity:.6;cursor:wait}
+
+/* divisores "ou ..." */
+form#login .auth-divider{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:0;
+  color:var(--muted,#8a8a93);
+  font-size:.76rem;
+}
+form#login .auth-divider::before,
+form#login .auth-divider::after{
+  content:"";
+  flex:1;
+  height:1px;
+  background:var(--lg-line);
+}
+form#login .auth-divider span{flex:none;padding:0}
+
+/* botão discreto de visitante */
+form#login .guest-login-button{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  margin:0;
+  min-height:46px;
+  border:1px dashed var(--border-soft,#3a3a45);
+  border-radius:12px;
+  background:transparent;
+  color:var(--text-soft,#b4b4bf);
+  font:inherit;
+  font-weight:600;
+  cursor:pointer;
+  transition:background .2s ease,border-color .2s ease,color .2s ease;
+}
+form#login .guest-login-button:hover:not(:disabled){
+  background:rgba(255,255,255,.04);
+  border-style:solid;
+  border-color:rgba(214,179,88,.55);
+  color:var(--text,#f2f2f5);
+}
+form#login .guest-login-button:focus-visible{
+  outline:2px solid var(--lg-gold-hi);
+  outline-offset:2px;
+}
+
+/* textos auxiliares */
+form#login .guest-login-note,
+form#login .auth-register-note{
+  display:block;
+  margin:0;
+  color:var(--muted,#8a8a93);
+  font-size:.76rem;
+  line-height:1.5;
+}
+form#login .auth-register-note{text-align:center}
+
+form#login #loginHelp{
+  display:block;
+  margin:2px 0 0;
+  padding-top:14px;
+  border-top:1px solid var(--lg-line);
+  text-align:center;
+  font-size:.76rem;
+  line-height:1.45;
+}
+
+/* ───────── animações ───────── */
+@keyframes loginRise{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:none}
+}
+@keyframes loginGlow{
+  0%,100%{box-shadow:0 0 0 1px rgba(255,255,255,.08),0 14px 40px rgba(214,40,52,.30)}
+  50%{box-shadow:0 0 0 1px rgba(255,255,255,.1),0 16px 64px rgba(214,40,52,.52)}
+}
+
+/* ───────── responsivo ───────── */
+@media (max-width:900px){
+  .login-shell{
+    grid-template-columns:minmax(0,1fr);
+    gap:28px;
+    max-width:480px;
+    min-height:0;
+    margin:0 auto;
+  }
+  form#login .login-intro{align-items:center;text-align:center;gap:14px}
+  form#login .logo.big{align-self:center;width:92px;height:92px;border-radius:22px}
+  form#login .logo.big::after{border-radius:28px}
+  form#login .login-eyebrow,
+  form#login .login-title,
+  form#login .login-lead{text-align:center;justify-content:center}
+  form#login .login-eyebrow::before{display:none}
+  form#login .login-title{font-size:clamp(2.1rem,9vw,2.9rem)}
+  form#login .login-lead{font-size:.95rem}
+}
+@media (max-width:560px){
+  form#login .login-card{padding:24px 18px 18px;border-radius:18px}
+  form#login .login-features li{
+    flex-direction:column;
+    text-align:center;
+    gap:6px;
+    padding:12px 6px;
+  }
+  form#login .login-features small{display:none}
+  form#login .login-feature-icon{width:36px;height:36px}
+}
+
+/* ───────── acessibilidade: menos movimento ───────── */
+@media (prefers-reduced-motion:reduce){
+  form#login .login-intro,
+  form#login .login-card,
+  form#login .logo.big{animation:none}
+  form#login #enter,
+  form#login #createPasswordAccount,
+  form#login .google-login-button,
+  form#login .guest-login-button,
+  form#login .login-features li{transition:none}
+}

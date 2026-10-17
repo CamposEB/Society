@@ -51,6 +51,9 @@ let PROFILE = {}, DM = {with:null}, DM_PROFILE_TARGET = null, UNREAD = 0, QZ = n
 let LFG_DETAILS = {}, LFG_PROFILE_TARGET = null, LFG_TOAST_TIMER = null, LFG_LOADED = false;
 let IS_ADMIN = false, IS_MODERATOR = false, IS_DEV = false;
 let IS_VIP = false, IS_STREAMER = false, IS_BETA = false;
+let IS_GUEST = false;
+// abas que exigem conta (o servidor também bloqueia; isto é só UX)
+const GUEST_BLOCKED_TABS = new Set(["dm", "quiz", "settings", "profile", "admin"]);
 let TOURNAMENTS = [], TOURNAMENT_EDIT_ID = null;
 let COMMUNITY_META = [], COMMUNITY_BUILDS = [], COMMUNITY_BUILDS_TRENDING = [], COMMUNITY_BUILDS_RECENT = [];
 let COMMUNITY_META_LANE = "all", BUILD_REQUEST_ID = 0, BUILD_LOAD_TIMER = null, BUILD_FILTER_TIMER = null;
@@ -430,6 +433,11 @@ function handle(m){
   else if (t === "init"){
     applyInit(m, false);
   }
+  else if (t === "register_required"){
+    window.dispatchEvent(new CustomEvent("society-register-required", {
+      detail:{nick:m.nick || "", suggestedName:m.suggested_name || ""}
+    }));
+  }
   else if (t === "session_invalid"){
     try { localStorage.removeItem("society.session"); } catch (e) {}
     clearInitCache();
@@ -438,6 +446,7 @@ function handle(m){
     $("game").style.display = "none";
     $("err").textContent = "Sua sessão expirou. Entre novamente.";
   }
+  else if (t === "guest_restricted") guestPrompt(m.m);
   else if (t === "room") {
     closePanel();
     closeCard();
@@ -621,10 +630,16 @@ function applyInit(m, fromCache) {
   IS_VIP = Boolean(m.is_vip);
   IS_STREAMER = Boolean(m.is_streamer);
   IS_BETA = Boolean(m.is_beta);
+  IS_GUEST = Boolean(m.is_guest);
 
+  if (!fromCache && IS_GUEST) {
+    // visitante nunca persiste sessão nem cache: recarregar volta ao login
+    try { localStorage.removeItem("society.session"); } catch (e) {}
+    clearInitCache();
+  }
   if (!fromCache) {
-    saveInitCache(m);
-    $("nick").value = SELF || "";
+    if (!IS_GUEST) saveInitCache(m);
+    $("nick").value = IS_GUEST ? "" : (SELF || "");
     $("password").value = "";
     $("registerPassword").value = "";
     $("registerPasswordConfirm").value = "";
@@ -638,6 +653,7 @@ function applyInit(m, fromCache) {
 
   $("login").style.display = "none";
   $("game").style.display = "block";
+  applyGuestMode();
 
   try { loadGameSettings(); } catch (e) {}
   try { loadLfgDetails(); } catch (e) {}
@@ -676,8 +692,27 @@ function applyInit(m, fromCache) {
   try { setupCommunity(); } catch (e) {}
   try { renderModSelf(); } catch (e) {}
 
-  try { mountFriendsUI(); } catch (e) { console.error("[friends] mount:", e); }
-  try { mountSocialUI(); } catch (e) { console.error("[social] mount:", e); }
+  if (!IS_GUEST) {
+    try { mountFriendsUI(); } catch (e) { console.error("[friends] mount:", e); }
+    try { mountSocialUI(); } catch (e) { console.error("[social] mount:", e); }
+  }
+}
+
+/* ---------- modo visitante ---------- */
+function guestPrompt(message){
+  showLfgToast(message || "Crie uma conta gratuita para usar este recurso.");
+  const banner = $("guestBanner");
+  if (banner && !banner.hidden) {
+    banner.classList.remove("is-pulse");
+    void banner.offsetWidth;
+    banner.classList.add("is-pulse");
+  }
+}
+
+function applyGuestMode(){
+  document.body.classList.toggle("is-guest", IS_GUEST);
+  const banner = $("guestBanner");
+  if (banner) banner.hidden = !IS_GUEST;
 }
 
 function updateCoins(){ $("coinsAmount").textContent = Number(ME.coins || 0).toLocaleString("pt-BR"); }
@@ -694,7 +729,7 @@ function addLog(text, who){
 }
 
 function mountFriendsUI() {
-  if (FRIENDS_BOOTED) return;
+  if (IS_GUEST || FRIENDS_BOOTED) return;
   if (!window.FriendsUI || typeof window.FriendsUI.mount !== "function") return;
   FRIENDS_BOOTED = true;
   window.FriendsUI.mount({
@@ -710,7 +745,7 @@ function mountFriendsUI() {
 }
 
 function mountSocialUI() {
-  if (SOCIAL_BOOTED) return;
+  if (IS_GUEST || SOCIAL_BOOTED) return;
   if (!window.SocialUI || typeof window.SocialUI.mount !== "function") return;
   SOCIAL_BOOTED = true;
   window.SocialUI.mount({
@@ -735,6 +770,10 @@ function requestHomeCommunity(){
 }
 
 function tab(n){
+  if (IS_GUEST && GUEST_BLOCKED_TABS.has(n) && !(n === "profile" && PROFILE_VIEW_TARGET)) {
+    guestPrompt("Crie uma conta gratuita para acessar esta área.");
+    return;
+  }
   document.querySelectorAll(".tab").forEach(s => s.classList.toggle("on", s.id === "tab-" + n));
   document.querySelectorAll("#nav button[data-t], #mobileNav button[data-t]").forEach(b => {
     const active = b.dataset.t === (n === "hero" ? "heroes" : n);
@@ -789,6 +828,11 @@ document.querySelectorAll("[data-shortcut]").forEach(b => b.onclick = () => {
   tab(shortcut);
 });
 $("logoutBtn").onclick = $("logout2").onclick = logout;
+const guestSignupButton = $("guestSignup");
+if (guestSignupButton) guestSignupButton.onclick = () => {
+  try { sessionStorage.setItem("society.auth_mode", "register"); } catch (e) {}
+  logout();
+};
 $("menuBtn").onclick = event => setMobileMenu(!document.body.classList.contains("menu"), true, event.currentTarget);
 $("menuClose").onclick = () => setMobileMenu(false, true);
 $("scrim").onclick = () => setMobileMenu(false, true);
@@ -823,6 +867,13 @@ window.societyGoogleLogin = detail => {
 window.societyGoogleProfileSubmit = profileName =>
   send({t:"google_profile_name", profile_name:profileName});
 window.societyGoogleProfileCancel = () => send({t:"google_profile_cancel"});
+window.societyRegisterSubmit = (profileName, passwordConfirm) =>
+  send({t:"register_complete", profile_name:profileName, password_confirm:passwordConfirm});
+window.societyRegisterCancel = () => send({t:"register_cancel"});
+window.societyGuestLogin = () => {
+  $("err").textContent = "";
+  connect({t:"guest_login"});
+};
 
 /* ---------- ABRIR PERFIL DE OUTRO USUÁRIO ---------- */
 window.abrirPerfil = function(userId) {
@@ -863,6 +914,7 @@ window.Society = {
     return "user";
   },
   self: () => SELF || null,
+  isGuest: () => IS_GUEST,
 
   itemFile: name => {
     const n = String(name || "").toLocaleLowerCase("pt-BR");
@@ -1474,7 +1526,10 @@ function createCommunityVoteActions(scope, entry){
     } else if (entry.own) {
       button.title = "Você não pode avaliar sua própria publicação.";
     }
-    button.addEventListener("click", () => send({t:kind, id:entry.id, value}));
+    button.addEventListener("click", () => {
+      if (IS_GUEST) return guestPrompt("Crie uma conta para avaliar publicações.");
+      send({t:kind, id:entry.id, value});
+    });
     actions.append(button);
   });
   return actions;
@@ -1891,6 +1946,7 @@ function setupTournaments(){
 }
 
 function openCommunityReport(target, displayName){
+  if (IS_GUEST) { guestPrompt("Crie uma conta para denunciar jogadores."); return; }
   if (!target || target === SELF) return;
   $("communityReportForm").reset();
   $("communityReportDialog").dataset.target = target;
@@ -2350,7 +2406,7 @@ ProfileUI.mount({
 });
 
 /* ---------- chat do lobby ---------- */
-function sendChat(){ const v = $("msg").value.trim(); if (v){ send({t:"chat", m:v}); $("msg").value = ""; } }
+function sendChat(){ if (IS_GUEST) { guestPrompt("Crie uma conta para conversar no lobby."); return; } const v = $("msg").value.trim(); if (v){ send({t:"chat", m:v}); $("msg").value = ""; } }
 $("send").onclick = sendChat;
 $("msg").onkeydown = e => { if (e.key === "Enter") sendChat(); };
 
@@ -2443,6 +2499,7 @@ function availabilityClass(player, details){
   return availabilityLabel(player, details) === "Agora" ? "lfg-status-now" : "lfg-status-soon";
 }
 function openLfgForm(editing){
+  if (IS_GUEST) { guestPrompt("Crie uma conta para publicar anúncios de duo."); return; }
   const dialog = $("lfgFormDialog");
   $("lfgForm").reset();
   $("lfgFormError").textContent = "";
@@ -2866,6 +2923,7 @@ function renderThreads(list, unread){
 })();
 
 function openDm(nick, name){
+  if (IS_GUEST) { guestPrompt("Crie uma conta para enviar mensagens."); return; }
   tab("dm");
   DM.with = nick;
   DM.name = name;

@@ -1,5 +1,5 @@
 /* ============================================================================
-   PROFILE + SETTINGS — Destiny (MLBB) · v11
+   PROFILE + SETTINGS — Destiny (MLBB) · v11 + expansão v26 + partículas v27
    - Pickers visuais: rank, herói e ROTA principal
    - Ícone da rota maior (CSS-only, via :has) — sem depender do JS
    - Temas com impacto visual real
@@ -635,4 +635,530 @@ button.pf-social-item:hover, a.pf-social-item:hover { background: color-mix(in s
 @media (prefers-reduced-motion: reduce) {
   .profile-page *, .profile-dialog *, [data-frame], .pf-swatch { transition: none !important; animation: none !important; }
   [data-frame]::before { display: none !important; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPANSÃO v26 — 40 novas molduras + 30 novos temas
+   Cole no FINAL de /static/css/profile.css
+   Regras:
+   • --frame-border / --frame-ring são SEMPRE uma camada única (o
+     shorthand do card só aplica "border-box" na última camada).
+   • Detalhes extras da moldura vão em --frame-overlay (desenhado
+     por ::before, só na faixa da borda, como as molduras v25).
+   • Só 2 molduras novas usam pf-rot: supernova e portal.
+   • Extras (keyframes pfx-, só em pseudo-elemento): sakura-veil e
+     glitch-rgb. Todos desligam em prefers-reduced-motion.
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes pfx-fall {
+  from { background-position: 0 0, 0 0, 0 0; }
+  to   { background-position: 0 240px, 0 320px, 0 200px; }
+}
+@keyframes pfx-glitch-frame {
+  0%,88%,100% { transform: translate(0,0); }
+  90% { transform: translate(-3px,1px); }
+  93% { transform: translate(3px,-1px); }
+  96% { transform: translate(-2px,2px); }
+}
+@keyframes pfx-glitch {
+  0%,90%,100% { transform: translate(0,0); }
+  92% { transform: translate(-2px,1px); }
+  94% { transform: translate(2px,-1px); }
+  96% { transform: translate(-1px,2px); }
+}
+
+/* ═══════════════ MOLDURAS v26 ═══════════════ */
+
+/* ── FREE · Elemental ── */
+/* para: card de fogo, magma com pontos quentes */
+[data-frame="lava"] { --frame-bw:3px;
+  --frame-border: conic-gradient(from 210deg,#ffe066,#ff6a00,#7a0c00,#ff3d00,#ffe066);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,80,0,.65);
+  --frame-overlay: radial-gradient(circle at 20% 0%,rgba(255,243,166,.9) 0 8%,transparent 32%), radial-gradient(circle at 85% 100%,rgba(255,179,0,.9) 0 8%,transparent 32%); }
+/* para: card aquático, ondas diagonais com espuma */
+[data-frame="tsunami"] { --frame-bw:3px;
+  --frame-border: linear-gradient(160deg,#e6fbff,#1fb6ff 25%,#0a3d99 55%,#1fb6ff 80%,#e6fbff);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(31,182,255,.55);
+  --frame-overlay: repeating-linear-gradient(160deg,rgba(255,255,255,.35) 0 2px,transparent 2px 9px); }
+/* para: elemental terra, faixas de estrato */
+[data-frame="rocha"] { --frame-bw:4px;
+  --frame-border: repeating-linear-gradient(20deg,#7a6650 0 5px,#3a2e24 5px 9px,#5b4a3a 9px 14px);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(120,90,60,.4); }
+/* para: elemental vento, redemoinho claro */
+[data-frame="vendaval"] { --frame-bw:2px;
+  --frame-border: conic-gradient(from 30deg,#eafffb,#7fe0d0,#ffffff,#a6c8ff,#eafffb);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(160,240,230,.5); }
+
+/* ── FREE · Metálica / Orgânica ── */
+/* para: metal escovado com micro-linhas */
+[data-frame="aco-escovado"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#f1f3f6,#8a929e 35%,#dde1e8 60%,#6d7581);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(200,206,216,.35);
+  --frame-overlay: repeating-linear-gradient(90deg,rgba(0,0,0,.25) 0 1px,transparent 1px 3px); }
+/* para: cobre com pátina azul-esverdeada no canto */
+[data-frame="cobre"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#ffd2a8,#c8683a 30%,#7a3418 55%,#e89a6a 80%,#a24a22);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(200,104,58,.55);
+  --frame-overlay: radial-gradient(circle at 92% 92%,rgba(60,200,170,.85),transparent 35%); }
+/* para: card natureza, nervuras de folha */
+[data-frame="folha"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#d9ff9a,#4caf50 30%,#1b5e20 55%,#7bd16a 80%,#2e7d32);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(76,175,80,.5);
+  --frame-overlay: repeating-linear-gradient(60deg,rgba(255,255,255,.35) 0 1px,transparent 1px 9px); }
+/* para: resina âmbar com bolhas */
+[data-frame="ambar"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#fff0b3,#ffb300 30%,#8a4b00 60%,#ffcf5a);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,179,0,.55);
+  --frame-overlay: radial-gradient(circle at 25% 30%,rgba(255,255,255,.8) 0 2px,transparent 3px), radial-gradient(circle at 75% 70%,rgba(255,255,255,.6) 0 2px,transparent 3px); }
+
+/* ── FREE · Geométrica / Retrô / Brutalista ── */
+/* para: faixa de alerta amarelo e preto */
+[data-frame="perigo"] { --frame-bw:4px;
+  --frame-border: repeating-linear-gradient(45deg,#ffd400 0 10px,#111 10px 20px);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,212,0,.45); }
+/* para: card gamer retrô, fita VHS com scanlines */
+[data-frame="vhs"] { --frame-bw:3px;
+  --frame-border: linear-gradient(90deg,#ff2d95,#7a00ff 35%,#00e5ff 65%,#ff2d95);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,45,149,.55);
+  --frame-overlay: repeating-linear-gradient(0deg,rgba(0,0,0,.45) 0 1px,transparent 1px 3px); }
+/* para: cores de gabinete de fliperama, blocos duros */
+[data-frame="arcade"] { --frame-bw:3px;
+  --frame-border: linear-gradient(90deg,#ff2d95 0 20%,#ffe600 20% 40%,#00e5ff 40% 60%,#7aff00 60% 80%,#7a00ff 80%);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,230,0,.45); }
+/* para: brutalista, uma cor sólida grossa */
+[data-frame="monolito"] { --frame-bw:5px;
+  --frame-border: linear-gradient(#f4f4f4,#f4f4f4);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,255,255,.12); }
+
+/* ── VIP · Cósmica ── */
+/* para: nebulosa roxa/rosa/azul com estrelas */
+[data-frame="nebula"] { --frame-bw:3px;
+  --frame-border: conic-gradient(from 120deg,#1a0b3d,#7a3bd6,#ff78dc,#3b7bff,#1a0b3d);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(150,90,255,.7);
+  --frame-overlay: radial-gradient(1.5px 1.5px at 30% 70%,#fff,transparent), radial-gradient(1px 1px at 70% 20%,#fff,transparent), radial-gradient(1.5px 1.5px at 90% 80%,#fff,transparent), radial-gradient(1px 1px at 12% 25%,#fff,transparent); }
+/* para: cauda de cometa que termina em ponto branco */
+[data-frame="cometa"] { --frame-bw:3px;
+  --frame-border: conic-gradient(from 200deg,#0d1a2e 0deg,#2a7fd6 60deg,#9fe6ff 100deg,#fff 112deg,#0d1a2e 113deg 360deg);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(120,200,255,.6); }
+/* para: disco de acreção ao redor do vazio */
+[data-frame="buraco-negro"] { --frame-bw:4px;
+  --frame-border: conic-gradient(from 20deg,#000,#1a0a00 60deg,#ff9d2e 120deg,#fff3a6 150deg,#ff6a00 190deg,#1a0a00 260deg,#000);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,140,30,.5); }
+/* para: explosão estelar girando (animada #1 com pf-rot) */
+[data-frame="supernova"] { --frame-bw:3px;
+  --frame-border: conic-gradient(from var(--pf-angle),#fff,#ffe066,#ff4fa3,#7c5cff,#fff 60%,#ffe066 80%,#fff);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,120,200,.75);
+  animation: pf-rot 5s linear infinite; }
+
+/* ── VIP · Metálica ── */
+[data-frame="titanio"] { --frame-bw:3px; /* para: metal azulado escovado */
+  --frame-border: linear-gradient(135deg,#e4eaf2,#7d8da6 30%,#3b4558 55%,#aab6c8 80%,#59677d);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(125,141,166,.5);
+  --frame-overlay: repeating-linear-gradient(0deg,rgba(255,255,255,.12) 0 1px,transparent 1px 3px); }
+[data-frame="ouro-branco"] { --frame-bw:3px; /* para: ouro pálido luxuoso */
+  --frame-border: linear-gradient(135deg,#fffdf2,#f1e6c2 25%,#cbb98a 50%,#fff8de 75%,#d9c99a);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,246,214,.6); }
+
+/* ── VIP · Orgânica ── */
+[data-frame="coral"] { --frame-bw:3px; /* para: recife, ondas concêntricas */
+  --frame-border: linear-gradient(135deg,#ff9a76,#ff5e8a 45%,#c43d6b 70%,#ff9a76);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,94,138,.55);
+  --frame-overlay: repeating-radial-gradient(circle at 0 0,rgba(255,255,255,.35) 0 2px,transparent 2px 14px); }
+[data-frame="madeira"] { --frame-bw:4px; /* para: veios de madeira */
+  --frame-border: repeating-linear-gradient(95deg,#8a5a2b 0 6px,#6b4220 6px 12px,#a3703a 12px 17px);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(140,90,40,.4);
+  --frame-overlay: repeating-linear-gradient(90deg,rgba(0,0,0,.2) 0 1px,transparent 1px 5px); }
+
+/* ── VIP · Cultural ── */
+[data-frame="farao"] { --frame-bw:4px; /* para: egípcia, ouro + lápis-lazúli + turquesa */
+  --frame-border: repeating-linear-gradient(90deg,#e6b94d 0 8px,#12378a 8px 13px,#0b8a7a 13px 18px);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(230,185,77,.6);
+  --frame-overlay: linear-gradient(180deg,rgba(255,255,255,.22),transparent 40%,rgba(0,0,0,.3)); }
+/* para: japonesa, pétalas caindo (do exemplo do briefing) */
+[data-frame="sakura-veil"] { --frame-bw:2px;
+  --frame-border: linear-gradient(135deg,rgba(255,209,236,.9) 0%,#ff8fc7 20%,rgba(255,255,255,.95) 35%,#c28bff 60%,#ff8fc7 85%,rgba(255,209,236,.9) 100%);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,143,199,.55); }
+.profile-card[data-frame="sakura-veil"]::before, .profile-preview-card[data-frame="sakura-veil"]::before {
+  content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; z-index:3;
+  background-image:
+    radial-gradient(circle at 20% 20%,rgba(255,209,236,.8) 0 2px,transparent 3px),
+    radial-gradient(circle at 70% 60%,rgba(255,143,199,.7) 0 2.5px,transparent 4px),
+    radial-gradient(circle at 40% 85%,rgba(255,255,255,.9) 0 1.5px,transparent 3px);
+  background-size: 60px 60px, 80px 80px, 50px 50px;
+  animation: pfx-fall 8s linear infinite; }
+[data-frame="asteca"] { --frame-bw:4px; /* para: asteca, losangos terracota/turquesa */
+  --frame-border: repeating-linear-gradient(45deg,#c8501e 0 7px,#14a38a 7px 14px);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(200,80,30,.5);
+  --frame-overlay: repeating-linear-gradient(-45deg,rgba(230,185,77,.6) 0 3px,transparent 3px 14px); }
+[data-frame="runas"] { --frame-bw:3px; /* para: nórdica, pedra azulada com runas riscadas */
+  --frame-border: linear-gradient(135deg,#1c2a3a,#3d5a7a 50%,#1c2a3a);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(130,190,255,.5);
+  --frame-overlay: repeating-linear-gradient(90deg,#bfe6ff 0 2px,transparent 2px 11px); }
+[data-frame="arabesco"] { --frame-bw:3px; /* para: árabe, estrela radial turquesa e ouro */
+  --frame-border: repeating-conic-gradient(from 0deg at 50% 50%,#e6b94d 0 7.5deg,#0f6e6e 7.5deg 15deg,#f4e3a1 15deg 18deg,#0f6e6e 18deg 30deg);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(15,160,150,.55); }
+
+/* ── VIP · Futurista / Status ── */
+[data-frame="holograma"] { --frame-bw:3px; /* para: holográfico iridescente com brilho diagonal */
+  --frame-border: conic-gradient(from 45deg,#ff9ad5,#ffe9a6,#a6ffe0,#9ad0ff,#d1a6ff,#ff9ad5);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(180,160,255,.6);
+  --frame-overlay: linear-gradient(115deg,transparent 30%,rgba(255,255,255,.6) 45%,transparent 60%); }
+[data-frame="campeao"] { --frame-bw:4px; /* para: status campeão, ouro e vermelho */
+  --frame-border: linear-gradient(135deg,#fff3b0,#ffcc33 25%,#d4301f 55%,#ffcc33 80%,#fff3b0);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,120,30,.65); }
+
+/* ── BETA ── */
+[data-frame="cartucho"] { --frame-bw:4px; /* para: retrô, plástico de cartucho com ranhuras */
+  --frame-border: linear-gradient(135deg,#a9adb7,#666a75 50%,#a9adb7);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,157,46,.4);
+  --frame-overlay: repeating-linear-gradient(90deg,rgba(0,0,0,.3) 0 2px,transparent 2px 7px); }
+[data-frame="disquete"] { --frame-bw:3px; /* para: retrô, disquete azul com etiqueta prata */
+  --frame-border: linear-gradient(135deg,#2a62d6,#1b3f94 60%,#2a62d6);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(42,98,214,.55);
+  --frame-overlay: linear-gradient(90deg,transparent 38%,#d5d9e0 38% 62%,transparent 62%); }
+[data-frame="fluxo-de-dados"] { --frame-bw:3px; /* para: futurista, colunas de dados verdes */
+  --frame-border: linear-gradient(135deg,#00261a,#00a37a 50%,#003a44);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(0,255,163,.55);
+  --frame-overlay: repeating-linear-gradient(90deg,#00ffa3 0 2px,transparent 2px 6px); }
+[data-frame="colecionador"] { --frame-bw:4px; /* para: status, gemas de todas as cores */
+  --frame-border: conic-gradient(from 0deg,#ffe38a,#ff9d2e,#7c5cff,#4cc8ff,#3ddc97,#ffe38a);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,157,46,.55); }
+
+/* ── STREAMER ── */
+[data-frame="epico"] { --frame-bw:4px; /* para: status épico, roxo profundo */
+  --frame-border: conic-gradient(from 90deg,#d9a6ff,#9a3bff,#4b0f9e,#9a3bff,#d9a6ff);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(154,59,255,.75); }
+[data-frame="chroma-key"] { --frame-bw:4px; /* para: tela verde com grade */
+  --frame-border: linear-gradient(135deg,#00ff5e,#00b341 50%,#00ff5e);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(0,255,94,.6);
+  --frame-overlay: repeating-linear-gradient(90deg,rgba(0,0,0,.35) 0 1px,transparent 1px 8px); }
+[data-frame="holofote"] { --frame-bw:3px; /* para: feixes de luz de palco */
+  --frame-border: conic-gradient(from 0deg,#fff 0 6deg,#2a1450 6deg 60deg,#ff2bd6 60deg 66deg,#2a1450 66deg 120deg,#00f0ff 120deg 126deg,#2a1450 126deg 180deg,#ffe600 180deg 186deg,#2a1450 186deg 240deg,#fff 240deg 246deg,#2a1450 246deg 300deg,#ff2bd6 300deg 306deg,#2a1450 306deg 360deg);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,43,214,.6); }
+
+/* ── MOD ── */
+[data-frame="aegis"] { --frame-bw:4px; /* para: escudo setorizado verde */
+  --frame-border: repeating-conic-gradient(from 0deg at 50% 50%,#3ecf8e 0 30deg,#0e3a2a 30deg 60deg);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(62,207,142,.65); }
+[data-frame="veredito"] { --frame-bw:5px; /* para: brutalista, branco x vermelho */
+  --frame-border: linear-gradient(90deg,#fff 0 50%,#d41f2f 50%);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(212,31,47,.5); }
+
+/* ── ADMIN ── */
+[data-frame="lendario"] { --frame-bw:4px; /* para: status lendário, ouro→brasa→carmim */
+  --frame-border: linear-gradient(135deg,#fff7c2,#ffb300 22%,#ff5a00 45%,#b3122b 65%,#ffb300 88%,#fff7c2);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,120,0,.8); }
+[data-frame="soberano"] { --frame-bw:5px; /* para: realeza carmim e ouro */
+  --frame-border: conic-gradient(from 45deg,#b3122b,#e6b94d,#fff5b8,#e6b94d,#b3122b,#5a0a16,#b3122b);
+  --frame-ring: linear-gradient(135deg,#e6b94d,#b3122b); --frame-glow: rgba(230,185,77,.8); }
+
+/* ── DEV ── */
+/* para: portal dimensional girando (animada #2 com pf-rot) */
+[data-frame="portal"] { --frame-bw:4px;
+  --frame-border: conic-gradient(from var(--pf-angle),#000,#7c5cff,#00f0ff,#fff,#00f0ff,#7c5cff,#000);
+  --frame-ring: linear-gradient(135deg,#00f0ff,#7c5cff); --frame-glow: rgba(0,240,255,.8);
+  animation: pf-rot 3s linear infinite; }
+.profile-card[data-frame="portal"]::before, .profile-preview-card[data-frame="portal"]::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:3;
+  box-shadow: inset 0 0 60px rgba(0,240,255,.25), inset 0 0 18px rgba(124,92,255,.35); }
+/* para: falha de sinal RGB, linhas de varredura + deslocamento */
+[data-frame="glitch-rgb"] { --frame-bw:4px;
+  --frame-border: linear-gradient(90deg,#ff006e 0 33%,#00fff0 33% 66%,#fff 66%);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,0,110,.7); }
+.profile-card[data-frame="glitch-rgb"]::before, .profile-preview-card[data-frame="glitch-rgb"]::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:3;
+  box-shadow: inset 3px 0 0 rgba(255,0,110,.7), inset -3px 0 0 rgba(0,255,240,.7);
+  animation: pfx-glitch-frame 3s steps(8) infinite; }
+
+/* ── Camada de detalhe (--frame-overlay) nas molduras que definem uma ── */
+:is(.profile-card,.profile-preview-card):is(
+  [data-frame="lava"],[data-frame="tsunami"],[data-frame="aco-escovado"],[data-frame="cobre"],
+  [data-frame="folha"],[data-frame="ambar"],[data-frame="vhs"],[data-frame="nebula"],
+  [data-frame="titanio"],[data-frame="coral"],[data-frame="madeira"],[data-frame="farao"],
+  [data-frame="asteca"],[data-frame="runas"],[data-frame="holograma"],[data-frame="cartucho"],
+  [data-frame="disquete"],[data-frame="fluxo-de-dados"],[data-frame="chroma-key"]
+)::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; padding:var(--frame-bw,3px);
+  background: var(--frame-overlay);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events:none; z-index:3; }
+
+/* ═══════════════ TEMAS v26 ═══════════════
+   Raio ≠ 20px sinalizado em cada comentário ("raio: Npx").
+   --th-psize sempre tem 1 tamanho por camada do --th-pattern. */
+
+/* ── FREE ── */
+/* Clima · chuva diagonal + clarão no canto · raio: 20px */
+[data-theme="tempestade"] { --th-acc:#6fa8ff; --th-a:#3b6fd6; --th-b:#1b2a4a; --th-s1:#0e1626; --th-s2:#080d18;
+  --th-pattern: repeating-linear-gradient(105deg,rgba(190,215,255,.30) 0 1px,transparent 1px 9px), radial-gradient(circle at 80% 0%,rgba(255,255,255,.18),transparent 40%);
+  --th-psize: auto, auto; --th-pattern-opacity:.6; }
+/* Clima/Bioma · flocos de neve · raio: 20px */
+[data-theme="tundra"] { --th-acc:#bfe6ff; --th-a:#8fcfff; --th-b:#e8f6ff; --th-s1:#0f1a24; --th-s2:#09121a;
+  --th-pattern: radial-gradient(circle at 20% 20%,rgba(255,255,255,.9) 0 1.5px,transparent 2.5px), radial-gradient(circle at 70% 60%,rgba(255,255,255,.7) 0 1px,transparent 2px), radial-gradient(circle at 45% 85%,rgba(255,255,255,.8) 0 2px,transparent 3px);
+  --th-psize: 52px 52px, 38px 38px, 67px 67px; --th-pattern-opacity:.8; }
+/* Bioma · arcos de folhagem nos cantos · raio: 20px */
+[data-theme="selva"] { --th-acc:#4ade80; --th-a:#16a34a; --th-b:#14532d; --th-s1:#0a1a10; --th-s2:#05100a;
+  --th-pattern: repeating-radial-gradient(ellipse at 0% 100%,rgba(74,222,128,.25) 0 3px,transparent 3px 22px), repeating-radial-gradient(ellipse at 100% 0%,rgba(163,230,53,.18) 0 2px,transparent 2px 26px);
+  --th-psize: auto, auto; --th-pattern-opacity:.7; }
+/* Bioma · capim + sol baixo · raio: 20px */
+[data-theme="savana"] { --th-acc:#f59e0b; --th-a:#d97706; --th-b:#92400e; --th-s1:#1c1408; --th-s2:#120c04;
+  --th-pattern: repeating-linear-gradient(80deg,rgba(251,191,36,.22) 0 2px,transparent 2px 7px), radial-gradient(circle at 80% 90%,rgba(255,140,30,.45),transparent 55%);
+  --th-psize: auto, auto; --th-pattern-opacity:.65; }
+/* Bioma · estalactites (raios do topo) + cristal azul · raio: 16px */
+[data-theme="caverna"] { --th-acc:#8b9bb4; --th-a:#4a5568; --th-b:#1f2937; --th-s1:#0f1115; --th-s2:#07080a; --th-card-radius:16px;
+  --th-pattern: repeating-conic-gradient(from 180deg at 50% 0%,rgba(255,255,255,.12) 0 4deg,transparent 4deg 12deg), radial-gradient(circle at 70% 100%,rgba(120,200,255,.25),transparent 40%);
+  --th-psize: auto, auto; --th-pattern-opacity:.7; }
+/* Material · veios de mármore · raio: 12px */
+[data-theme="marmore"] { --th-acc:#e5e7eb; --th-a:#cbd5e1; --th-b:#64748b; --th-s1:#171a20; --th-s2:#0e1014; --th-card-radius:12px;
+  --th-pattern: linear-gradient(115deg,transparent 40%,rgba(255,255,255,.22) 41%,transparent 42.5%), linear-gradient(60deg,transparent 55%,rgba(255,255,255,.16) 56%,transparent 57.5%), linear-gradient(160deg,transparent 20%,rgba(255,255,255,.12) 21%,transparent 22%);
+  --th-psize: auto, auto, auto; --th-pattern-opacity:.8; }
+/* Material · concreto bruto, juntas de fôrma · raio: 2px */
+[data-theme="concreto"] { --th-acc:#a3a3a3; --th-a:#737373; --th-b:#404040; --th-s1:#1a1a1a; --th-s2:#0f0f0f; --th-card-radius:2px;
+  --th-pattern: radial-gradient(circle at 20% 30%,rgba(255,255,255,.18) 0 1px,transparent 1.5px), radial-gradient(circle at 70% 70%,rgba(0,0,0,.5) 0 1px,transparent 1.5px), repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 48px), repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 96px);
+  --th-psize: 7px 7px, 5px 5px, auto, auto; --th-pattern-opacity:.8; }
+/* Jogo · tabuleiro xadrez de gabinete + scanlines · raio: 8px */
+[data-theme="fliperama"] { --th-acc:#ffd400; --th-a:#ff3b3b; --th-b:#ffd400; --th-s1:#150c1c; --th-s2:#0a0510; --th-card-radius:8px;
+  --th-pattern: repeating-conic-gradient(rgba(255,255,255,.10) 0 25%,transparent 0 50%), repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 1px,transparent 1px 3px);
+  --th-psize: 24px 24px, auto; --th-pattern-opacity:.7; }
+/* Emoção · ondulações calmas · raio: 28px */
+[data-theme="calmaria"] { --th-acc:#5eead4; --th-a:#2dd4bf; --th-b:#38bdf8; --th-s1:#0a1c22; --th-s2:#06121a; --th-card-radius:28px;
+  --th-pattern: repeating-radial-gradient(circle at 50% 150%,transparent 0 22px,rgba(255,255,255,.14) 22px 24px);
+  --th-psize: auto; --th-pattern-opacity:.6; }
+/* Cidade · sol, calçadão de ondas, verde e amarelo · raio: 24px */
+[data-theme="rio"] { --th-acc:#22c55e; --th-a:#00a859; --th-b:#ffd400; --th-s1:#0a1c1a; --th-s2:#051210; --th-card-radius:24px;
+  --th-pattern: radial-gradient(circle at 85% 12%,rgba(255,212,0,.55) 0 7%,transparent 18%), radial-gradient(circle at 50% 100%,transparent 0 9px,rgba(255,255,255,.22) 9px 11px,transparent 11px);
+  --th-psize: auto, 36px 18px; --th-pattern-opacity:.65; }
+
+/* ── VIP ── */
+/* Emoção · raios vermelhos + riscos · raio: 6px */
+[data-theme="furia"] { --th-acc:#ff1f3d; --th-a:#ff1f3d; --th-b:#7a0010; --th-s1:#1a0508; --th-s2:#0b0204; --th-card-radius:6px;
+  --th-pattern: repeating-conic-gradient(from 0deg at 50% 120%,rgba(255,31,61,.35) 0 5deg,transparent 5deg 14deg), repeating-linear-gradient(135deg,rgba(0,0,0,.4) 0 3px,transparent 3px 14px);
+  --th-psize: auto, auto; --th-pattern-opacity:.8; }
+/* Emoção · confete colorido · raio: 28px */
+[data-theme="euforia"] { --th-acc:#ff7ac6; --th-a:#ff7ac6; --th-b:#ffd34d; --th-s1:#26102e; --th-s2:#17081f; --th-card-radius:28px;
+  --th-pattern: radial-gradient(circle at 20% 25%,#ffd34d 0 3px,transparent 4px), radial-gradient(circle at 65% 15%,#5cf0ff 0 2.5px,transparent 3.5px), radial-gradient(circle at 80% 70%,#ff7ac6 0 3px,transparent 4px), radial-gradient(circle at 35% 80%,#b58cff 0 2.5px,transparent 3.5px);
+  --th-psize: 90px 90px, 70px 70px, 110px 110px, 80px 80px; --th-pattern-opacity:.85; }
+/* Época · muralha de pedra + luz de tocha · raio: 4px */
+[data-theme="medieval"] { --th-acc:#c9a227; --th-a:#8b1e2d; --th-b:#c9a227; --th-s1:#1a1412; --th-s2:#0e0a09; --th-card-radius:4px;
+  --th-pattern: repeating-linear-gradient(0deg,rgba(0,0,0,.5) 0 2px,transparent 2px 22px), repeating-linear-gradient(90deg,rgba(0,0,0,.4) 0 2px,transparent 2px 44px), radial-gradient(circle at 12% 18%,rgba(255,160,40,.45),transparent 30%);
+  --th-psize: auto, auto, auto; --th-pattern-opacity:.75; }
+/* Época · anos 20 Art Déco, leques dourados · raio: 2px */
+[data-theme="art-deco"] { --th-acc:#e6b94d; --th-a:#e6b94d; --th-b:#0f766e; --th-s1:#0d0d12; --th-s2:#050507; --th-card-radius:2px;
+  --th-pattern: radial-gradient(circle at 50% 100%,transparent 0 12px,rgba(230,185,77,.45) 12px 14px,transparent 14px 20px,rgba(230,185,77,.3) 20px 22px,transparent 22px), repeating-linear-gradient(90deg,rgba(230,185,77,.18) 0 1px,transparent 1px 30px);
+  --th-psize: 42px 21px, auto; --th-pattern-opacity:.75; }
+/* Cidade · letreiros verticais + reflexo no asfalto · raio: 10px */
+[data-theme="toquio-noturno"] { --th-acc:#ff3d81; --th-a:#ff3d81; --th-b:#3d5afe; --th-s1:#0c0a1e; --th-s2:#05040f; --th-card-radius:10px;
+  --th-pattern: repeating-linear-gradient(90deg,transparent 0 22px,rgba(255,61,129,.30) 22px 24px,transparent 24px 46px,rgba(61,90,254,.30) 46px 49px,transparent 49px 70px,rgba(255,230,0,.2) 70px 71px), linear-gradient(0deg,rgba(255,61,129,.25),transparent 40%);
+  --th-psize: auto, auto; --th-pattern-opacity:.8; }
+/* Cidade · fachadas com janelas acesas · raio: 3px */
+[data-theme="nova-york"] { --th-acc:#f97316; --th-a:#f97316; --th-b:#64748b; --th-s1:#11151c; --th-s2:#090c11; --th-card-radius:3px;
+  --th-pattern: repeating-linear-gradient(90deg,transparent 0 8px,rgba(10,12,18,.9) 8px 11px), repeating-linear-gradient(0deg,rgba(255,200,90,.28) 0 5px,transparent 5px 12px);
+  --th-psize: auto, auto; --th-pattern-opacity:.7; }
+/* Cidade · arcos de canal + reflexo d'água · raio: 30px */
+[data-theme="veneza"] { --th-acc:#2dd4bf; --th-a:#0e7490; --th-b:#e6b94d; --th-s1:#08202a; --th-s2:#04131a; --th-card-radius:30px;
+  --th-pattern: radial-gradient(circle at 50% 100%,transparent 0 13px,rgba(230,185,77,.35) 13px 15px,transparent 15px), repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 1px,transparent 1px 6px);
+  --th-psize: 40px 40px, auto; --th-pattern-opacity:.7; }
+/* Cidade · pirâmides em areia e lápis-lazúli · raio: 12px */
+[data-theme="cairo"] { --th-acc:#e6a04a; --th-a:#d97706; --th-b:#1e40af; --th-s1:#1c1608; --th-s2:#120d04; --th-card-radius:12px;
+  --th-pattern: linear-gradient(135deg,rgba(230,160,74,.28) 25%,transparent 25%), linear-gradient(225deg,rgba(230,160,74,.28) 25%,transparent 25%), radial-gradient(circle at 85% 10%,rgba(255,200,90,.35),transparent 40%);
+  --th-psize: 40px 40px, 40px 40px, auto; --th-pattern-opacity:.7; }
+/* Fantasia · vaga-lumes na floresta encantada · raio: 28px */
+[data-theme="feerico"] { --th-acc:#86efac; --th-a:#a78bfa; --th-b:#5eead4; --th-s1:#0f1a22; --th-s2:#08111a; --th-card-radius:28px;
+  --th-pattern: radial-gradient(circle at 20% 30%,rgba(255,255,160,.9) 0 1.5px,transparent 4px), radial-gradient(circle at 70% 60%,rgba(160,255,200,.8) 0 2px,transparent 5px), radial-gradient(circle at 45% 85%,rgba(200,170,255,.8) 0 1.5px,transparent 4px);
+  --th-psize: 70px 70px, 95px 95px, 60px 60px; --th-pattern-opacity:.9; }
+/* Fantasia · raios de luz celestial · raio: 26px */
+[data-theme="angelical"] { --th-acc:#fde68a; --th-a:#fff1b8; --th-b:#bfdbfe; --th-s1:#141a28; --th-s2:#0b1020; --th-card-radius:26px;
+  --th-pattern: repeating-conic-gradient(from 0deg at 50% 0%,rgba(255,244,190,.22) 0 3deg,transparent 3deg 10deg), radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.35),transparent 60%);
+  --th-psize: auto, auto; --th-pattern-opacity:.75; }
+/* Fantasia · bioluminescência no fundo do mar · raio: 22px */
+[data-theme="abissal"] { --th-acc:#22d3ee; --th-a:#0e7490; --th-b:#312e81; --th-s1:#030b16; --th-s2:#01050c; --th-card-radius:22px;
+  --th-pattern: radial-gradient(circle at 20% 70%,rgba(34,211,238,.9) 0 2px,transparent 6px), radial-gradient(circle at 75% 35%,rgba(129,140,248,.9) 0 2.5px,transparent 7px), radial-gradient(circle at 50% 90%,rgba(94,234,212,.8) 0 1.5px,transparent 5px), linear-gradient(180deg,transparent,rgba(0,0,0,.5));
+  --th-psize: 110px 110px, 140px 140px, 80px 80px, auto; --th-pattern-opacity:.9; }
+/* Material · veludo vinho com brilho de tecido · raio: 16px */
+[data-theme="veludo"] { --th-acc:#e11d48; --th-a:#9f1239; --th-b:#4c0519; --th-s1:#1f0710; --th-s2:#12040a; --th-card-radius:16px;
+  --th-pattern: repeating-linear-gradient(100deg,rgba(255,255,255,.07) 0 2px,transparent 2px 5px), linear-gradient(115deg,transparent 30%,rgba(255,120,150,.18) 50%,transparent 70%);
+  --th-psize: auto, auto; --th-pattern-opacity:.8; }
+[data-theme="veludo"] .profile-card::after { mix-blend-mode: soft-light; }
+
+/* ── BETA ── */
+/* Fantasia · nuvens e estrelas de sonho · raio: 30px */
+[data-theme="onirico"] { --th-acc:#c4b5fd; --th-a:#a78bfa; --th-b:#f0abfc; --th-s1:#171233; --th-s2:#0c0a22; --th-card-radius:30px;
+  --th-pattern: radial-gradient(ellipse at 20% 80%,rgba(240,171,252,.35),transparent 50%), radial-gradient(ellipse at 80% 20%,rgba(167,139,250,.4),transparent 50%), radial-gradient(1.5px 1.5px at 30% 30%,#fff,transparent), radial-gradient(1px 1px at 65% 70%,#fff,transparent), radial-gradient(1px 1px at 85% 45%,#fff,transparent);
+  --th-psize: auto, auto, 120px 120px, 90px 90px, 150px 150px; --th-pattern-opacity:.85; }
+/* Emoção · sépia, vinheta e grão de filme · raio: 24px */
+[data-theme="saudade"] { --th-acc:#f4a98a; --th-a:#c77d5a; --th-b:#7b4a6b; --th-s1:#1d1410; --th-s2:#110b09; --th-card-radius:24px;
+  --th-pattern: radial-gradient(ellipse at 50% 50%,transparent 40%,rgba(0,0,0,.55) 100%), repeating-linear-gradient(0deg,rgba(255,220,180,.05) 0 1px,transparent 1px 3px), radial-gradient(circle at 25% 20%,rgba(244,169,138,.30),transparent 45%);
+  --th-psize: auto, auto, auto; --th-pattern-opacity:.85; }
+/* Jogo · xadrez de pixels (xadrez 8px) de RPG de 16 bits · raio: 6px */
+[data-theme="rpg-antigo"] { --th-acc:#facc15; --th-a:#ca8a04; --th-b:#14532d; --th-s1:#14110a; --th-s2:#0a0805; --th-card-radius:6px;
+  --th-pattern: repeating-linear-gradient(90deg,rgba(250,204,21,.12) 0 8px,transparent 8px 16px), repeating-linear-gradient(0deg,rgba(250,204,21,.12) 0 8px,transparent 8px 16px);
+  --th-psize: auto, auto; --th-pattern-opacity:.75; }
+
+/* ── STREAMER ── */
+/* Jogo · mapa com zona de tiro encolhendo · raio: 10px */
+[data-theme="battle-royale"] { --th-acc:#fb923c; --th-a:#ea580c; --th-b:#16a34a; --th-s1:#10160d; --th-s2:#080c06; --th-card-radius:10px;
+  --th-pattern: radial-gradient(circle at 70% 40%,transparent 30%,rgba(239,68,68,.25) 31%), repeating-radial-gradient(circle at 70% 40%,transparent 0 38px,rgba(255,255,255,.18) 38px 40px), linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px), linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);
+  --th-psize: auto, auto, 26px 26px, 26px 26px; --th-pattern-opacity:.75; }
+/* Jogo · synthwave: sol listrado + grade ciano · raio: 14px */
+[data-theme="fliperama-neon"] { --th-acc:#ff2bd6; --th-a:#ff2bd6; --th-b:#00e5ff; --th-s1:#1a0630; --th-s2:#0a0218; --th-card-radius:14px;
+  --th-pattern: radial-gradient(circle at 50% 100%,rgba(255,200,60,.5) 0 18%,rgba(255,43,214,.35) 19% 30%,transparent 31%), linear-gradient(rgba(0,229,255,.3) 1px,transparent 1px), linear-gradient(90deg,rgba(0,229,255,.3) 1px,transparent 1px);
+  --th-psize: auto, 30px 30px, 30px 30px; --th-pattern-opacity:.75; }
+
+/* ── MOD ── */
+/* Jogo · HUD tático com mira e scanlines · raio: 4px */
+[data-theme="fps-tatico"] { --th-acc:#a3e635; --th-a:#65a30d; --th-b:#334155; --th-s1:#0f1410; --th-s2:#070a08; --th-card-radius:4px;
+  --th-pattern: repeating-linear-gradient(0deg,rgba(163,230,53,.12) 0 1px,transparent 1px 4px), radial-gradient(circle at 80% 50%,transparent 0 22px,rgba(163,230,53,.45) 22px 23px,transparent 23px), linear-gradient(90deg,transparent calc(80% - .5px),rgba(163,230,53,.3) 0 calc(80% + .5px),transparent 0), linear-gradient(0deg,transparent calc(50% - .5px),rgba(163,230,53,.3) 0 calc(50% + .5px),transparent 0);
+  --th-psize: auto, auto, auto, auto; --th-pattern-opacity:.8; }
+
+/* ── ADMIN ── */
+/* Fantasia · anéis rituais, raios e fogo infernal · raio: 6px */
+[data-theme="demoniaco"] { --th-acc:#ff2200; --th-a:#dc2626; --th-b:#450a0a; --th-s1:#180304; --th-s2:#0a0102; --th-card-radius:6px;
+  --th-pattern: repeating-radial-gradient(circle at 50% 50%,rgba(255,34,0,.25) 0 2px,transparent 2px 30px), repeating-conic-gradient(from 18deg at 50% 50%,rgba(255,34,0,.28) 0 1deg,transparent 1deg 36deg), radial-gradient(circle at 50% 120%,rgba(255,60,0,.5),transparent 55%);
+  --th-psize: auto, auto, auto; --th-pattern-opacity:.85; }
+
+/* ── DEV ── */
+/* Glitch: linhas RGB, tela tremendo · raio: 4px */
+[data-theme="glitch"] { --th-acc:#ff006e; --th-a:#ff006e; --th-b:#00fff0; --th-s1:#0a0208; --th-s2:#020102; --th-card-radius:4px;
+  --th-pattern: repeating-linear-gradient(0deg,rgba(255,0,110,.22) 0 2px,transparent 2px 5px), repeating-linear-gradient(90deg,rgba(0,255,240,.18) 0 1px,transparent 1px 9px), repeating-linear-gradient(45deg,rgba(255,255,255,.08) 0 2px,transparent 2px 16px);
+  --th-psize: auto, auto, auto; --th-pattern-opacity:.85; }
+[data-theme="glitch"] .profile-card::after { mix-blend-mode: screen; animation: pfx-glitch 3s steps(8) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="glitch"] .profile-card::after,
+  .profile-card[data-frame="sakura-veil"]::before, .profile-preview-card[data-frame="sakura-veil"]::before,
+  .profile-card[data-frame="glitch-rgb"]::before, .profile-preview-card[data-frame="glitch-rgb"]::before { animation: none !important; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPANSÃO v27 — 12 molduras de PARTÍCULAS (estilo Véu de Sakura)
+   Cole no FINAL do profile.css (depois do v26).
+
+   Como funciona: cada moldura define borda em gradiente + brilho e
+   escolhe uma camada de partículas via variáveis:
+     --pfx-img   camadas de radial-gradient (as partículas)
+     --pfx-size  tamanho do tile de cada camada
+     --pfx-from  posição inicial (uma por camada)
+     --pfx-to    posição final = MÚLTIPLO EXATO do tile (loop sem pulo)
+     --pfx-dur   duração · --pfx-ease (opcional, ex.: steps(10))
+   Um único ::before compartilhado desenha e anima tudo.
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes pfx-drift { to { background-position: var(--pfx-to); } }
+
+:is(.profile-card,.profile-preview-card):is(
+  [data-frame="nevasca"],[data-frame="bolhas"],[data-frame="vagalumes"],
+  [data-frame="brasas"],[data-frame="outono"],[data-frame="chuva-estelar"],
+  [data-frame="rosas"],[data-frame="confete"],[data-frame="chuva-de-codigo"],
+  [data-frame="chuva-de-moedas"],[data-frame="poeira-de-ouro"],[data-frame="chuva-glitch"]
+)::before {
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:3;
+  background-image: var(--pfx-img);
+  background-size: var(--pfx-size);
+  background-position: var(--pfx-from);
+  background-repeat: repeat;
+  animation: pfx-drift var(--pfx-dur,10s) var(--pfx-ease,linear) infinite;
+}
+
+/* ── FREE ── */
+/* neve caindo devagar */
+[data-frame="nevasca"] { --frame-bw:2px;
+  --frame-border: linear-gradient(135deg,#ffffff,#bfe6ff 30%,#5cc8ff 60%,#eafcff);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(191,230,255,.55);
+  --pfx-img: radial-gradient(circle at 20% 20%,rgba(255,255,255,.95) 0 2px,transparent 3px), radial-gradient(circle at 65% 55%,rgba(255,255,255,.8) 0 1.5px,transparent 2.5px), radial-gradient(circle at 40% 85%,rgba(255,255,255,.9) 0 2.5px,transparent 3.5px);
+  --pfx-size: 60px 60px, 80px 80px, 50px 50px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 0 240px, 0 320px, 0 200px; --pfx-dur: 9s; }
+/* bolhas subindo */
+[data-frame="bolhas"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#d6fbff,#38bdf8 40%,#0e7490 70%,#a5f3fc);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(56,189,248,.5);
+  --pfx-img: radial-gradient(circle at 25% 70%,transparent 0 5px,rgba(255,255,255,.55) 5px 6px,transparent 6px), radial-gradient(circle at 70% 40%,transparent 0 3px,rgba(200,245,255,.6) 3px 4px,transparent 4px), radial-gradient(circle at 50% 90%,transparent 0 7px,rgba(255,255,255,.4) 7px 8px,transparent 8px);
+  --pfx-size: 70px 70px, 55px 55px, 90px 90px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 0 -280px, 0 -220px, 0 -360px; --pfx-dur: 10s; }
+/* vaga-lumes flutuando na diagonal */
+[data-frame="vagalumes"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#f7ffb0,#a3e635 40%,#3f6212 70%,#d9f99d);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(190,242,100,.5);
+  --pfx-img: radial-gradient(circle at 30% 30%,rgba(250,255,160,.95) 0 1.5px,rgba(190,242,100,.35) 2px,transparent 7px), radial-gradient(circle at 70% 65%,rgba(220,255,170,.9) 0 1.5px,rgba(163,230,53,.3) 2px,transparent 6px), radial-gradient(circle at 45% 85%,rgba(250,255,160,.9) 0 1px,rgba(190,242,100,.3) 2px,transparent 5px);
+  --pfx-size: 90px 90px, 120px 120px, 75px 75px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 180px -180px, 240px -240px, 150px -150px; --pfx-dur: 14s; }
+
+/* ── VIP ── */
+/* brasas subindo, faíscas laranja */
+[data-frame="brasas"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#ffe066,#ff6a00 35%,#8a1c00 65%,#ff9d2e);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,106,0,.65);
+  --pfx-img: radial-gradient(circle at 25% 80%,#ffb347 0 1.5px,rgba(255,140,40,.35) 2px,transparent 5px), radial-gradient(circle at 70% 50%,#ff6a00 0 1.5px,rgba(255,90,0,.3) 2px,transparent 4px), radial-gradient(circle at 45% 20%,#ffe066 0 2px,rgba(255,200,60,.35) 2.5px,transparent 6px);
+  --pfx-size: 64px 64px, 86px 86px, 48px 48px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 0 -256px, 0 -344px, 0 -192px; --pfx-dur: 6s; }
+/* folhas de outono caindo e balançando */
+[data-frame="outono"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#ffd9a0,#e0701a 35%,#7a2e0c 65%,#d9a441);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(224,112,26,.5);
+  --pfx-img: radial-gradient(ellipse 5px 2.5px at 25% 25%,rgba(224,112,26,.95) 0 70%,transparent 100%), radial-gradient(ellipse 4px 2px at 65% 55%,rgba(217,164,65,.9) 0 70%,transparent 100%), radial-gradient(ellipse 5px 2.5px at 45% 85%,rgba(168,60,20,.9) 0 70%,transparent 100%);
+  --pfx-size: 72px 72px, 96px 96px, 60px 60px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: -72px 288px, -96px 384px, -60px 240px; --pfx-dur: 11s; }
+/* chuva estelar na diagonal */
+[data-frame="chuva-estelar"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#1b1250,#7c5cff 40%,#c4b5fd 60%,#1b1250);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(140,100,255,.7);
+  --pfx-img: radial-gradient(circle at 20% 25%,#fff 0 1.5px,transparent 3px), radial-gradient(circle at 70% 60%,#c4b5fd 0 2px,transparent 4px), radial-gradient(circle at 45% 85%,#fff 0 1px,transparent 2px);
+  --pfx-size: 80px 80px, 110px 110px, 60px 60px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 160px 160px, 220px 220px, 120px 120px; --pfx-dur: 8s; }
+/* pétalas de rosa, queda lenta com deriva */
+[data-frame="rosas"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#ffc2d1,#e11d48 40%,#7f1d1d 70%,#fb7185);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(225,29,72,.55);
+  --pfx-img: radial-gradient(ellipse 5px 3px at 25% 20%,rgba(251,113,133,.9) 0 70%,transparent 100%), radial-gradient(ellipse 4px 2.5px at 70% 55%,rgba(225,29,72,.85) 0 70%,transparent 100%), radial-gradient(ellipse 5px 3px at 45% 85%,rgba(255,194,209,.9) 0 70%,transparent 100%);
+  --pfx-size: 66px 66px, 88px 88px, 54px 54px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 66px 264px, -88px 352px, 0 216px; --pfx-dur: 12s; }
+/* confete de festa */
+[data-frame="confete"] { --frame-bw:3px;
+  --frame-border: conic-gradient(from 0deg,#ff4d4d,#ffd34d,#4dff88,#4dd2ff,#b58cff,#ff4d4d);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,211,77,.5);
+  --pfx-img: radial-gradient(circle at 20% 20%,#ff4d6d 0 2.5px,transparent 3.5px), radial-gradient(circle at 60% 50%,#ffd34d 0 2.5px,transparent 3.5px), radial-gradient(circle at 80% 80%,#4dd2ff 0 2.5px,transparent 3.5px), radial-gradient(circle at 35% 75%,#b58cff 0 2px,transparent 3px);
+  --pfx-size: 72px 72px, 64px 64px, 88px 88px, 56px 56px;
+  --pfx-from: 0 0, 0 0, 0 0, 0 0; --pfx-to: 0 288px, 0 256px, 0 352px, 0 224px; --pfx-dur: 7s; }
+
+/* ── BETA ── */
+/* chuva de código verde (colunas verticais) */
+[data-frame="chuva-de-codigo"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#003b1a,#00ff41 50%,#003b1a);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(0,255,65,.6);
+  --pfx-img: radial-gradient(ellipse 1px 14px at 20% 50%,rgba(0,255,65,.95),transparent), radial-gradient(ellipse 1px 18px at 55% 50%,rgba(120,255,160,.8),transparent), radial-gradient(ellipse 1px 11px at 85% 50%,rgba(0,255,65,.85),transparent);
+  --pfx-size: 34px 120px, 50px 160px, 26px 90px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 0 480px, 0 640px, 0 360px; --pfx-dur: 5s; }
+
+/* ── STREAMER ── */
+/* moedas de ouro caindo */
+[data-frame="chuva-de-moedas"] { --frame-bw:3px;
+  --frame-border: linear-gradient(135deg,#ffe38a,#e6b94d 40%,#9a3bff 75%,#ffe38a);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,200,60,.55);
+  --pfx-img: radial-gradient(circle at 30% 20%,#ffe38a 0 2.5px,#b8860b 3px 4px,transparent 4.5px), radial-gradient(circle at 70% 60%,#ffd34d 0 2px,#b8860b 2.5px 3.5px,transparent 4px), radial-gradient(circle at 45% 85%,#fff3a6 0 2px,#a86b00 2.5px 3.5px,transparent 4px);
+  --pfx-size: 76px 76px, 100px 100px, 62px 62px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 0 304px, 0 400px, 0 248px; --pfx-dur: 8s; }
+
+/* ── ADMIN ── */
+/* poeira de ouro subindo, densa e lenta */
+[data-frame="poeira-de-ouro"] { --frame-bw:4px;
+  --frame-border: conic-gradient(from 45deg,#e6b94d,#fff5b8,#a86b00,#e6b94d,#fff5b8,#e6b94d);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(230,185,77,.8);
+  --pfx-img: radial-gradient(circle at 20% 30%,rgba(255,235,150,.95) 0 1px,transparent 2px), radial-gradient(circle at 70% 70%,rgba(255,215,100,.85) 0 1px,transparent 2px), radial-gradient(circle at 45% 50%,rgba(255,245,184,.9) 0 1.5px,rgba(230,185,77,.25) 2px,transparent 4px);
+  --pfx-size: 40px 40px, 55px 55px, 70px 70px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 0 -160px, 0 -220px, 0 -280px; --pfx-dur: 16s; }
+
+/* ── DEV ── */
+/* chuva glitch: riscos magenta/ciano caindo em passos */
+[data-frame="chuva-glitch"] { --frame-bw:4px;
+  --frame-border: conic-gradient(from 0deg,#ff006e,#00fff0,#ffffff,#ff006e);
+  --frame-ring: var(--frame-border); --frame-glow: rgba(255,0,110,.7);
+  --pfx-img: radial-gradient(ellipse 1.5px 10px at 20% 50%,rgba(255,0,110,.95),transparent), radial-gradient(ellipse 1.5px 14px at 60% 50%,rgba(0,255,240,.9),transparent), radial-gradient(circle at 85% 30%,#fff 0 1.5px,transparent 2.5px);
+  --pfx-size: 38px 100px, 52px 130px, 44px 88px;
+  --pfx-from: 0 0, 0 0, 0 0; --pfx-to: 0 400px, 0 520px, 0 352px; --pfx-dur: 2.4s; --pfx-ease: steps(12); }
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.profile-card,.profile-preview-card)::before { animation: none !important; }
 }

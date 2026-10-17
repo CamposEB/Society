@@ -35,19 +35,27 @@ googleProfileForm.addEventListener("submit", event => {
     googleProfileName.focus();
     return;
   }
-  if (window.societyGoogleProfileSubmit(name)) googleProfileDialog.close();
+  if (window.societyGoogleProfileSubmit(name)) {
+    googleProfileDialog.close();
+    googleMessage.textContent = "Criando sua conta…";
+  }
 });
 document.getElementById("googleProfileCancel").addEventListener("click", () => {
   googleProfileDialog.close();
   window.societyGoogleProfileCancel();
+  googleMessage.textContent = "";
 });
 googleProfileDialog.addEventListener("cancel", event => {
   event.preventDefault();
   googleProfileDialog.close();
   window.societyGoogleProfileCancel();
+  googleMessage.textContent = "";
 });
 window.addEventListener("society-google-profile-required", event => {
-  googleProfileName.value = event.detail.suggestedName || "";
+  // Campo vazio de propósito: o usuário escolhe o nome, nada é gerado a partir da conta Google.
+  googleProfileName.value = "";
+  googleMessage.textContent = "";
+  document.getElementById("err").textContent = "";
   googleProfileDialog.showModal();
   googleProfileName.focus();
 });
@@ -160,10 +168,17 @@ async function configureGoogleLogin(){
   }
 }
 
-async function startGoogleLogin(mode){
-  const registering = mode === true;
-  const button = registering ? googleRegisterButton : googleButton;
-  button.disabled = true;
+/*
+ * Os dois botões Google (aba "Entrar" e aba "Criar conta") fazem o mesmo fluxo:
+ *  - conta já existe  -> entra direto
+ *  - conta não existe -> o servidor responde "google_profile_required" e o diálogo
+ *    pede o nome de usuário; a conta só é criada depois que ele for confirmado.
+ * Por isso allow_registration é sempre true e nenhum nome é enviado daqui.
+ */
+async function startGoogleLogin(){
+  const button = googleButton.hidden ? googleRegisterButton : googleButton;
+  const buttons = [googleButton, googleRegisterButton];
+  buttons.forEach(b => { b.disabled = true; });
   googleMessage.textContent = "Conectando com Google…";
   document.getElementById("err").textContent = "";
   try {
@@ -177,18 +192,112 @@ async function startGoogleLogin(mode){
     const idToken = await credential.user.getIdToken(true);
     window.societyGoogleLogin({
       id_token:idToken,
-      allow_registration:registering,
-      suggested_profile_name:registering ? credential.user.displayName || "" : ""
+      allow_registration:true
     });
-    googleMessage.textContent = registering ? "Criando sua conta…" : "Verificando sua conta…";
+    googleMessage.textContent = "Verificando sua conta…";
   } catch (error) {
     console.error("Falha no login Google.", error);
     googleMessage.textContent = error instanceof Error && !error.code
       ? error.message
       : googleLoginErrorMessage(error);
   } finally {
-    button.disabled = false;
+    buttons.forEach(b => { b.disabled = false; });
   }
 }
 
 configureGoogleLogin();
+
+/* ---------- modo visitante ---------- */
+const guestButton = document.getElementById("guestLogin");
+
+function startGuestLogin(){
+  document.getElementById("err").textContent = "";
+  if (typeof window.societyGuestLogin !== "function") {
+    googleMessage.textContent = "O site ainda está carregando. Tente novamente em instantes.";
+    return;
+  }
+  guestButton.disabled = true;
+  googleMessage.textContent = "Entrando como visitante…";
+  window.societyGuestLogin();
+  window.setTimeout(() => { guestButton.disabled = false; }, 6000);
+}
+
+if (guestButton) guestButton.addEventListener("click", startGuestLogin);
+
+window.addEventListener("society-auth-error", () => {
+  if (guestButton) guestButton.disabled = false;
+  if (!googleProfileDialog.open) googleMessage.textContent = "";
+});
+
+// visitante clicou em "Criar conta": abre direto a aba de cadastro
+try {
+  if (sessionStorage.getItem("society.auth_mode") === "register") {
+    sessionStorage.removeItem("society.auth_mode");
+    setAuthMode("register");
+  }
+} catch (error) { /* sessionStorage indisponível: segue na aba Entrar */ }
+
+/* ---------- cadastro automático ao tentar entrar com nick inexistente ---------- */
+const registerPromptDialog = document.getElementById("registerPromptDialog");
+const registerPromptForm = document.getElementById("registerPromptForm");
+const registerPromptNick = document.getElementById("registerPromptNick");
+const registerPromptName = document.getElementById("registerPromptName");
+const registerPromptConfirm = document.getElementById("registerPromptConfirm");
+const registerPromptError = document.getElementById("registerPromptError");
+
+function cancelRegisterPrompt(){
+  if (registerPromptDialog.open) registerPromptDialog.close();
+  window.societyRegisterCancel();
+  googleMessage.textContent = "";
+}
+
+window.addEventListener("society-register-required", event => {
+  registerPromptNick.textContent = event.detail.nick;
+  registerPromptName.value = event.detail.suggestedName || "";
+  registerPromptConfirm.value = "";
+  registerPromptError.textContent = "";
+  googleMessage.textContent = "";
+  registerPromptDialog.showModal();
+  registerPromptName.focus();
+  registerPromptName.select();
+});
+
+registerPromptForm.addEventListener("submit", event => {
+  event.preventDefault();
+  const name = registerPromptName.value.trim();
+  const password = document.getElementById("password").value;
+  const confirmation = registerPromptConfirm.value;
+  if (!name || name.length > 28) {
+    registerPromptError.textContent = "O nome deve ter de 1 a 28 caracteres.";
+    registerPromptName.focus();
+    return;
+  }
+  if (password.length < 10) {
+    registerPromptError.textContent =
+      "Para criar a conta, a senha precisa ter pelo menos 10 caracteres. Cancele e digite uma senha maior.";
+    return;
+  }
+  if (confirmation !== password) {
+    registerPromptError.textContent = "A confirmação não corresponde à senha digitada.";
+    registerPromptConfirm.focus();
+    return;
+  }
+  if (window.societyRegisterSubmit(name, confirmation)) {
+    registerPromptDialog.close();
+    googleMessage.textContent = "Criando sua conta…";
+  } else {
+    registerPromptError.textContent = "Conexão interrompida. Tente entrar novamente.";
+  }
+});
+
+document.getElementById("registerPromptCancel").addEventListener("click", cancelRegisterPrompt);
+registerPromptDialog.addEventListener("cancel", event => {
+  event.preventDefault();
+  cancelRegisterPrompt();
+});
+
+// erro do servidor depois de enviar o nome: fecha a janela e mostra o motivo
+window.addEventListener("society-auth-error", event => {
+  if (registerPromptDialog.open) registerPromptDialog.close();
+  googleMessage.textContent = event.detail;
+});
