@@ -1,0 +1,234 @@
+/* Destiny · Perfil — camada de UI (v2.1)
+   Abas do editor, prévia ao vivo, confirmação ao fechar, estado de salvamento,
+   estado vazio das conquistas e barra social (Amigos/Seguidores/Seguindo).
+   Não altera o profile.js: cole este arquivo NO FINAL do profile.js (ou carregue logo depois).
+   Funciona mesmo se o HTML do perfil for injetado depois que o script rodar. */
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  /* ───────────── EDITOR ───────────── */
+  function initEditor() {
+    const dialog = $("profileEditor");
+    const form = $("profileForm");
+    if (!dialog || !form || dialog.dataset.pfEnhanced) return Boolean(dialog && dialog.dataset.pfEnhanced);
+    dialog.dataset.pfEnhanced = "1";
+
+    const tabs = Array.from(dialog.querySelectorAll(".profile-tab"));
+    const panels = Array.from(dialog.querySelectorAll(".profile-tab-panel"));
+    const previewCard = $("profilePreviewCard");
+    let snapshot = "";
+    let touchedImage = false;
+    let confirmedClose = false;
+
+    const visibleTabs = () => tabs.filter((t) => !t.hidden);
+
+    function selectTab(key, focus) {
+      tabs.forEach((t) => {
+        const on = t.dataset.tab === key;
+        t.setAttribute("aria-selected", String(on));
+        t.tabIndex = on ? 0 : -1;
+        if (on && focus) t.focus();
+      });
+      panels.forEach((p) => { p.hidden = p.id !== "panel-" + key; });
+    }
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => selectTab(tab.dataset.tab));
+      tab.addEventListener("keydown", (e) => {
+        const list = visibleTabs();
+        const i = list.indexOf(tab);
+        let next = null;
+        if (e.key === "ArrowRight") next = list[(i + 1) % list.length];
+        else if (e.key === "ArrowLeft") next = list[(i - 1 + list.length) % list.length];
+        else if (e.key === "Home") next = list[0];
+        else if (e.key === "End") next = list[list.length - 1];
+        if (next) { e.preventDefault(); selectTab(next.dataset.tab, true); }
+      });
+    });
+
+    // Aba Stream: só para quem pode configurar canal (profile.js controla #pStreamField.hidden)
+    function syncStreamTab() {
+      const field = $("pStreamField");
+      const tab = $("tab-stream");
+      if (!field || !tab) return;
+      tab.hidden = field.hidden;
+      if (field.hidden && tab.getAttribute("aria-selected") === "true") selectTab("identity");
+    }
+    const streamField = $("pStreamField");
+    if (streamField) new MutationObserver(syncStreamTab).observe(streamField, { attributes: true, attributeFilter: ["hidden"] });
+
+    // Prévia ao vivo (mini player card)
+    const _imgWin = new Map(); /* PERF-PATCH */
+    function loadImg(img, urls, i = 0) {
+      if (!img) return;
+      if (!urls.length || i >= urls.length) { img.removeAttribute("src"); img.onerror = null; img.hidden = true; return; }
+      const key = urls[0];
+      if (i === 0 && _imgWin.has(key)) { img.hidden = false; img.onerror = null; img.src = _imgWin.get(key); return; }
+      img.hidden = false;
+      img.onerror = () => loadImg(img, urls, i + 1);
+      img.onload = () => { _imgWin.set(key, urls[i]); };
+      img.src = urls[i];
+    }
+    function syncPreview() {
+      const name = $("profileDisplayNameInput")?.value.trim() || "Jogador";
+      const rank = $("pRank")?.value || "";
+      const stars = $("pStars");
+      const starsVal = stars && !stars.disabled && stars.value !== "" ? stars.value : "";
+      const nameEl = $("profilePreviewName");
+      const metaEl = $("profilePreviewMeta");
+      if (nameEl) nameEl.textContent = name;
+      if (metaEl) metaEl.textContent = [$("pRole")?.value, $("pHero")?.value].filter((v) => v && v !== "Qualquer").join(" · ");
+      const wrap = $("profilePreviewRankWrap");
+      const img = $("profilePreviewRank");
+      const starsEl = $("profilePreviewStars");
+      const urls = rank && window.ProfileUI?.rankCandidatesForRank ? window.ProfileUI.rankCandidatesForRank(rank) : [];
+      if (wrap) wrap.hidden = !urls.length;
+      if (urls.length) loadImg(img, urls);
+      if (starsEl) { starsEl.hidden = starsVal === ""; starsEl.textContent = starsVal === "" ? "" : "★ " + starsVal; }
+      if (previewCard) {
+        previewCard.dataset.frame = $("profileFrameInput")?.value || "default";
+        const c = $("profileAccentInput")?.value;
+        if (c) previewCard.style.setProperty("--profile-accent", c);
+      }
+    }
+    ["profileDisplayNameInput", "pRank", "pStars", "pRole", "pHero", "profileFrameInput", "profileAccentInput"].forEach((id) => {
+      const el = $(id);
+      if (el) { el.addEventListener("input", syncPreview); el.addEventListener("change", syncPreview); }
+    });
+    const rankSel = $("pRank");
+    if (rankSel) new MutationObserver(syncPreview).observe(rankSel, { childList: true });
+    const accent = $("profileAccentInput");
+    if (accent) accent.addEventListener("input", () => dialog.style.setProperty("--profile-accent", accent.value));
+
+    // Alterações não salvas
+    function serialize() {
+      return Array.from(form.elements)
+        .filter((el) => el.id && el.type !== "file" && el.type !== "button" && el.type !== "submit")
+        .map((el) => el.id + "=" + (el.type === "checkbox" ? el.checked : el.value))
+        .join("|");
+    }
+    const isDirty = () => touchedImage || serialize() !== snapshot;
+    ["profileAvatarFile", "profileBannerFile"].forEach((id) => $(id)?.addEventListener("change", () => { touchedImage = true; }));
+    ["profileRemoveAvatar", "profileRemoveBanner"].forEach((id) => $(id)?.addEventListener("click", () => { touchedImage = true; }));
+
+    function requestClose() {
+      if (!isDirty() || confirm("Você tem alterações não salvas. Descartar e fechar o editor?")) {
+        confirmedClose = true;
+        dialog.close();
+      }
+    }
+    // Captura: roda antes dos handlers do profile.js
+    [$("profileEditorClose"), $("profileCancelButton")].forEach((btn) => {
+      if (!btn) return;
+      btn.addEventListener("click", (e) => {
+        if (confirmedClose) return;
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        requestClose();
+      }, true);
+    });
+    dialog.addEventListener("cancel", (e) => { // Esc
+      if (confirmedClose || !isDirty()) return;
+      e.preventDefault();
+      requestClose();
+    });
+
+    // Estado de salvamento
+    const saveBtn = $("pSave");
+    const msg = $("profileFormMessage");
+    let saveTimer = 0;
+    function setSaving(on) {
+      if (!saveBtn) return;
+      clearTimeout(saveTimer);
+      saveBtn.disabled = on;
+      saveBtn.classList.toggle("is-saving", on);
+      saveBtn.textContent = on ? "Salvando…" : "Salvar alterações";
+      if (on) saveTimer = setTimeout(() => setSaving(false), 10000);
+    }
+    form.addEventListener("submit", () => {
+      setTimeout(() => { if (msg && !msg.classList.contains("is-error") && msg.textContent) setSaving(true); }, 0);
+    });
+    if (msg) new MutationObserver(() => { if (msg.classList.contains("is-error")) setSaving(false); })
+      .observe(msg, { attributes: true, attributeFilter: ["class"], childList: true });
+
+    // Abertura / fechamento
+    new MutationObserver(() => {
+      if (dialog.open) {
+        confirmedClose = false;
+        touchedImage = false;
+        setSaving(false);
+        selectTab("identity");
+        syncStreamTab();
+        syncPreview();
+        const body = dialog.querySelector(".profile-editor-body");
+        if (body) body.scrollTop = 0;
+        requestAnimationFrame(() => { syncPreview(); snapshot = serialize(); });
+      } else {
+        setSaving(false);
+      }
+    }).observe(dialog, { attributes: true, attributeFilter: ["open"] });
+    return true;
+  }
+
+  /* ───────────── CARD: conquistas vazias + barra social ───────────── */
+  const TROPHY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>';
+
+  function upgradeAchievementsEmpty() {
+    const box = $("profileAchievements");
+    if (!box) return;
+    const only = box.children.length === 1 ? box.firstElementChild : null;
+    if (!only || !only.classList.contains("profile-empty")) return;
+    const state = document.createElement("div");
+    state.className = "profile-empty-state";
+    state.innerHTML = TROPHY;
+    const p = document.createElement("p");
+    p.textContent = "Nenhuma conquista registrada nesta temporada.";
+    state.append(p);
+    box.replaceChildren(state);
+  }
+
+  // A barra "N Amigos · N Seguidores · N Seguindo" vem de outro módulo (SocialUI);
+  // localizamos pelo texto, sem depender de classes, e só adicionamos classes de estilo.
+  function markSocialBar() {
+    const card = $("profileCard");
+    if (!card) return;
+    const has = (el) => {
+      const t = (el.textContent || "").toLowerCase();
+      return t.includes("amigos") && t.includes("seguidores") && t.includes("seguindo");
+    };
+    const current = card.querySelector(".pf-social");
+    if (current && current.isConnected && has(current)) {
+      Array.from(current.children).forEach((c) => c.classList.add("pf-social-item"));
+      return;
+    }
+    const cands = Array.from(card.querySelectorAll("div,section,p,ul,nav,span"))
+      .filter((el) => has(el) && (el.textContent || "").length < 90 && el.children.length >= 2);
+    const target = cands.find((el) => !Array.from(el.children).some((c) => has(c)));
+    if (!target) return;
+    target.classList.add("pf-social");
+    Array.from(target.children).forEach((c) => c.classList.add("pf-social-item"));
+  }
+
+  function initCard() {
+    const card = $("profileCard");
+    if (!card) return false;
+    if (card.dataset.pfEnhanced) return true;
+    card.dataset.pfEnhanced = "1";
+    let raf = 0;
+    const run = () => { raf = 0; upgradeAchievementsEmpty(); markSocialBar(); };
+    new MutationObserver(() => { if (!raf) raf = setTimeout(run, 250); })
+      .observe(card, { childList: true, subtree: true, characterData: true });
+    document.addEventListener("profile:rendered", () => setTimeout(run, 60));
+    run();
+    return true;
+  }
+
+  /* ───────────── BOOT (tolera HTML injetado depois) ───────────── */
+  function boot() { const a = initEditor(); const b = initCard(); return Boolean(a && b); }
+  /* PERF-PATCH: desconecta o observer global assim que tudo foi inicializado */
+  let raf = 0;
+  const bootObs = new MutationObserver(() => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => { raf = 0; if (boot()) bootObs.disconnect(); });
+  });
+  if (!boot()) bootObs.observe(document.documentElement, { childList: true, subtree: true });
+})();

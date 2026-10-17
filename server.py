@@ -189,6 +189,9 @@ ROOMS = {"lobby": "Salão Principal", "praca": "Praça", "arena": "Arena"}
 
 db = _connect_db()
 
+_t = time.perf_counter(); db.execute("SELECT 1").fetchone()
+print(f"⏱ latência do banco: {(time.perf_counter()-_t)*1000:.0f} ms")
+
 
 def _ensure_dm_reactions_table():
     try:
