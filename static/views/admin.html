@@ -53,6 +53,34 @@
     <div class="adm-stats" id="admStats"></div>
   </section>
 
+  <!-- ═══════════ PRÉVIA DE PERFIS (ADM+) ═══════════ -->
+  <section class="moderation-section" data-min="admin">
+    <header class="moderation-section-header">
+      <div>
+        <p class="moderation-eyebrow">PRÉVIA DE PERFIS</p>
+        <h3>Quem está por aqui</h3>
+      </div>
+      <small class="adm-hint">Cards com foto e cargo. Clique para abrir a prévia do perfil.</small>
+    </header>
+
+    <div class="adm-profile-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="10.8" cy="10.8" r="6.3"/>
+        <path d="m15.5 15.5 4.2 4.2"/>
+      </svg>
+      <input id="admProfileSearch" type="search" autocomplete="off"
+             placeholder="Buscar jogador por nick ou nome..." aria-label="Buscar perfil de jogador">
+    </div>
+
+    <div id="admProfileShortcuts" class="adm-profile-shortcuts" aria-label="Pessoas nas denúncias"></div>
+    <div id="admProfileResults" class="adm-profile-grid" aria-live="polite"></div>
+    <p id="admProfileEmpty" class="moderation-empty">
+      <span aria-hidden="true">🔎</span>
+      <b>Busque um jogador</b>
+      <small>Digite pelo menos 2 letras para ver os cards de perfil.</small>
+    </p>
+  </section>
+
   <!-- ═══════════ DENÚNCIAS (ADM+) ═══════════ -->
   <section class="moderation-section" data-min="admin">
     <header class="moderation-section-header">
@@ -198,4 +226,9 @@
     <ul class="adm-log" id="admLog"></ul>
     <p id="admLogEmpty" class="moderation-empty" hidden>Sem ações registradas nesta sessão.</p>
   </section>
+
+  <!-- ═══════════ PRÉVIA DE PERFIL (dialog) ═══════════ -->
+  <dialog id="admProfileDialog" class="adm-profile-dialog" aria-labelledby="admProfileDialogTitle">
+    <div id="admProfileDialogBody"></div>
+  </dialog>
 </main>

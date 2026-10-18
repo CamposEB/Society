@@ -53,7 +53,7 @@ let IS_ADMIN = false, IS_MODERATOR = false, IS_DEV = false;
 let IS_VIP = false, IS_STREAMER = false, IS_BETA = false;
 let IS_GUEST = false;
 // abas que exigem conta (o servidor também bloqueia; isto é só UX)
-const GUEST_BLOCKED_TABS = new Set(["dm", "quiz", "settings", "profile", "admin"]);
+new Set(["dm", "settings", "profile", "admin"])
 let TOURNAMENTS = [], TOURNAMENT_EDIT_ID = null;
 let COMMUNITY_META = [], COMMUNITY_BUILDS = [], COMMUNITY_BUILDS_TRENDING = [], COMMUNITY_BUILDS_RECENT = [];
 let COMMUNITY_META_LANE = "all", BUILD_REQUEST_ID = 0, BUILD_LOAD_TIMER = null, BUILD_FILTER_TIMER = null;
@@ -455,6 +455,7 @@ function handle(m){
   }
   else if (t === "rooms") renderRooms(m.list);
   else if (t === "pview"){
+    window.dispatchEvent(new CustomEvent("society:pview", { detail: m }));
     fillCard(m);
     if (LFG_PROFILE_TARGET === m.nick) fillLfgProfile(m);
 
@@ -481,8 +482,8 @@ function handle(m){
   catch (e) { console.error("[lobby]", e); }
 }
   else if (t === "chat"){
-    addLog(m.m, m.name);
-    try { Lobby.setChat(m.nick, m.m); } catch (e) { console.error("[lobby]", e); }
+    addLog(m.m, m.name, m.role, m.name_color);
+    try { if (window.Lobby) window.Lobby.setChat(m.nick, m.m); } catch (e) { console.error("[lobby]", e); }
   }
   else if (t === "lfg"){ LFG = m.list; LFG_LOADED = true; renderLfg(); }
   else if (t === "lfg_error") showLfgToast(m.m);
@@ -591,7 +592,9 @@ function handle(m){
   else if (t === "player_profile"){
     try { Lobby.setPlayerName(m.nick, m.p.display_name); } catch (e) { console.error("[lobby]", e); }
   }
-  else if (t === "quiz_result"){ QZ.done = true; renderQuiz(); $("qMsg").textContent = m.ok ? "Acertou! +10 moedas." : "Errou. A resposta era: " + QZ.o[m.correct]; }
+     else if (typeof t === "string" && t.indexOf("quiz_") === 0) {
+     try { window.SocietyQuiz && window.SocietyQuiz.onMessage(m); } catch (e) { console.error("[quiz]", e); }
+   }
   else if (t === "me"){ ME = {coins:m.coins, owned:m.owned, equip:m.equip}; renderItems(); updateCoins(); }
   else if (t === "friends"){
     try { window.FriendsUI?.setFriends(m); } catch (e) { console.error("[friends]", e); }
@@ -682,7 +685,7 @@ function applyInit(m, fromCache) {
 
   if (!fromCache) HOME_COMMUNITY_REQUESTED = false;
   try { tab("home"); } catch (e) {}
-  try { if (QZ) renderQuiz(); } catch (e) {}
+  try { window.SocietyQuiz && window.SocietyQuiz.setState(QZ, { cached: fromCache }); } catch (e) { console.error("[quiz]", e); }
   try { fillProfile(); } catch (e) {}
   try { setUnread(m.unread || 0); } catch (e) {}
   try { renderItems(); } catch (e) {}
@@ -717,12 +720,17 @@ function applyGuestMode(){
 
 function updateCoins(){ $("coinsAmount").textContent = Number(ME.coins || 0).toLocaleString("pt-BR"); }
 
-function addLog(text, who){
+function addLog(text, who, role, nameColor){
   const log = $("log");
   if (!log) return;
   const d = el("div");
-  if (who) d.append(el("b", who + ": "), text);
-  else d.textContent = text;
+  if (who) {
+    const b = el("b", who + ": ");
+    if (window.RoleColors && (role || nameColor)) {
+      window.RoleColors.apply(b, { role: role, name_color: nameColor });
+    }
+    d.append(b, text);
+  } else d.textContent = text;
   log.append(d);
   while (log.children.length > 8) log.firstChild.remove();
   setTimeout(() => d.remove(), 30000);
@@ -1074,56 +1082,511 @@ function homeTierRank(tier){
   return index === -1 ? HOME_TIER_ORDER.length : index;
 }
 
+/* ---------- heróis com foto (catálogo + meta) ---------- */
+const META_LANE_ORDER = ["EXP", "Jungle", "Mid", "Gold", "Roam"];
+const META_TIER_ORDER = ["S", "A", "B", "C"];
+const CATALOG_LANE_KEYS = {
+  EXP: ["exp lane"],
+  Jungle: ["jungling", "jungle"],
+  Mid: ["mid lane"],
+  Gold: ["gold lane"],
+  Roam: ["roaming", "roam"]
+};
+
+function catalogHeroByName(name){
+  const list = window.HERO_CATALOG || [];
+  const target = String(name || "").trim().toLocaleLowerCase("pt-BR");
+  if (!target) return null;
+  return list.find(hero => String(hero.name).toLocaleLowerCase("pt-BR") === target) || null;
+}
+
+function catalogImage(url){
+  if (!url) return "";
+  return (window.HeroCatalog && typeof window.HeroCatalog.routeImg === "function")
+    ? window.HeroCatalog.routeImg(url) : url;
+}
+
+function heroArtUrl(hero){
+  return hero ? catalogImage(hero.wallpaper || hero.head || hero.file || "") : "";
+}
+
+function heroPortraitUrl(hero){
+  return hero ? catalogImage(hero.file || hero.head || hero.wallpaper || "") : "";
+}
+
+function heroRolesText(hero){
+  if (!hero || !Array.isArray(hero.roles) || !hero.roles.length) return "";
+  const label = window.HeroCatalog && window.HeroCatalog.roleLabel;
+  return hero.roles.map(role => (label ? label(role) : role)).join(" / ");
+}
+
+function heroInitials(name){
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return parts.slice(0, 2).map(part => part.charAt(0).toLocaleUpperCase("pt-BR")).join("");
+}
+
+function heroImageEl(url, name, cls, eager){
+  const img = el("img", null, cls);
+  img.alt = "";
+  img.loading = eager ? "eager" : "lazy";
+  img.decoding = "async";
+  img.referrerPolicy = "no-referrer";
+  img.src = url;
+  img.addEventListener("error", () => {
+    const fallback = el("span", heroInitials(name), "hero-photo-fallback");
+    if (img.parentNode) img.parentNode.replaceChild(fallback, img);
+  }, {once:true});
+  return img;
+}
+
+function heroTierRank(tier){
+  const index = META_TIER_ORDER.indexOf(String(tier || "").toUpperCase());
+  return index === -1 ? META_TIER_ORDER.length : index;
+}
+
+function laneFromCatalog(value){
+  const lane = String(value || "").toLocaleLowerCase("pt-BR");
+  if (lane.includes("exp")) return "EXP";
+  if (lane.includes("jung")) return "Jungle";
+  if (lane.includes("mid")) return "Mid";
+  if (lane.includes("gold")) return "Gold";
+  if (lane.includes("roam")) return "Roam";
+  return "";
+}
+
+function catalogLaneHeroes(lane, limit){
+  const keys = CATALOG_LANE_KEYS[lane] || [];
+  const list = (window.HERO_CATALOG || []).filter(hero =>
+    (hero.lanes || []).some(laneName =>
+      keys.includes(String(laneName).toLocaleLowerCase("pt-BR"))));
+  list.sort((a, b) => heroTierRank(a.tier) - heroTierRank(b.tier) || (b.win || 0) - (a.win || 0));
+  return limit ? list.slice(0, limit) : list;
+}
+
+function catalogTopHeroes(limit){
+  const list = (window.HERO_CATALOG || []).slice().sort((a, b) =>
+    heroTierRank(a.tier) - heroTierRank(b.tier) || (b.win || 0) - (a.win || 0));
+  return limit ? list.slice(0, limit) : list;
+}
+
+function tierBadge(tier, cls){
+  if (!tier) return null;
+  const badge = el("span", String(tier), cls || "meta-tier-badge");
+  badge.dataset.tier = String(tier).charAt(0).toUpperCase();
+  return badge;
+}
+
+function metaEntriesByRating(lane){
+  return COMMUNITY_META
+    .filter(entry => !lane || entry.lane === lane)
+    .sort((a, b) => communityRating(b) - communityRating(a) ||
+      Number(b.created_at) - Number(a.created_at));
+}
+
+function openHeroPage(name){
+  if (!name) return;
+  if (window.SocietyHero && typeof window.SocietyHero.open === "function") {
+    try { window.SocietyHero.open(name); return; } catch (error) {
+      console.error("[meta] abrir herói:", error);
+    }
+  }
+  tab("heroes");
+}
+
+function laneHighlight(lane, used){
+  const entries = metaEntriesByRating(lane);
+  const referenceHeroes = catalogLaneHeroes(lane, 8);
+  const taken = used || new Set();
+  let hero = null, primaryName = "";
+
+  if (entries.length) {
+    primaryName = entries[0].hero;
+    hero = catalogHeroByName(primaryName) || referenceHeroes[0] || null;
+  } else {
+    hero = referenceHeroes.find(item =>
+      !taken.has(String(item.name).toLocaleLowerCase("pt-BR"))) || referenceHeroes[0] || null;
+    if (hero) taken.add(String(hero.name).toLocaleLowerCase("pt-BR"));
+    primaryName = hero ? hero.name : "";
+  }
+
+  return {
+    entries,
+    referenceHeroes,
+    hero,
+    primaryName,
+    tier: entries.length ? entries[0].tier : (hero && hero.tier)
+  };
+}
+
+function metaLaneCard(lane, used){
+  const { entries, referenceHeroes, hero, primaryName, tier } = laneHighlight(lane, used);
+  const card = el("button", null, "meta-lane-card" + (entries.length ? "" : " is-reference"));
+  card.type = "button";
+  card.setAttribute("aria-label", "Ver meta da rota " + communityLaneName(lane));
+
+  const art = el("span", null, "meta-lane-art");
+  const url = heroArtUrl(hero);
+  if (url) art.append(heroImageEl(url, primaryName, "meta-lane-img", true));
+  else {
+    art.classList.add("is-empty");
+    art.append(el("span", heroInitials(primaryName), "hero-photo-fallback"));
+  }
+  card.append(art);
+
+  const content = el("span", null, "meta-lane-content");
+  content.append(el("span", communityLaneName(lane), "meta-lane-label"));
+  content.append(el("b", primaryName || "Sem indicação", "meta-lane-name"));
+
+  const info = el("span", null, "meta-lane-info");
+  const badge = tierBadge(tier, "meta-tier-badge is-small");
+  if (badge) info.append(badge);
+  info.append(el("small", entries.length
+    ? "▲ " + communityRating(entries[0]) + " relevantes · " + entries[0].patch
+    : "Referência do catálogo"));
+  content.append(info);
+
+  const picks = entries.length
+    ? entries.slice(0, 4).map(entry => entry.hero)
+    : referenceHeroes.map(item => item.name);
+  const thumbs = el("span", null, "meta-lane-thumbs");
+  picks.filter(name => name && name !== primaryName).slice(0, 3).forEach(name => {
+    const thumb = el("span", null, "meta-lane-thumb");
+    thumb.title = name;
+    const thumbUrl = heroPortraitUrl(catalogHeroByName(name));
+    if (thumbUrl) thumb.append(heroImageEl(thumbUrl, name, ""));
+    else thumb.append(el("span", heroInitials(name), "hero-photo-fallback"));
+    thumbs.append(thumb);
+  });
+  if (thumbs.childElementCount) content.append(thumbs);
+  card.append(content);
+
+  card.addEventListener("click", () => {
+    COMMUNITY_META_LANE = lane;
+    tab("meta");
+    const target = $("metaList");
+    if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+  return card;
+}
+
+function renderMetaLaneShowcase(){
+  const wrap = $("metaLaneShowcase");
+  if (!wrap) return;
+  wrap.replaceChildren();
+  if (!(window.HERO_CATALOG || []).length && !COMMUNITY_META.length) {
+    wrap.append(el("p", "Carregando heróis do catálogo...", "community-game-message"));
+    return;
+  }
+  const used = new Set();
+  META_LANE_ORDER.forEach(lane => wrap.append(metaLaneCard(lane, used)));
+}
+
+function metaSuggestionCard(hero, lane){
+  const card = el("article", null, "meta-suggest-card");
+  const art = el("span", null, "meta-suggest-art");
+  const url = heroArtUrl(hero);
+  if (url) art.append(heroImageEl(url, hero.name, "meta-suggest-img"));
+  else art.append(el("span", heroInitials(hero.name), "hero-photo-fallback"));
+  const badge = tierBadge(hero.tier, "meta-tier-badge is-small");
+  if (badge) art.append(badge);
+  card.append(art);
+
+  const body = el("div", null, "meta-suggest-body");
+  body.append(el("b", hero.name, "meta-suggest-name"));
+  const details = [heroRolesText(hero),
+    hero.win != null ? Number(hero.win).toFixed(1) + "% win" : ""].filter(Boolean).join(" · ");
+  body.append(el("small", details || "Herói do catálogo", "meta-suggest-meta"));
+
+  const pick = el("button", "Indicar", "meta-suggest-pick");
+  pick.type = "button";
+  pick.setAttribute("aria-label", "Indicar " + hero.name + " para o meta");
+  pick.addEventListener("click", () => indicateHero(hero.name, lane));
+  body.append(pick);
+  card.append(body);
+  return card;
+}
+
+function indicateHero(name, lane){
+  if (window.MetaPicker && typeof window.MetaPicker.select === "function") {
+    window.MetaPicker.select(name);
+  }
+  if (lane && $("metaLane")) $("metaLane").value = lane;
+  showCommunityMessage("meta", name + " selecionado. Complete rota, nível e patch para publicar.", false);
+  const form = $("metaForm");
+  if (form) {
+    form.scrollIntoView({behavior:"smooth", block:"center"});
+    setTimeout(() => {
+      const patch = $("metaPatch");
+      if (patch) patch.focus({preventScroll:true});
+    }, 320);
+  }
+}
+
+function renderMetaSuggestions(){
+  const box = $("metaSuggestions"), grid = $("metaSuggestGrid");
+  if (!box || !grid) return;
+
+  const lane = COMMUNITY_META_LANE;
+  let heroes;
+  if (lane === "all") {
+    const seen = new Set();
+    heroes = META_LANE_ORDER
+      .flatMap(item => catalogLaneHeroes(item, 2))
+      .filter(hero => {
+        const key = String(hero.name).toLocaleLowerCase("pt-BR");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  } else {
+    heroes = catalogLaneHeroes(lane, 10);
+  }
+  heroes = heroes.slice(0, 12);
+
+  grid.replaceChildren();
+  const count = $("metaSuggestCount");
+  if (!heroes.length) {
+    box.hidden = true;
+    if (count) count.textContent = "";
+    return;
+  }
+  box.hidden = false;
+  if (count) {
+    count.textContent = heroes.length + (heroes.length === 1 ? " herói" : " heróis") +
+      (lane === "all" ? " · todas as rotas" : " · " + communityLaneName(lane));
+  }
+  heroes.forEach(hero => grid.append(metaSuggestionCard(hero, lane === "all" ? "" : lane)));
+}
+
+function metaHeroStats(hero){
+  const row = el("div", null, "meta-route-stats");
+  [["WIN", hero.win, "win"], ["PICK", hero.pick, "pick"], ["BAN", hero.ban, "ban"]].forEach(([label, value, kind]) => {
+    if (value == null) return;
+    const cell = el("span", null, "meta-route-stat");
+    cell.dataset.kind = kind;
+    cell.append(el("small", label), el("b", Number(value).toFixed(1) + "%"));
+    row.append(cell);
+  });
+  return row;
+}
+
+function metaHeroCard(entry){
+  const hero = catalogHeroByName(entry.hero);
+  const card = el("article", null, "community-meta-card meta-route-card");
+
+  const art = el("button", null, "meta-route-art");
+  art.type = "button";
+  art.setAttribute("aria-label", "Abrir a página de " + entry.hero);
+  const url = heroArtUrl(hero);
+  if (url) art.append(heroImageEl(url, entry.hero, "meta-route-img"));
+  else {
+    art.classList.add("is-empty");
+    art.append(el("span", heroInitials(entry.hero), "hero-photo-fallback"));
+  }
+  const badge = tierBadge(entry.tier, "meta-route-tier");
+  if (badge) art.append(badge);
+  art.append(el("span", communityLaneName(entry.lane), "meta-route-lane"));
+  art.append(el("span", entry.hero, "meta-route-name"));
+  art.addEventListener("click", () => openHeroPage(entry.hero));
+  card.append(art);
+
+  const body = el("div", null, "meta-route-body");
+  const tags = el("div", null, "meta-route-tags");
+  tags.append(el("span", "Patch " + entry.patch, "community-game-tag"));
+  const roles = heroRolesText(hero);
+  if (roles) tags.append(el("span", roles, "community-game-tag is-muted"));
+  body.append(tags);
+
+  if (entry.notes) body.append(el("p", entry.notes, "meta-route-notes"));
+  if (hero) body.append(metaHeroStats(hero));
+
+  const byline = el("p", null, "community-meta-subline");
+  byline.textContent = "por " + entry.author + " · " + communityDate(entry.created_at);
+  body.append(byline);
+
+  const votes = createCommunityVoteActions("meta", entry);
+  votes.classList.add("meta-route-votes");
+  body.append(votes);
+
+  card.append(body);
+  return card;
+}
+
+function renderCommunityMeta(){
+  const list = $("metaList");
+  if (!list) return;
+  document.querySelectorAll("[data-meta-lane]").forEach(option => {
+    option.setAttribute("aria-pressed", String(option.dataset.metaLane === COMMUNITY_META_LANE));
+  });
+  refreshMetaPatchFilter();
+  renderMetaLaneShowcase();
+  renderMetaSuggestions();
+
+  list.replaceChildren();
+  const patch = $("metaPatchFilter") ? $("metaPatchFilter").value : "";
+  const entries = COMMUNITY_META
+    .filter(entry => (COMMUNITY_META_LANE === "all" || entry.lane === COMMUNITY_META_LANE) &&
+      (!patch || entry.patch === patch))
+    .sort((a, b) => communityRating(b) - communityRating(a) ||
+      Number(b.created_at) - Number(a.created_at));
+
+  const empty = $("metaEmpty");
+  if (empty) empty.hidden = entries.length > 0;
+  list.classList.toggle("is-empty", entries.length === 0);
+  entries.forEach(entry => list.append(metaHeroCard(entry)));
+}
+
+function homeHeroCard(item){
+  const hero = catalogHeroByName(item.name);
+  const card = el("button", null, "home-tier-card" + (item.reference ? " is-reference" : ""));
+  card.type = "button";
+  card.setAttribute("aria-label", "Abrir a página de " + item.name);
+
+  const art = el("span", null, "home-tier-art");
+  const url = heroArtUrl(hero);
+  if (url) art.append(heroImageEl(url, item.name, "home-tier-img"));
+  else {
+    art.classList.add("is-empty");
+    art.append(el("span", heroInitials(item.name), "hero-photo-fallback"));
+  }
+  const badge = tierBadge(item.tier, "home-tier-badge");
+  if (badge) art.append(badge);
+  if (item.reference) art.append(el("span", "CATÁLOGO", "home-tier-ref"));
+
+  const copy = el("span", null, "home-tier-copy");
+  copy.append(el("b", item.name, "home-tier-name"));
+  copy.append(el("small",
+    [item.lane ? communityLaneName(item.lane) : "", item.metric].filter(Boolean).join(" · "),
+    "home-tier-meta"));
+  card.append(art, copy);
+  card.addEventListener("click", () => openHeroPage(item.name));
+  return card;
+}
+
+function homeLaneCard(lane, used){
+  const { entries, referenceHeroes, hero, primaryName, tier } = laneHighlight(lane, used);
+
+  const card = el("button", null, "home-lane-card" + (entries.length ? "" : " is-reference"));
+  card.type = "button";
+  card.setAttribute("aria-label", "Abrir meta da rota " + communityLaneName(lane));
+
+  const art = el("span", null, "home-lane-art");
+  const url = heroArtUrl(hero);
+  if (url) art.append(heroImageEl(url, primaryName, "home-lane-img", true));
+  else {
+    art.classList.add("is-empty");
+    art.append(el("span", heroInitials(primaryName), "hero-photo-fallback"));
+  }
+  const badge = tierBadge(tier, "home-lane-tier");
+  if (badge) art.append(badge);
+
+  const content = el("span", null, "home-lane-content");
+  content.append(el("span", communityLaneName(lane), "home-lane-label"));
+  content.append(el("b", primaryName || "Sem indicação", "home-lane-name"));
+  content.append(el("small", entries.length
+    ? "▲ " + communityRating(entries[0]) + " relevantes · " + entries[0].patch
+    : "Referência do catálogo", "home-lane-meta"));
+
+  const picks = entries.length
+    ? entries.slice(0, 4).map(entry => entry.hero)
+    : referenceHeroes.map(item => item.name);
+  const thumbs = el("span", null, "home-lane-thumbs");
+  picks.filter(name => name && name !== primaryName).slice(0, 3).forEach(name => {
+    const thumb = el("span", null, "home-lane-thumb");
+    thumb.title = name;
+    const thumbUrl = heroPortraitUrl(catalogHeroByName(name));
+    if (thumbUrl) thumb.append(heroImageEl(thumbUrl, name, ""));
+    else thumb.append(el("span", heroInitials(name), "hero-photo-fallback"));
+    thumbs.append(thumb);
+  });
+  if (thumbs.childElementCount) content.append(thumbs);
+
+  card.append(art, content);
+  card.addEventListener("click", () => {
+    COMMUNITY_META_LANE = lane;
+    tab("meta");
+    const target = $("metaList");
+    if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+  return card;
+}
+
+function renderHomeMetaLanes(){
+  const wrap = $("homeMetaLanes");
+  if (!wrap) return;
+  wrap.replaceChildren();
+  if (!COMMUNITY_META.length && !(window.HERO_CATALOG || []).length) {
+    wrap.append(el("p", "Carregando meta da comunidade...", "home-preview-empty"));
+    return;
+  }
+  const used = new Set();
+  META_LANE_ORDER.forEach(lane => wrap.append(homeLaneCard(lane, used)));
+}
+
 function renderHomeLiveMeta(){
   const track = $("homeTickerTrack"), grid = $("homeTierPreview");
   if (!track && !grid) return;
   const byRating = (a, b) => communityRating(b) - communityRating(a) ||
     Number(b.created_at) - Number(a.created_at);
+  const rated = [...COMMUNITY_META].sort(byRating);
+  const byTier = [...COMMUNITY_META].sort((a, b) =>
+    homeTierRank(a.tier) - homeTierRank(b.tier) || byRating(a, b));
+  const referenceMode = rated.length === 0;
 
   if (track) {
     track.replaceChildren();
-    const hot = [...COMMUNITY_META].sort(byRating).slice(0, 12);
+    const hot = referenceMode
+      ? catalogTopHeroes(12).map(hero => ({hero:hero.name, tier:hero.tier, reference:true}))
+      : rated.slice(0, 12);
     if (!hot.length) {
       track.classList.add("is-static");
-      track.append(el("span", "Ainda não há contribuições de meta.", "home-ticker-item"));
+      track.append(el("span", "Carregando heróis...", "home-ticker-item"));
     } else {
       track.classList.remove("is-static");
-      [false, true].forEach(isCopy => hot.forEach(entry => {
-        const item = el("span", null, "home-ticker-item");
-        if (isCopy) item.setAttribute("aria-hidden", "true");
-        item.append(
-          getIcon("herois", entry.hero),
-          el("b", entry.hero),
-          el("span", "Tier " + entry.tier),
-          el("span", "▲ " + communityRating(entry), "home-ticker-up")
+      [false, true].forEach(isCopy => hot.forEach(item => {
+        const node = el("span", null, "home-ticker-item");
+        if (isCopy) node.setAttribute("aria-hidden", "true");
+        node.append(
+          getIcon("herois", item.hero),
+          el("b", item.hero),
+          el("span", "Tier " + item.tier)
         );
-        track.append(item);
+        if (item.reference) node.append(el("span", "catálogo", "home-ticker-tag"));
+        else node.append(el("span", "▲ " + communityRating(item), "home-ticker-up"));
+        track.append(node);
       }));
     }
   }
 
   if (grid) {
     grid.replaceChildren();
-    const top = [...COMMUNITY_META]
-      .sort((a, b) => homeTierRank(a.tier) - homeTierRank(b.tier) || byRating(a, b))
-      .slice(0, 8);
-    if (!top.length) grid.append(el("p", "Ainda não há contribuições de meta.", "home-preview-empty"));
-    top.forEach(entry => grid.append(homeCommunityRow(
-      entry.hero,
-      communityLaneName(entry.lane) + " · " + entry.patch,
-      "Tier " + entry.tier + " · " + communityRating(entry) + " 👍",
-      "meta",
-      entry.hero
-    )));
+    const cards = referenceMode
+      ? catalogTopHeroes(8).map(hero => ({
+          name: hero.name,
+          tier: hero.tier,
+          lane: laneFromCatalog((hero.lanes || [])[0]),
+          metric: hero.win != null ? Number(hero.win).toFixed(1) + "% win" : "referência",
+          reference: true
+        }))
+      : byTier.slice(0, 8).map(entry => ({
+          name: entry.hero,
+          tier: entry.tier,
+          lane: entry.lane,
+          metric: communityRating(entry) + " 👍 · " + entry.patch,
+          reference: false
+        }));
+    if (!cards.length) grid.append(el("p", "Ainda não há heróis para mostrar.", "home-preview-empty"));
+    cards.forEach(item => grid.append(homeHeroCard(item)));
+    grid.classList.toggle("is-reference", cards.length > 0 && cards.every(item => item.reference));
   }
 }
 
 function renderHomeCommunityPreviews(){
   renderHomeLiveMeta();
-  const trending = $("homeBuildTrending"), recent = $("homeBuildRecent"), meta = $("homeMetaLanes");
-  if (!trending || !recent || !meta) return;
-  const buildRatingOrder = (a, b) => communityRating(b) - communityRating(a) ||
-    Number(b.created_at) - Number(a.created_at);
+  renderHomeMetaLanes();
+  const trending = $("homeBuildTrending"), recent = $("homeBuildRecent");
+  if (!trending || !recent) return;
   const topBuilds = COMMUNITY_BUILDS_TRENDING.slice(0, 3);
   const recentBuilds = COMMUNITY_BUILDS_RECENT.slice(0, 3);
 
@@ -1143,20 +1606,6 @@ function renderHomeCommunityPreviews(){
     communityLaneName(entry.lane) + " · " + entry.patch + " · por " + entry.author,
     communityDate(entry.created_at),
     "builds",
-    entry.hero
-  )));
-
-  const laneOrder = ["EXP", "Jungle", "Mid", "Gold", "Roam"];
-  const laneHighlights = laneOrder.map(lane => COMMUNITY_META
-    .filter(entry => entry.lane === lane)
-    .sort(buildRatingOrder)[0]).filter(Boolean);
-  meta.replaceChildren();
-  if (!laneHighlights.length) meta.append(el("p", "Ainda não há contribuições de meta.", "home-preview-empty"));
-  laneHighlights.forEach(entry => meta.append(homeCommunityRow(
-    communityLaneName(entry.lane),
-    entry.hero + " · Tier " + entry.tier + " · " + entry.patch,
-    entry.helpful + " avaliações positivas",
-    "meta",
     entry.hero
   )));
 }
@@ -1285,6 +1734,13 @@ function setupCommunity(){
   $("metaForm").addEventListener("submit", event => {
     event.preventDefault();
     if (!event.currentTarget.reportValidity()) return;
+    if (!$("metaHero").value) {
+      // Se o jogador digitou o nome exato e clicou em publicar, seleciona agora
+      const typed = $("metaHeroSearch") ? $("metaHeroSearch").value.trim() : "";
+      if (typed && window.MetaPicker && typeof window.MetaPicker.select === "function") {
+        window.MetaPicker.select(typed);
+      }
+    }
     if (!$("metaHero").value) {
       showCommunityMessage("meta", "Escolha um herói da lista.", true);
       return;
@@ -1466,43 +1922,15 @@ function renderBuildItemSelection(){
 }
 
 function refreshMetaPatchFilter(){
-  const select = $("metaPatchFilter"), selected = select.value;
-  const patches = [...new Set(COMMUNITY_META.map(entry => entry.patch))].sort().reverse();
+  const select = $("metaPatchFilter");
+  if (!select) return;
+  const selected = select.value;
+  const patches = [...new Set(COMMUNITY_META.map(entry => entry.patch))]
+    .filter(Boolean).sort().reverse();
   select.textContent = "";
   select.append(new Option("Todos", ""));
   patches.forEach(patch => select.append(new Option(patch, patch)));
   select.value = patches.includes(selected) ? selected : "";
-}
-
-function renderCommunityMeta(){
-  const list = $("metaList");
-  if (!list) return;
-  refreshMetaPatchFilter();
-  list.textContent = "";
-  const patch = $("metaPatchFilter").value;
-  const entries = COMMUNITY_META.filter(entry =>
-    (COMMUNITY_META_LANE === "all" || entry.lane === COMMUNITY_META_LANE) &&
-    (!patch || entry.patch === patch)
-  );
-  $("metaEmpty").hidden = entries.length > 0;
-  entries.forEach(entry => {
-    const card = el("article", null, "community-meta-card");
-    const top = el("div", null, "community-meta-top");
-    const identity = el("div");
-    const title = el("div", null, "community-meta-title");
-    const heroWrap = el("span", null, "community-meta-hero-icon");
-    heroWrap.append(getIcon("herois", entry.hero));
-    title.append(heroWrap, el("h4", entry.hero), el("span", communityLaneName(entry.lane), "community-game-tag"));
-    title.append(el("span", entry.tier, "community-game-tag community-meta-tier community-tier-" + entry.tier));
-    identity.append(title);
-    identity.append(el("p", entry.patch + " · por " + entry.author + " · " + communityDate(entry.created_at),
-      "community-meta-subline"));
-    top.append(identity);
-    card.append(top);
-    if (entry.notes) card.append(el("p", entry.notes, "community-meta-notes"));
-    card.append(createCommunityVoteActions("meta", entry));
-    list.append(card);
-  });
 }
 
 function createCommunityVoteActions(scope, entry){
@@ -2753,7 +3181,9 @@ function renderLfg(){
     const top = el("div", null, "lfg-player-top");
     const name = el("div", null, "lfg-player-name");
     const status = availabilityLabel(p, details);
-    name.append(el("h4", p.display), el("span", status === "Agora" ? "Online · Disponível agora" :
+    const nameEl = el("h4", p.display);
+    if (window.RoleColors) window.RoleColors.apply(nameEl, { role: p.account_role, name_color: p.name_color });
+    name.append(nameEl, el("span", status === "Agora" ? "Online · Disponível agora" :
       p.online ? "Online · " + status : "Offline", "lfg-status " + availabilityClass(p, details)));
     top.append(ProfileUI.createAvatar({
       display_name: p.display, username: p.nick, avatar: p.avatar
@@ -2883,7 +3313,9 @@ function dmRenderThreadList(){
     btn.append(av);
 
     const copy = el("span", null, "dm-thread-copy" + (unread ? " is-unread" : ""));
-    copy.append(el("b", t.name));
+    const peerName = el("b", t.name);
+    if (window.RoleColors) window.RoleColors.apply(peerName, t);
+    copy.append(peerName);
     copy.append(el("span", (t.last || "Sem mensagens ainda").slice(0, 80), "dm-thread-preview"));
     btn.append(copy);
 
@@ -3238,16 +3670,6 @@ function fillProfile(saved){
   if (saved) profileUpdated();
   else ProfileUI.renderProfile(PROFILE, SELF);
 }
-function renderQuiz(){
-  $("qText").textContent = QZ.q; const o = $("qOpts"); o.textContent = "";
-  QZ.o.forEach((x, i) => { const b = el("button", x, "opt"); b.disabled = QZ.done; b.onclick = () => send({t:"quiz_answer", i}); o.append(b); });
-  $("qMsg").textContent = QZ.done ? "Você já respondeu hoje. Volte amanhã!" : "Acertou = +10 moedas. Uma tentativa por dia.";
-}
-$("cfgNames").onchange = $("cfgBubbles").onchange = () => {
-  CFG = {names:$("cfgNames").checked, bubbles:$("cfgBubbles").checked};
-  saveGameSettings();
-  try { Lobby.setConfig({names: CFG.names, bubbles: CFG.bubbles}); } catch (e) {}
-};
 
 /* ---------- painéis dentro do jogo (salas, loja, inventário) ---------- */
 const PTITLES = {rooms:"Salas", shop:"Loja", inv:"Inventário"}, PIDS = {rooms:"roomList", shop:"shopItems", inv:"invItems"};

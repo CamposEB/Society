@@ -819,7 +819,7 @@
       document.getElementById("wrReset").addEventListener("click", resetWinRate);
       updateWinRate();
 
-      // Treino de Retribution (static/js/retri-trainer.js)
+      // Treino de Caçar (static/js/retri-trainer.js)
       const retriRoot = document.getElementById("retriRoot");
       if (window.RetriTrainer) {
         window.RetriTrainer.mount(retriRoot);

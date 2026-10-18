@@ -1,35 +1,30 @@
 /* ============================================================================
-   Society MLBB — Treino de Retribution (v4 · barra precisa)
-   A barra de HP do objetivo cai com golpes aleatórios. Quando a PONTA da barra
-   cruza a linha do seu dano de Retribution, aperte (botão, toque ou Espaço)
-   antes que o jungler rival roube ou o objetivo morra.
+   Society MLBB — Treino de Caçar (v5 · precisão de 1 ms)
+   A barra de HP mostra a janela final do objetivo e cai de forma contínua e
+   determinística: o HP em qualquer instante é calculado por uma única fórmula,
+   usada tanto no desenho quanto no momento do clique. Assim o erro é medido em
+   milissegundos de verdade, não pelo frame da animação.
 
    Uso: RetriTrainer.mount(elemento)  ·  RetriTrainer.stop()
+   (O nome interno "Retri" é mantido por compatibilidade com tools.js.)
 
-   ⚠️ Os valores de HP e de dano abaixo são ESTIMATIVAS PARA TREINO, não dados
-   oficiais da Moonton. Ajuste OBJECTIVES, retriDamage() e CONTESTS à vontade.
-
-   v4
-   • CORREÇÃO: a barra e a lógica agora usam exatamente a mesma régua.
-     Fill, zona de secure e linha ficam dentro da mesma trilha (.rt-track) e
-     o fill não tem mais transição de largura. Apertar com a ponta ainda antes
-     da linha = "CEDO DEMAIS" (antes parecia antes, mas contava como acerto).
-   • Zona de secure listrada, ponta brilhante e estado "aproximando".
-   • Botão usa a imagem do Caçar (RETRI_ICON) com fallback para o SVG.
-   • Proteção contra disparo duplo (Espaço + click em botão focado).
+   ⚠️ Os valores de HP e dano são ESTIMATIVAS PARA TREINO, não dados oficiais.
    ============================================================================ */
 (() => {
   "use strict";
 
-  const STORE_KEY = "society.retri.v1";
+  const STORE_KEY = "society.retri.v2";
   const BASE_DPS = 1800;
 
-  /* Caminho da imagem do Caçar, relativo à PÁGINA que carrega este script.
-     (Dica: renomeie para "cacar.png" e troque aqui, evita problemas com "ç".) */
-  const RETRI_ICON = "static/assets/ca%C3%A7ar.png";
+  /* Caminho absoluto: funciona tanto na raiz do site quanto em /static/. */
+  const RETRI_ICON = "/static/assets/ca%C3%A7ar.png";
 
-  /* Quanto antes da linha o estado "aproximando" acende (× dano do retri). */
+  /* Quanto antes da linha o estado "aproximando" acende (× dano do Caçar). */
   const NEAR_FACTOR = 1.35;
+
+  /* Janela de aproximação: a barra começa cheia e o alvo chega em ~2–4 s. */
+  const LEAD_MIN = 1600;
+  const LEAD_MAX = 4200;
 
   /* ---------- DADOS EDITÁVEIS ---------- */
   const OBJECTIVES = [
@@ -48,18 +43,22 @@
     { id: "pro",   name: "Contest pro",   mult: 3.2, steal: [140, 260] }
   ];
 
+  /* Precisão = quantos ms depois do ponto ideal o Caçar saiu (0 = perfeito). */
   const GRADES = [
-    { id: "perfect", max: 60,       label: "PERFEITO", sub: "Secure garantido!",      pts: 100 },
-    { id: "great",   max: 130,      label: "ÓTIMO",    sub: "Secure garantido!",      pts: 70 },
-    { id: "good",    max: 250,      label: "BOM",      sub: "Secure garantido.",      pts: 40 },
-    { id: "slow",    max: Infinity, label: "LENTO",    sub: "Garantiu, mas na raça.", pts: 15 }
+    { id: "perfect", max: 1,        label: "PERFEITO", sub: "Diferença de 1 ms. Secure cirúrgico!", pts: 150 },
+    { id: "great",   max: 8,        label: "ÓTIMO",    sub: "Poucos milissegundos de diferença.",   pts: 100 },
+    { id: "good",    max: 30,       label: "BOM",      sub: "Secure com folga curta.",              pts: 60 },
+    { id: "slow",    max: 150,      label: "NO LIMITE",sub: "Garantiu, mas já estava tarde.",       pts: 25 },
+    { id: "late",    max: Infinity, label: "TARDE",    sub: "Garantiu no último instante.",         pts: 10 }
   ];
 
   const retriDamage = level => Math.round(1000 + (level - 1) * (2000 / 14));
 
   /* ---------- helpers ---------- */
   const rand = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const fmt = n => Math.round(n).toLocaleString("pt-BR");
+  const fmtMs = n => Number(n).toFixed(1).replace(".", ",") + " ms";
   const h = (tag, cls, text) => {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -78,9 +77,14 @@
   let lastCastAt = 0;
   const refs = {};
   const cfg = { level: 15, obj: "lord8", contest: "fifty" };
-  const stats = { score: 0, streak: 0, attempts: 0, secures: 0, reacts: [], history: [] };
+  const stats = { score: 0, streak: 0, attempts: 0, secures: 0, precisions: [], history: [] };
   const best = loadBest();
-  const round = { phase: "idle", hp: 0, max: 0, dmg: 0, mult: 1, nextTick: 0, openAt: null, enemyAt: null, enemyDelay: 0 };
+  const round = {
+    phase: "idle",
+    hp: 0, startHp: 0, max: 0, dmg: 0, dps: 1, mult: 1,
+    startAt: 0, targetAt: 0, deathAt: 0,
+    enemyAt: null, enemyDelay: 0
+  };
 
   const objective = () => OBJECTIVES.find(o => o.id === cfg.obj) || OBJECTIVES[0];
   const contest   = () => CONTESTS.find(c => c.id === cfg.contest) || CONTESTS[0];
@@ -88,16 +92,28 @@
   function loadBest() {
     try {
       const raw = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+      const precision = Number(raw.precision != null ? raw.precision : raw.react);
       return {
         score: Number(raw.score) || 0,
         streak: Number(raw.streak) || 0,
-        react: Number(raw.react) || 0
+        precision: Number.isFinite(precision) ? precision : null
       };
-    } catch (e) { return { score: 0, streak: 0, react: 0 }; }
+    } catch (e) { return { score: 0, streak: 0, precision: null }; }
   }
   function saveBest() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(best)); } catch (e) {}
   }
+
+  /* ---------- matemática da barra ---------- */
+  /* HP exato em qualquer instante (ms). É a MESMA função usada no cast. */
+  function hpAt(t) {
+    return clamp(round.startHp - round.dps * ((t - round.startAt) / 1000), 0, round.startHp);
+  }
+  /* > 0 = ainda faltam ms para o alvo; < 0 = passou do alvo. */
+  function errorMsAt(t) {
+    return (hpAt(t) - round.dmg) / round.dps * 1000;
+  }
+
 
   /* ---------- SVGs ---------- */
   const SVG_OBJECTIVE = `
@@ -167,7 +183,7 @@
 
     /* ═════════ ARENA ═════════ */
     const arena = h("section", "rt-arena");
-    arena.setAttribute("aria-label", "Arena do treino de Retribution");
+    arena.setAttribute("aria-label", "Arena do treino de Caçar");
 
     /* HUD */
     const hud = h("div", "rt-hud");
@@ -198,7 +214,11 @@
     refs.line = h("div", "rt-bar-line");
     refs.track.append(refs.fill, refs.zone, refs.line);
     bar.append(refs.track);
-    barWrap.append(marks, bar);
+    refs.live = h("p", "rt-live");
+    refs.live.setAttribute("aria-live", "off");
+    refs.liveValue = h("b", null, "—");
+    refs.live.append(h("span", null, "Precisão"), refs.liveValue);
+    barWrap.append(marks, bar, refs.live);
 
     /* STAGE */
     const stage = h("div", "rt-stage");
@@ -216,7 +236,7 @@
     const allyA = unit("rt-unit-ally rt-ally-a", "Aliado");
     const allyB = unit("rt-unit-ally rt-ally-b", "Aliado");
 
-    refs.hint = h("p", "rt-hint", "Aperte quando a ponta da barra entrar na zona dourada.");
+    refs.hint = h("p", "rt-hint", "Aperte quando a ponta da barra entrar na zona dourada — o erro é medido em ms.");
 
     /* Overlay */
     refs.overlay = h("div", "rt-overlay");
@@ -235,14 +255,14 @@
     refs.reset = h("button", "rt-reset", "↺ Zerar sessão");
     refs.reset.type = "button";
 
-    /* Botão RETRI / Caçar (slot de spell) */
+    /* Botão CAÇAR (slot de spell) */
     refs.cast = h("button", "rt-cast");
     refs.cast.type = "button";
-    refs.cast.setAttribute("aria-label", "Lançar Retribution (atalho: Espaço)");
+    refs.cast.setAttribute("aria-label", "Lançar Caçar (atalho: Espaço)");
     refs.cast.innerHTML = `
       <span class="rt-cast-pulse" aria-hidden="true"></span>
       ${SVG_RETRI}
-      <span class="rt-cast-label">RETRI</span>
+      <span class="rt-cast-label">CAÇAR</span>
       <span class="rt-cast-dmg">3.000</span>
     `;
     refs.castDmg = refs.cast.querySelector(".rt-cast-dmg");
@@ -271,9 +291,9 @@
     /* ═════════ PAINEL LATERAL ═════════ */
     const side = h("div", "rt-side");
 
-    const pMine = panel("Seu Retribution");
+    const pMine = panel("Seu Caçar");
     refs.dmgBig = h("div", "rt-dmg-big", "3.000");
-    pMine.append(refs.dmgBig, h("p", "rt-dmg-sub", "dano verdadeiro (estimativa de treino)"));
+    pMine.append(refs.dmgBig, h("p", "rt-dmg-sub", "dano do Caçar (estimativa de treino)"));
     const lvlRow = h("label", "rt-level");
     const lvlText = h("span", null, "Level do herói");
     refs.levelVal = h("b", null, "15");
@@ -324,18 +344,18 @@
     refs.pBest = cell("Melhor seq.");
     refs.pRate = cell("Taxa secure");
     refs.pSecures = cell("Secures");
-    refs.pAvg = cell("Reação média");
-    refs.pFast = cell("Melhor reação");
+    refs.pAvg = cell("Erro médio");
+    refs.pFast = cell("Melhor erro");
     refs.pScore = cell("Recorde");
     refs.chips = h("div", "rt-chips");
     refs.chips.setAttribute("aria-label", "Últimas tentativas");
     pPerf.append(grid, refs.chips);
 
     const note = h("p", "rt-note",
-      "Valores de HP e dano são estimativas para treino, não dados oficiais. " +
-      "Só vale quando a ponta branca da barra entra na zona listrada (fica verde). " +
-      "Dica: reagir só quando a zona abre perde para um jungler rápido — " +
-      "aprenda o ritmo dos golpes e antecipe.");
+      "A barra mostra a janela final do objetivo: o HP cai de forma contínua e " +
+      "o app calcula o instante exato em que ele cruza o seu dano de Caçar. " +
+      "Aperte o mais perto possível desse ponto; o resultado mostra a diferença em ms. " +
+      "Valores de HP e dano são estimativas de treino.");
 
     side.append(pMine, pObj, pCon, pPerf, note);
     root.append(arena, side);
@@ -344,12 +364,11 @@
   /* ---------- eventos ---------- */
   let globalBound = false;
   function bind() {
-    refs.cast.addEventListener("pointerdown", e => { e.preventDefault(); cast(); });
-    refs.cast.addEventListener("click", e => { if (e.detail === 0) cast(); });
+    refs.cast.addEventListener("pointerdown", e => { e.preventDefault(); cast(e.timeStamp); });
+    refs.cast.addEventListener("click", e => { if (e.detail === 0) cast(e.timeStamp); });
     refs.ovStart.addEventListener("click", () => { if (round.phase !== "running") startRound(); });
     refs.reset.addEventListener("click", resetSession);
     refs.level.addEventListener("input", () => { cfg.level = Number(refs.level.value); configChanged(); });
-
     if (!globalBound) {
       document.addEventListener("keydown", e => {
         if (e.code !== "Space" || !root || !root.isConnected || root.offsetParent === null) return;
@@ -357,7 +376,7 @@
         if (el && (el.tagName === "TEXTAREA" || el.tagName === "SELECT" ||
             (el.tagName === "INPUT" && el.type !== "range"))) return;
         e.preventDefault();
-        if (!e.repeat) cast();
+        if (!e.repeat) cast(e.timeStamp);
       });
       document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); });
       window.addEventListener("society:tab", e => { if (e.detail !== "tools") stop(); });
@@ -371,18 +390,35 @@
   function configChanged() { stop(); refresh(); }
 
   function startRound() {
-    const dmg = retriDamage(cfg.level), obj = objective(), ct = contest();
+    const dmg = retriDamage(cfg.level), ct = contest();
+    const dps = BASE_DPS * ct.mult;
+    const lead = rand(LEAD_MIN, LEAD_MAX);
+    const startHp = Math.max(dmg + 1, Math.round(dmg + dps * lead / 1000));
+    const now = performance.now();
+
+    round.startAt = now;
+    round.startHp = startHp;
+    round.max = startHp;
+    round.hp = startHp;
     round.dmg = dmg;
-    round.max = obj.hp;
-    round.hp = Math.min(obj.hp, dmg + rand(1200, 4500));
+    round.dps = dps;
     round.mult = ct.mult;
-    round.openAt = null;
-    round.enemyAt = null;
+    round.targetAt = now + ((startHp - dmg) / dps) * 1000;
+    round.deathAt = now + (startHp / dps) * 1000;
     round.enemyDelay = 0;
-    round.nextTick = performance.now() + 700;
+    round.enemyAt = null;
+    if (ct.steal) {
+      round.enemyDelay = rand(ct.steal[0], ct.steal[1]);
+      round.enemyAt = round.targetAt + round.enemyDelay;
+    }
+
+    lastCastAt = 0;
     refs.floats.textContent = "";
     refs.rival.classList.remove("is-steal");
+    refs.liveValue.textContent = "—";
+    refs.live.dataset.state = "";
     setPhase("running");
+    refresh();
     render();
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
@@ -390,75 +426,79 @@
 
   function frame(t) {
     if (round.phase !== "running") { raf = 0; return; }
-    const ct = contest();
-    let guard = 0;
-    while (t >= round.nextTick && guard++ < 50) {
-      const gap = rand(110, 190);
-      const dmgTick = BASE_DPS * round.mult * (gap / 1000) * rand(0.6, 1.4);
-      round.hp = Math.max(0, round.hp - dmgTick);
-      floatNumber(dmgTick);
-      round.nextTick += gap;
-      if (round.openAt === null && round.hp <= round.dmg) {
-        round.openAt = t;
-        if (ct.steal) {
-          round.enemyDelay = rand(ct.steal[0], ct.steal[1]);
-          round.enemyAt = t + round.enemyDelay;
-        }
-      }
-      if (round.hp <= 0) { render(); end("late"); return; }
-    }
+    round.hp = hpAt(t);
+    if (round.hp <= 0) { render(); end("late"); return; }
     if (round.enemyAt !== null && t >= round.enemyAt) { render(); end("stolen"); return; }
     render();
     raf = requestAnimationFrame(frame);
   }
 
-  function cast() {
+  function cast(at) {
+    /* Usa o timestamp do evento (mais próximo do toque real que o próximo frame). */
+    let now = Number(at);
+    if (!Number.isFinite(now) || now <= 0 || now > 1e12) now = performance.now();
+
     /* evita disparo duplo (Espaço no keydown + click do botão focado) */
-    const now = performance.now();
-    if (now - lastCastAt < 150) return;
+    if (now - lastCastAt < 120) return;
     lastCastAt = now;
 
     if (round.phase === "idle" || round.phase === "result") { startRound(); return; }
     if (round.phase !== "running") return;
-    /* Só vale se a barra DESENHADA já está dentro da zona: render() roda a cada
-       frame logo após o cálculo, então round.hp é exatamente o que está na tela. */
-    if (round.openAt === null || round.hp > round.dmg) { end("early"); return; }
+
+    round.hp = hpAt(now);
+    if (round.hp <= 0) { end("late"); return; }
     if (round.enemyAt !== null && now >= round.enemyAt) { end("stolen"); return; }
-    end("secure", now - round.openAt);
+
+    const earlyMs = errorMsAt(now); // > 0 = ainda faltava HP para o alvo
+    if (earlyMs > 0) { end("early", earlyMs); return; }
+    end("secure", -earlyMs);
   }
 
-  function end(kind, react) {
+  function end(kind, value) {
     cancelAnimationFrame(raf); raf = 0;
     stats.attempts++;
     let title = "", sub = "", detail = "", pts = 0, chip = { id: "fail", label: "✕" };
 
     if (kind === "secure") {
-      const g = GRADES.find(x => react <= x.max);
+      /* arredonda para 0,001 ms: evita 1,0000000002 cair fora do PERFEITO */
+      const precision = Math.max(0, Math.round((Number(value) || 0) * 1000) / 1000);
+      const g = GRADES.find(x => precision <= x.max) || GRADES[GRADES.length - 1];
       stats.secures++; stats.streak++;
-      stats.reacts.push(react);
+      stats.precisions.push(precision);
       pts = Math.round(g.pts * contest().mult) + Math.min(stats.streak, 10) * 10;
       stats.score += pts;
       title = g.label; sub = g.sub;
-      detail = "Você reagiu " + fmt(react) + " ms depois da linha abrir.";
-      chip = { id: g.id, label: fmt(react) };
+      detail = precision < 0.05
+        ? "Você acertou o ponto ideal (0 ms)."
+        : "Você lançou " + fmtMs(precision) + " depois do ponto ideal.";
+      chip = { id: g.id, label: fmtMs(precision) };
+      if (best.precision == null || precision < best.precision) best.precision = precision;
       if (stats.streak > best.streak) best.streak = stats.streak;
-      if (!best.react || react < best.react) best.react = react;
       if (stats.score > best.score) best.score = stats.score;
       saveBest();
+      refs.liveValue.textContent = fmtMs(precision) + " depois";
+      refs.live.dataset.state = "secure";
     } else {
       stats.streak = 0;
       if (kind === "early") {
+        const early = Math.max(0, Number(value) || 0);
         title = "CEDO DEMAIS";
-        sub = "A ponta da barra ainda não tinha entrado na zona.";
-        detail = "Faltavam " + fmt(Math.max(0, round.hp - round.dmg)) + " de HP para a linha de secure.";
+        sub = "O Caçar saiu antes do ponto ideal.";
+        detail = "Faltaram " + fmtMs(early) + " para o alvo. Aperte um pouco mais tarde.";
+        refs.liveValue.textContent = fmtMs(early) + " antes";
+        refs.live.dataset.state = "early";
       } else if (kind === "stolen") {
         title = "ROUBADO";
         sub = "O jungler rival garantiu o objetivo.";
-        detail = "Ele lançou o Retribution " + fmt(round.enemyDelay) + " ms depois da linha abrir. Antecipe o ritmo dos golpes.";
+        detail = "Ele lançou " + fmtMs(round.enemyDelay) + " depois do ponto ideal. Antecipe o ritmo dos golpes.";
+        refs.liveValue.textContent = "roubado";
+        refs.live.dataset.state = "fail";
       } else {
         title = "TARDE DEMAIS";
-        sub = "O objetivo morreu antes do seu Retribution.";
-        detail = "Ninguém garantiu o secure. Aperte assim que a ponta da barra cruzar a linha.";
+        sub = "O objetivo morreu antes do seu Caçar.";
+        detail = "O HP chegou a zero. Aperte assim que a ponta da barra cruzar a linha.";
+        refs.liveValue.textContent = "tarde";
+        refs.live.dataset.state = "fail";
       }
     }
 
@@ -483,65 +523,58 @@
     if (!root) return;
     if (round.phase === "running") initOverlay();
     if (round.phase !== "result") setPhase("idle");
+    refresh();
   }
 
   function resetSession() {
     stop();
     stats.score = 0; stats.streak = 0; stats.attempts = 0; stats.secures = 0;
-    stats.reacts = []; stats.history = [];
+    stats.precisions = []; stats.history = [];
     setPhase("idle");
     initOverlay();
     refresh();
   }
 
   function initOverlay() {
-    refs.ovTitle.textContent = "Treino de Retribution";
+    refs.ovTitle.textContent = "Treino de Caçar";
     refs.ovTitle.dataset.kind = "";
     refs.ovSub.textContent = "Escolha o objetivo e o contest e comece.";
-    refs.ovDetail.textContent = "A barra de HP do objetivo cai com golpes aleatórios. Lance o Retribution quando a ponta da barra entrar na zona dourada.";
+    refs.ovDetail.textContent = "A barra mostra a janela final do objetivo. Aperte quando o HP cruzar a linha do seu Caçar; o app mede a diferença em milissegundos.";
     refs.ovPts.hidden = true;
     refs.ovStart.textContent = "Começar";
     refs.ovHint.textContent = "Atalho: Espaço · funciona também por toque.";
+    if (refs.liveValue) {
+      refs.liveValue.textContent = "—";
+      refs.live.dataset.state = "";
+    }
   }
 
   /* ---------- desenho ---------- */
-  function floatNumber(value) {
-    if (refs.floats.childElementCount > 8) refs.floats.firstChild.remove();
-    const n = h("span", "rt-float", "-" + fmt(value));
-    n.style.left = rand(28, 72).toFixed(1) + "%";
-    n.addEventListener("animationend", () => n.remove());
-    refs.floats.append(n);
-  }
-
   function hpColorFor(pct) {
     if (pct > 0.6)  return "var(--rt-hp-high, #4ade80)";
     if (pct > 0.3)  return "var(--rt-hp-mid, #fbbf24)";
     return "var(--rt-hp-low, #ef4444)";
   }
 
-  let lastHpSeen = Infinity;
-  let hitTimer = 0;
-
   function render() {
-    const pct = round.max > 0 ? round.hp / round.max : 1;
     const running = round.phase === "running";
+    const max = round.startHp || round.max || 1;
+    const pct = clamp(round.hp / max, 0, 1);
     const open = running && round.hp <= round.dmg;
     const near = running && !open && round.hp <= round.dmg * NEAR_FACTOR;
 
-    refs.fill.style.width = Math.max(0, Math.min(100, pct * 100)) + "%";
+    /* sub-pixel: 4 casas decimais na largura para a barra não “pular” ms */
+    refs.fill.style.width = (pct * 100).toFixed(4) + "%";
     refs.fill.style.setProperty("--rt-hp-color", hpColorFor(pct));
-    refs.hpLabel.textContent = fmt(round.hp) + " / " + fmt(round.max);
+    refs.hpLabel.textContent = fmt(round.hp) + " / " + fmt(max);
     root.classList.toggle("is-open", open);
     root.classList.toggle("is-near", near);
 
-    if (running && round.hp < lastHpSeen) {
-      refs.fill.classList.remove("is-hit");
-      void refs.fill.offsetWidth;
-      refs.fill.classList.add("is-hit");
-      clearTimeout(hitTimer);
-      hitTimer = setTimeout(() => refs.fill.classList.remove("is-hit"), 180);
+    if (running && round.dps > 0) {
+      const ms = (round.hp - round.dmg) / round.dps * 1000;
+      refs.liveValue.textContent = ms > 0 ? "faltam " + fmtMs(ms) : "aberta há " + fmtMs(-ms);
+      refs.live.dataset.state = ms > 0 ? "early" : "late";
     }
-    lastHpSeen = round.hp;
   }
 
   function refresh() {
@@ -552,21 +585,34 @@
     refs.dmgBig.textContent = fmt(dmg);
     refs.castDmg.textContent = fmt(dmg);
     refs.levelVal.textContent = String(cfg.level);
-    refs.lineLabel.textContent = "◆ RETRI " + fmt(dmg);
+    refs.lineLabel.textContent = "◆ CAÇAR " + fmt(dmg);
 
     /* linha e zona na mesma régua do fill (porcentagem da trilha) */
-    const frac = Math.min(1, dmg / obj.hp);
+    const idleHp = dmg + BASE_DPS * ct.mult * 2.5;
+    const displayHp = (round.phase === "running" || round.phase === "result") && round.startHp
+      ? round.startHp : idleHp;
+    const frac = clamp(dmg / displayHp, 0, 1);
     refs.line.style.left = (frac * 100) + "%";
     refs.zone.style.width = (frac * 100) + "%";
     /* o rótulo vive fora da trilha: compensa a margem de 4px da barra */
     refs.lineLabel.style.left = "calc(4px + (100% - 8px) * " + frac + ")";
+    refs.hpLabel.title = "Janela final: o objetivo completo tem " + fmt(obj.hp) +
+      " HP; a barra mostra os últimos " + fmt(displayHp) + " HP.";
 
-    if (round.phase !== "running") {
+    if (round.phase === "idle") {
       refs.fill.style.width = "100%";
       refs.fill.style.setProperty("--rt-hp-color", "var(--rt-hp-high, #4ade80)");
-      refs.hpLabel.textContent = fmt(obj.hp) + " / " + fmt(obj.hp);
+      refs.hpLabel.textContent = fmt(displayHp) + " / " + fmt(displayHp);
+      refs.liveValue.textContent = "—";
+      refs.live.dataset.state = "";
       root.classList.remove("is-open", "is-near");
-      lastHpSeen = Infinity;
+    } else if (round.phase === "result") {
+      const pct = round.startHp ? clamp(round.hp / round.startHp, 0, 1) : 0;
+      refs.fill.style.width = (pct * 100).toFixed(4) + "%";
+      refs.fill.style.setProperty("--rt-hp-color", hpColorFor(pct));
+      refs.hpLabel.textContent = fmt(round.hp) + " / " + fmt(round.startHp);
+      root.classList.toggle("is-open", round.hp <= round.dmg);
+      root.classList.remove("is-near");
     }
 
     refs.rival.hidden = !ct.steal;
@@ -578,10 +624,10 @@
     refs.pBest.textContent = fmt(best.streak);
     refs.pRate.textContent = stats.attempts ? Math.round(stats.secures / stats.attempts * 100) + "%" : "—";
     refs.pSecures.textContent = stats.secures + "/" + stats.attempts;
-    refs.pAvg.textContent = stats.reacts.length
-      ? fmt(stats.reacts.reduce((a, b) => a + b, 0) / stats.reacts.length) + " ms"
+    refs.pAvg.textContent = stats.precisions.length
+      ? fmtMs(stats.precisions.reduce((a, b) => a + b, 0) / stats.precisions.length)
       : "—";
-    refs.pFast.textContent = best.react ? fmt(best.react) + " ms" : "—";
+    refs.pFast.textContent = best.precision != null ? fmtMs(best.precision) : "—";
     refs.pScore.textContent = fmt(best.score);
 
     refs.chips.textContent = "";
@@ -606,7 +652,14 @@
   window.RetriTrainer = {
     mount,
     stop,
-    _state: () => ({ phase: round.phase, open: round.openAt !== null, hp: round.hp, dmg: round.dmg })
+    _state: () => ({
+      phase: round.phase,
+      open: round.phase === "running" && round.hp <= round.dmg,
+      hp: round.hp, dmg: round.dmg, dps: round.dps,
+      startAt: round.startAt, targetAt: round.targetAt, deathAt: round.deathAt,
+      errorMs: round.phase === "running" ? errorMsAt(performance.now()) : null
+    }),
+    _castAt: (t) => cast(t)
   };
 
   /* ---------- auto-montagem defensiva ---------- */

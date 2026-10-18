@@ -99,7 +99,16 @@
           ? h.roles.map(String).map(function (r) { return r.toLowerCase(); })
           : [],
         slug:  h.slug || '',
-        wallpaper: h.wallpaper || h.head || ''
+        wallpaper: h.wallpaper || h.head || '',
+        // Dados usados pelos cards de meta/home (rota, tier e números do herói)
+        lanes: Array.isArray(h.lanes) ? h.lanes.map(String) : [],
+        tier:  h.tier || '',
+        win:   typeof h.win === 'number' ? h.win : null,
+        pick:  typeof h.pick === 'number' ? h.pick : null,
+        ban:   typeof h.ban === 'number' ? h.ban : null,
+        speciality: Array.isArray(h.speciality) ? h.speciality.map(String) : [],
+        difficulty_bucket: h.difficulty_bucket || '',
+        released_year: h.released_year || ''
       };
     }).filter(function (h) { return h.name; });
   }

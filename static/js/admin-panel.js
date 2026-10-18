@@ -16,7 +16,7 @@
     ["Analisar denúncias, filtrar, exportar e agir em lote", "admin"],
     ["Silenciar e remover silenciamentos", "mod"], ["Gerenciar cargos e ver contas", "dev"],
   ];
-  const S = { role: "user", reports: [], mutes: [], accounts: [], filter: "open", cat: "", sort: "new", q: "", sel: new Set(), selMutes: new Set(), roleFilter: "all", accQ: "", accSort: "role", log: [], timer: 0 };
+  const S = { role: "user", reports: [], mutes: [], accounts: [], filter: "open", cat: "", sort: "new", q: "", sel: new Set(), selMutes: new Set(), roleFilter: "all", accQ: "", accSort: "role", log: [], timer: 0, profileCache: new Map(), previewNick: "", profileSeq: 0, profileQ: "" };
   const rank = (r) => ORDER.indexOf(r);
   const has = (min) => rank(S.role) >= rank(min);
   const fmt = (ts) => new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(ts * 1000));
@@ -31,7 +31,7 @@
     renderLog();
   }
   function act(payload, label) { const ok = send(payload); log(ok ? label : "Falha de conexão: " + label, !ok); return ok; }
-  const profile = (nick) => { try { window.Society?.openProfile(nick); } catch (e) {} };
+  const profile = (nick) => previewProfile(nick);
   function userLink(nick) {
     const b = el("button", "@" + nick, "moderation-user-link"); b.type = "button";
     b.setAttribute("aria-label", "Ver perfil de @" + nick);
@@ -50,7 +50,178 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
 
-  /* ── Seu acesso ── */
+  /* ── Prévia de perfis (ADM/MOD/DEV) ── */
+  function profileInitials(p) {
+    const text = String((p && (p.display_name || p.name || p.username || p.nick)) || "?").trim();
+    return text.slice(0, 1).toLocaleUpperCase("pt-BR") || "?";
+  }
+  function profileAvatar(p, cls) {
+    if (window.ProfileUI && typeof window.ProfileUI.createAvatar === "function") {
+      const avatar = window.ProfileUI.createAvatar(p || {}, cls);
+      if (p && p.frame) avatar.dataset.frame = p.frame;
+      if (p && p.accent) avatar.style.setProperty("--profile-accent", p.accent);
+      return avatar;
+    }
+    return el("span", profileInitials(p), cls);
+  }
+  function joinedLabel(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("pt-BR");
+  }
+  function renderProfilePreview(p, nick, loading) {
+    const body = $("admProfileDialogBody");
+    if (!body) return;
+    body.textContent = "";
+
+    const card = el("article", null, "adm-profile-card");
+    if (!p) {
+      card.append(el("p", "Carregando a prévia de @" + nick + "…", "adm-profile-loading"));
+      body.append(card);
+      return;
+    }
+
+    const banner = el("div", null, "adm-profile-banner");
+    if (p.banner) banner.style.backgroundImage =
+      'linear-gradient(180deg, rgba(7,8,10,.18), rgba(7,8,10,.85)), url("' + p.banner + '")';
+    const close = btn("✕", () => { const d = $("admProfileDialog"); if (d) d.close(); }, "adm-profile-close");
+    close.setAttribute("aria-label", "Fechar prévia");
+    banner.append(close);
+    const roleKey = window.RoleColors ? window.RoleColors.keyFor(p) : "";
+    if (roleKey && window.RoleColors) banner.append(el("span", window.RoleColors.label(p), "role-badge " + (ROLE[roleKey] || ROLE.user)[1]));
+    card.append(banner);
+
+    const head = el("div", null, "adm-profile-head");
+    head.append(profileAvatar(p, "adm-profile-avatar"));
+    const identity = el("div", null, "adm-profile-identity");
+    const name = el("h3", p.display_name || p.username || nick, "adm-profile-name");
+    name.id = "admProfileDialogTitle";
+    if (window.RoleColors) window.RoleColors.apply(name, p);
+    identity.append(name, el("p", "@" + (p.username || nick), "adm-profile-handle"));
+    const roles = el("div", null, "adm-profile-roles");
+    (Array.isArray(p.community_roles) ? p.community_roles : []).forEach((role) => {
+      const chip = el("span", role, "profile-community-role");
+      chip.dataset.role = String(role).toLowerCase();
+      roles.append(chip);
+    });
+    if (roles.childElementCount) identity.append(roles);
+    head.append(identity);
+    card.append(head);
+
+    const meta = el("div", null, "adm-profile-meta");
+    [["Elo", p.rank], ["Herói", p.hero], ["Função", p.game_role], ["Entrou", joinedLabel(p.joined_at)]].forEach(([label, value]) => {
+      if (!value) return;
+      const item = el("span", null, "adm-profile-meta-item");
+      item.append(el("small", label), el("b", value));
+      meta.append(item);
+    });
+    if (meta.childElementCount) card.append(meta);
+
+    if (p.details_hidden) card.append(el("p", "Perfil privado — os detalhes ficam ocultos para quem não é amigo.", "adm-profile-locked"));
+    else if (p.bio) card.append(el("p", p.bio, "adm-profile-bio"));
+
+    const actions = el("div", null, "adm-profile-actions");
+    actions.append(btn("Abrir perfil completo", () => {
+      const dialog = $("admProfileDialog");
+      if (dialog) dialog.close();
+      try { window.Society?.openProfile(nick); } catch (e) {}
+    }, "moderation-secondary"));
+    actions.append(btn("Copiar @" + nick, () => copy("@" + nick, "Nick copiado."), "moderation-secondary"));
+    actions.append(btn("Fechar", () => { const d = $("admProfileDialog"); if (d) d.close(); }, "moderation-secondary"));
+    card.append(actions);
+    body.append(card);
+  }
+  function previewProfile(nick) {
+    if (!nick) return;
+    const key = String(nick).toLowerCase();
+    const dialog = $("admProfileDialog");
+    if (!dialog) { try { window.Society?.openProfile(key); } catch (e) {} return; }
+    S.previewNick = key;
+    const cached = S.profileCache.get(key);
+    renderProfilePreview(cached || null, key, !cached);
+    if (!dialog.open) {
+      if (typeof dialog.showModal === "function") dialog.showModal();
+      else dialog.setAttribute("open", "");
+    }
+    if (!cached) send({ t: "profile_view", nick: key });
+  }
+  function renderProfileShortcuts() {
+    const box = $("admProfileShortcuts");
+    if (!box) return;
+    const nicks = [];
+    S.reports.forEach((report) => {
+      [report.target, report.reporter].forEach((nick) => {
+        if (nick && !nicks.includes(nick)) nicks.push(nick);
+      });
+    });
+    S.mutes.forEach((mute) => { if (mute.nick && !nicks.includes(mute.nick)) nicks.push(mute.nick); });
+    box.textContent = "";
+    if (!nicks.length) { box.hidden = true; return; }
+    box.hidden = false;
+    box.append(el("span", "Nas denúncias:", "adm-profile-shortcut-label"));
+    nicks.slice(0, 10).forEach((nick) => {
+      const b = btn("@" + nick, () => previewProfile(nick), "adm-profile-shortcut");
+      box.append(b);
+    });
+  }
+  function renderProfileResults(list) {
+    const box = $("admProfileResults");
+    if (!box) return;
+    box.textContent = "";
+    const empty = $("admProfileEmpty");
+    if (!list.length) {
+      if (empty) empty.hidden = false;
+      return;
+    }
+    if (empty) empty.hidden = true;    list.forEach((user) => {
+      const card = el("button", null, "adm-profile-result");
+      card.type = "button";
+      card.setAttribute("aria-label", "Ver prévia do perfil de @" + user.nick);
+      const copyBox = el("span", null, "adm-profile-result-copy");
+      const name = el("b", user.name || user.nick);
+      if (window.RoleColors) window.RoleColors.apply(name, user);
+      copyBox.append(name, el("small", "@" + user.nick, "adm-profile-result-nick"));
+      const key = window.RoleColors ? window.RoleColors.keyFor(user) : "";
+      if (key) copyBox.append(el("span", window.RoleColors.label(user), "adm-profile-result-role role-" + key));
+      card.append(profileAvatar(user, "adm-profile-result-avatar"), copyBox);
+      card.addEventListener("click", () => previewProfile(user.nick));
+      box.append(card);
+    });
+  }
+  function setProfileEmptyState(title, hint) {
+    const box = $("admProfileEmpty");
+    if (!box) return;
+    const titleEl = box.querySelector("b");
+    const hintEl = box.querySelector("small");
+    if (titleEl && title) titleEl.textContent = title;
+    if (hintEl && hint) hintEl.textContent = hint;
+  }
+  async function searchProfiles(query) {
+    const empty = $("admProfileEmpty");
+    const q = String(query || "").trim();
+    if (q.length < 2) {
+      renderProfileResults([]);
+      if (empty) { empty.hidden = false; setProfileEmptyState("Busque um jogador", "Digite pelo menos 2 letras para ver os cards de perfil."); }
+      return;
+    }
+    const seq = ++S.profileSeq;
+    try {
+      const viewer = window.Society?.self?.() || "";
+      const response = await fetch("/api/users/search?q=" + encodeURIComponent(q) +
+        "&viewer=" + encodeURIComponent(viewer), { headers: { Accept: "application/json" } });
+      const list = await response.json();
+      if (seq !== S.profileSeq) return;
+      const users = Array.isArray(list) ? list : [];
+      renderProfileResults(users);
+      if (!users.length && empty) setProfileEmptyState("Nenhum perfil encontrado", "Tente buscar por outro nick ou nome.");
+    } catch (error) {
+      if (seq !== S.profileSeq) return;
+      renderProfileResults([]);
+      if (empty) { empty.hidden = false; setProfileEmptyState("Não foi possível buscar", "Verifique a conexão e tente novamente."); }
+      msg("Não foi possível buscar perfis agora.", true);
+    }
+  }
+
   function renderAccess() {
     const info = ROLE[S.role];
     $("admAccessTitle").textContent = TITLE[S.role];
@@ -159,8 +330,8 @@
     body.append(head, el("b", CAT[r.category] || "Outro problema", "moderation-category"), el("p", r.details, "moderation-details"));
     if (r.reviewed_by) body.append(el("small", "Revisado por @" + r.reviewed_by + (r.reviewed_at ? " · " + fmt(r.reviewed_at) : ""), "moderation-reviewed-by"));
     const a = el("div", null, "moderation-actions");
-    a.append(btn("👤 Denunciado", () => profile(r.target)));
-    if (r.reporter && r.reporter !== r.target) a.append(btn("👤 Autor", () => profile(r.reporter)));
+    a.append(btn("👤 Prévia do denunciado", () => profile(r.target)));
+    if (r.reporter && r.reporter !== r.target) a.append(btn("👤 Prévia do autor", () => profile(r.reporter)));
     if (r.status === "open") a.append(btn("Marcar em análise", () => act({ t: "moderation_action", id: r.id, action: "review" }, "Denúncia #" + r.id + " marcada em análise")));
     if (has("mod") && !closed) [["10 min", "mute_10m"], ["1 hora", "mute_1h"], ["24 h", "mute_24h"]].forEach(([l, k]) =>
       a.append(btn("Silenciar " + l, () => { if (confirm("Silenciar @" + r.target + " por " + l + "?")) act({ t: "moderation_action", id: r.id, action: k }, "@" + r.target + " silenciado por " + l + " (#" + r.id + ")"); }, k === "mute_24h" ? "moderation-warn" : "moderation-secondary")));
@@ -213,7 +384,7 @@
       rem.firstElementChild.dataset.until = m.muted_until; info.append(rem);
       if (m.by_nick) info.append(el("small", "Aplicado por @" + m.by_nick));
       const a = el("div", null, "moderation-mute-actions");
-      a.append(btn("👤 Perfil", () => profile(m.nick)), btn("Remover", () => { if (confirm("Remover silenciamento de @" + m.nick + "?")) act({ t: "moderation_unmute", target: m.nick }, "Silenciamento de @" + m.nick + " removido"); }));
+      a.append(btn("👤 Prévia", () => profile(m.nick)), btn("Remover", () => { if (confirm("Remover silenciamento de @" + m.nick + "?")) act({ t: "moderation_unmute", target: m.nick }, "Silenciamento de @" + m.nick + " removido"); }));
       item.append(cb, info, a); box.append(item);
     });
     $("admUnmuteSel").disabled = !S.selMutes.size;
@@ -240,7 +411,7 @@
       meta.append(el("small", acc.source === "google" ? "Google vinculado" : "Conta antiga"), el("small", acc.google_linked ? "🔗 Google" : "🔒 Senha"), el("small", (ROLE[acc.role] || ROLE.user)[0]));
       if (acc.nick === me) meta.append(el("small", "Você")); id.append(meta);
       const a = el("div", null, "moderation-role-actions");
-      a.append(btn("👤 Ver perfil", () => profile(acc.nick)));
+      a.append(btn("👤 Prévia", () => profile(acc.nick)));
       const sel = document.createElement("select"); sel.setAttribute("aria-label", "Cargo de @" + acc.nick);
       ORDER.forEach((r) => sel.append(new Option(ROLE[r][0], r))); sel.value = acc.role || "user"; sel.disabled = acc.nick === me;
       const save = btn("Salvar cargo", () => {
@@ -266,14 +437,14 @@
 
   /* ── Eventos ── */
   function onMessage(m) {
-    if (m.t === "moderation_data") { S.reports = m.reports || []; S.mutes = m.mutes || []; renderStats(); renderChips(); renderReports(); renderMutes(); }
+    if (m.t === "moderation_data") { S.reports = m.reports || []; S.mutes = m.mutes || []; renderStats(); renderChips(); renderReports(); renderMutes(); renderProfileShortcuts(); }
     else if (m.t === "admin_roles") { S.accounts = m.list || []; renderStats(); renderAccounts(); }
     else if (/_saved$/.test(m.t)) { msg(m.m, false); log(m.m || "Ação concluída"); setTimeout(refresh, 400); }
     else if (/_error$/.test(m.t)) { msg(m.m, true); log(m.m || "Erro", true); }
   }
   function onShow() {
     S.role = window.Society?.role?.() || "user";
-    renderAll(); refresh();
+    renderAll(); renderProfileShortcuts(); refresh();
   }
   function bind() {
     const root = $("admRoot"); if (!root || root.dataset.bound) return; root.dataset.bound = "1";
@@ -287,6 +458,19 @@
     $("admUnmuteSel").onclick = () => { const n = [...S.selMutes]; if (!n.length || !confirm("Remover o silenciamento de " + n.length + " jogador(es)?")) return; n.forEach((nick) => send({ t: "moderation_unmute", target: nick })); log("Em lote: " + n.length + " silenciamento(s) removido(s)"); S.selMutes.clear(); setTimeout(refresh, 600); };
     $("admAccSearch").addEventListener("input", (e) => { S.accQ = e.target.value; renderAccounts(); });
     $("admAccSort").onchange = (e) => { S.accSort = e.target.value; renderAccounts(); };
+    const profileSearch = $("admProfileSearch");
+    if (profileSearch) {
+      let timer = 0;
+      profileSearch.addEventListener("input", (e) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { S.profileQ = e.target.value; searchProfiles(S.profileQ); }, 250);
+      });
+    }
+    const profileDialog = $("admProfileDialog");
+    if (profileDialog) {
+      profileDialog.addEventListener("click", (e) => { if (e.target === profileDialog) profileDialog.close(); });
+      profileDialog.addEventListener("close", () => { S.previewNick = ""; });
+    }
     $("admLogClear").onclick = () => { S.log = []; renderLog(); };
     $("admAuto").onchange = (e) => { clearInterval(S.timer); if (e.target.checked) S.timer = setInterval(() => { if ($("tab-admin")?.classList.contains("on")) refresh(); }, 30000); };
     $("admExportReports").onclick = () => csv([["id", "status", "categoria", "denunciado", "denunciante", "data", "detalhes", "revisado_por"], ...visibleReports().map((r) => [r.id, r.status, CAT[r.category] || r.category, r.target, r.reporter, new Date(r.created_at * 1000).toISOString(), r.details, r.reviewed_by || ""])], "denuncias.csv");
@@ -297,6 +481,14 @@
   window.AdminPanel = { onMessage, onShow, bind };
   window.addEventListener("society:admin", (e) => { bind(); S.role = window.Society?.role?.() || S.role; onMessage(e.detail || {}); });
   window.addEventListener("society:tab", (e) => { if (e.detail === "admin") { bind(); onShow(); } });
+  window.addEventListener("society:pview", (e) => {
+    const m = e.detail || {};
+    if (!m.nick || !m.p) return;
+    const key = String(m.nick).toLowerCase();
+    S.profileCache.set(key, m.p);
+    while (S.profileCache.size > 16) S.profileCache.delete(S.profileCache.keys().next().value);
+    if (S.previewNick === key) renderProfilePreview(m.p, key, false);
+  });
 
   // Auto-inicialização: a view admin.html é injetada por innerHTML DEPOIS do carregamento,
   // então desenhamos assim que #admRoot aparecer (não dependemos de nenhum evento anterior).

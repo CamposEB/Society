@@ -37,9 +37,11 @@
 <link rel="stylesheet" href="/static/css/sidebar-hover.css">
 <link rel="stylesheet" href="/static/css/lobby.css">
 <link rel="stylesheet" href="/static/css/guide.css">
+<link rel="stylesheet" href="/static/css/quiz.css">
 <link rel="stylesheet" href="/static/css/topbar.css">
 <!-- 🆕 tela de login: DEPOIS do base.css (e dos demais) para sobrescrever o #login antigo -->
 <link rel="stylesheet" href="/static/css/login.css">
+<link rel="stylesheet" href="/static/css/role-colors.css">
 <style>
 /* modo visitante */
 .guest-login-button{width:100%;margin-top:8px;background:transparent;color:inherit;border:1px dashed var(--muted,#8a8a93);border-radius:10px;padding:10px 14px;font:inherit;cursor:pointer}
@@ -52,7 +54,6 @@
 .guest-banner.is-pulse{animation:guestPulse .6s ease}
 @keyframes guestPulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.04)}}
 body.is-guest #nav button[data-t="dm"],
-body.is-guest #nav button[data-t="quiz"],
 body.is-guest #nav button[data-t="settings"],
 body.is-guest #mobileNav button[data-t="dm"]{opacity:.55}
 @media (min-width:900px){.guest-banner{bottom:24px}}
@@ -648,15 +649,16 @@ body.is-guest #mobileNav button[data-t="dm"]{opacity:.55}
 </dialog>
 <div id="lfgToast" class="lfg-toast" role="status" aria-live="polite"></div>
 
+<script src="/static/js/role-colors.js"></script>
 <script src="/static/js/profile.js"></script>
 <script src="/static/js/perf.js"></script>
 <script src="/static/js/profile-enhance.js"></script>
 <script src="/static/js/hero-catalog.js"></script>
 <script src="/static/js/hero-official.js"></script>
 <script src="/static/js/lobby/figure-catalog.js"></script>
-<script src="/static/js/lobby/assets.js"></script>
 <script src="/static/js/lobby/lobby.js"></script>
 <script src="/static/js/guide.js"></script>
+<script src="/static/js/quiz.js"></script>
 <script src="/static/js/app.js"></script>
 <script src="/static/js/friends.js"></script>
 <script src="/static/js/social.js"></script>

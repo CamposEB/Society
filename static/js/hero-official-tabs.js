@@ -151,6 +151,18 @@
   // ═══════════════════════════════════════════════════════════════
   // O hero-hub.js atualiza #heroCrumb.textContent com o nome do herói
   // em cada renderBanner. Observamos esse nó em vez de fazer polling.
+  // O HTML da página do herói nasce com o texto "Herói" no crumb. Esse valor
+  // não é um nome de herói e não deve disparar fetch no catálogo oficial.
+  function crumbHeroName() {
+    var crumb = document.getElementById('heroCrumb');
+    var n = crumb ? (crumb.textContent || '').trim() : '';
+    if (!n || /^her[oó]i$/i.test(n)) return '';
+    if (window.HeroCatalog && typeof window.HeroCatalog.find === 'function') {
+      return window.HeroCatalog.find(n) ? n : '';
+    }
+    return n;
+  }
+
   function watchHeroCrumb() {
     var crumb = document.getElementById('heroCrumb');
     if (!crumb) {
@@ -159,11 +171,11 @@
       return;
     }
 
-    var last = (crumb.textContent || '').trim();
+    var last = crumbHeroName();
     if (last) ensureLoaded(last);
 
     var obs = new MutationObserver(function () {
-      var n = (crumb.textContent || '').trim();
+      var n = crumbHeroName();
       if (n && n !== last) {
         last = n;
         ensureLoaded(n);

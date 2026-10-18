@@ -1,1 +1,69 @@
-<div class="card"><small>Quiz do dia</small><h2 id="qText"></h2><div id="qOpts"></div><p id="qMsg"></p></div>
+<main class="quiz-page" id="quizPage">
+  <header class="quiz-head">
+    <p class="quiz-lead">Uma pergunta por dia sobre Mobile Legends. Acertou, ganhou moedas. Respondeu todo dia, a sequência cresce.</p>
+    <div class="quiz-streak" id="quizStreak">
+      <span class="quiz-streak-flame" aria-hidden="true">🔥</span>
+      <span class="quiz-streak-count"><b id="quizStreakNum">0</b> <span id="quizStreakLabel">dias seguidos</span></span>
+      <small id="quizStreakHint"></small>
+    </div>
+  </header>
+
+  <div class="quiz-tabs" role="tablist" aria-label="Seções do quiz">
+    <button type="button" class="quiz-tab is-active" role="tab" id="quizTabDaily" data-quiz-tab="daily" aria-selected="true" aria-controls="quizPanelDaily">Do dia</button>
+    <button type="button" class="quiz-tab" role="tab" id="quizTabPractice" data-quiz-tab="practice" aria-selected="false" aria-controls="quizPanelPractice">Treino</button>
+    <button type="button" class="quiz-tab" role="tab" id="quizTabRanking" data-quiz-tab="ranking" aria-selected="false" aria-controls="quizPanelRanking">Ranking</button>
+  </div>
+
+  <!-- ═════════ QUIZ DO DIA ═════════ -->
+  <section class="quiz-panel" id="quizPanelDaily" role="tabpanel" aria-labelledby="quizTabDaily">
+    <article class="card quiz-card">
+      <div class="quiz-card-top">
+        <small>Pergunta de hoje</small>
+        <span class="quiz-reward" id="quizReward">+10 moedas</span>
+      </div>
+      <h2 id="qText">Carregando quiz...</h2>
+      <div id="qOpts" class="quiz-options" role="group" aria-label="Alternativas"></div>
+      <p id="qMsg" class="quiz-msg" role="status" aria-live="polite"></p>
+      <p id="quizExplain" class="quiz-explain" hidden></p>
+      <p id="quizNext" class="quiz-next" hidden>Próxima pergunta em <b id="quizCountdown">--:--:--</b></p>
+      <div id="quizGuestCta" class="quiz-guest-cta" hidden>
+        <span>O quiz do dia vale moedas e conta na sua sequência. Crie uma conta gratuita para participar. Enquanto isso, você pode treinar.</span>
+        <button type="button" id="quizSignup">Criar conta</button>
+      </div>
+    </article>
+
+    <dl class="quiz-stats" id="quizStats">
+      <div><dt>Respondidas</dt><dd id="quizStatAnswered">0</dd></div>
+      <div><dt>Acertos</dt><dd id="quizStatHits">0</dd></div>
+      <div><dt>Taxa de acerto</dt><dd id="quizStatAccuracy">—</dd></div>
+      <div><dt>Melhor sequência</dt><dd id="quizStatBest">0</dd></div>
+    </dl>
+  </section>
+
+  <!-- ═════════ TREINO ═════════ -->
+  <section class="quiz-panel" id="quizPanelPractice" role="tabpanel" aria-labelledby="quizTabPractice" hidden>
+    <article class="card quiz-card">
+      <div class="quiz-card-top">
+        <small>Treino sem moedas</small>
+        <span class="quiz-reward is-muted" id="quizPracticeScore">0 de 0</span>
+      </div>
+      <h2 id="quizPracticeText">Toque em “Nova pergunta” para treinar.</h2>
+      <div id="quizPracticeOpts" class="quiz-options" role="group" aria-label="Alternativas do treino"></div>
+      <p id="quizPracticeMsg" class="quiz-msg" role="status" aria-live="polite"></p>
+      <p id="quizPracticeExplain" class="quiz-explain" hidden></p>
+      <button type="button" class="quiz-primary" id="quizPracticeNext">Nova pergunta</button>
+    </article>
+  </section>
+
+  <!-- ═════════ RANKING ═════════ -->
+  <section class="quiz-panel" id="quizPanelRanking" role="tabpanel" aria-labelledby="quizTabRanking" hidden>
+    <article class="card quiz-card">
+      <div class="quiz-card-top">
+        <small>Quem mais acerta o quiz do dia</small>
+        <button type="button" class="quiz-link" id="quizRankRefresh">Atualizar</button>
+      </div>
+      <ol class="quiz-rank" id="quizRankList" aria-label="Ranking do quiz"></ol>
+      <p class="quiz-rank-me" id="quizRankMe" role="status"></p>
+    </article>
+  </section>
+</main>

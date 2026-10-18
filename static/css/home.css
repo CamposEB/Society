@@ -295,10 +295,50 @@
 .home-tool-featured:hover .home-tool-mark { opacity: .14; transform: scale(1.05) rotate(-4deg); }
 
 
-/* ── 7. TIER LIST ─────────────────────────────────────────────────────────── */
-.home-tier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
-.home-tier-grid .home-preview-row { background: var(--hp-surface-2); }
+/* ── 7. TIER LIST (cards com foto) ────────────────────────────────────────── */
+.home-tier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 9px; }
 .home-tier-grid .home-preview-empty { grid-column: 1 / -1; }
+.home-tier-card {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+  aspect-ratio: 4 / 5; min-width: 0; padding: 0; overflow: hidden;
+  border: 1px solid var(--hp-border); border-radius: var(--hp-radius);
+  background: var(--hp-surface-2); color: var(--hp-text); text-align: left; cursor: pointer;
+  transition: transform var(--hp-ease), border-color var(--hp-ease);
+}
+.home-tier-card::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(7,8,10,0) 38%, rgba(7,8,10,.92) 100%);
+}
+.home-tier-card:hover { border-color: var(--hp-gold-line); transform: translateY(-2px); }
+.home-tier-card:focus-visible { outline: 2px solid var(--hp-gold); outline-offset: 2px; }
+.home-tier-art { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #0b0d11; }
+.home-tier-img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; transition: transform .4s ease; }
+.home-tier-card:hover .home-tier-img { transform: scale(1.05); }
+.home-tier-badge {
+  position: absolute; top: 8px; left: 8px; z-index: 3;
+  display: grid; place-items: center; min-width: 23px; height: 23px; padding: 0 5px;
+  border-radius: 6px; background: linear-gradient(135deg, #f7c948, #d4911c); color: #1a1a0a;
+  font-size: .74rem; font-weight: 800; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.45);
+}
+.home-tier-badge[data-tier="A"] { background: linear-gradient(135deg, #66bb6a, #388e3c); color: #fff; }
+.home-tier-badge[data-tier="B"] { background: linear-gradient(135deg, #42a5f5, #1565c0); color: #fff; }
+.home-tier-badge[data-tier="C"] { background: linear-gradient(135deg, #757575, #424242); color: #fff; }
+.home-tier-ref {
+  position: absolute; top: 8px; right: 8px; z-index: 3; padding: 3px 6px;
+  border: 1px solid rgba(255,255,255,.16); border-radius: 999px;
+  background: rgba(7,8,10,.7); color: var(--hp-muted);
+  font-size: .54rem; font-weight: 800; letter-spacing: .06em;
+}
+.home-tier-copy { position: relative; z-index: 2; display: grid; gap: 1px; padding: 9px 10px 10px; }
+.home-tier-name {
+  overflow: hidden; color: #fff; font-family: var(--hp-display);
+  font-size: .98rem; font-weight: 700; letter-spacing: .03em; line-height: 1.05;
+  text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap;
+}
+.home-tier-meta {
+  overflow: hidden; color: var(--hp-muted); font-size: .63rem; line-height: 1.3;
+  text-overflow: ellipsis; white-space: nowrap;
+}
 
 
 /* ── 8. BUILDS ────────────────────────────────────────────────────────────── */
@@ -339,15 +379,49 @@
 .home-preview-empty { margin: 0; padding: 16px 8px; color: var(--hp-muted); font-size: .78rem; text-align: center; }
 
 
-/* ── 9. META POR ROTA ─────────────────────────────────────────────────────── */
-.home-meta-lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-.home-meta-lanes .home-preview-row {
-  align-items: flex-start; flex-direction: column; gap: 6px; padding: 12px;
-  border-color: var(--hp-border); background: var(--hp-surface-2);
+/* ── 9. META POR ROTA (cards com arte + reservas) ─────────────────────────── */
+.home-meta-lanes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; }
+.home-lane-card {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+  min-height: 228px; padding: 0; overflow: hidden;
+  border: 1px solid var(--hp-border); border-radius: var(--hp-radius);
+  background: var(--hp-surface-2); color: var(--hp-text); text-align: left; cursor: pointer;
+  transition: transform var(--hp-ease), border-color var(--hp-ease);
 }
-.home-meta-lanes .home-preview-row:hover:not(:disabled) { border-color: var(--hp-gold-line); }
-.home-meta-lanes .home-preview-summary { width: 100%; justify-content: space-between; }
+.home-lane-card::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(7,8,10,0) 30%, rgba(7,8,10,.95) 100%);
+}
+.home-lane-card:hover { border-color: var(--hp-gold-line); transform: translateY(-2px); }
+.home-lane-card:focus-visible { outline: 2px solid var(--hp-gold); outline-offset: 2px; }
+.home-lane-art { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #0b0d11; }
+.home-lane-img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; transition: transform .45s ease; }
+.home-lane-card:hover .home-lane-img { transform: scale(1.05); }
+.home-lane-tier {
+  position: absolute; top: 9px; left: 9px; z-index: 3;
+  display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px;
+  border-radius: 6px; background: linear-gradient(135deg, #f7c948, #d4911c); color: #1a1a0a;
+  font-size: .72rem; font-weight: 800; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.45);
+}
+.home-lane-tier[data-tier="A"] { background: linear-gradient(135deg, #66bb6a, #388e3c); color: #fff; }
+.home-lane-tier[data-tier="B"] { background: linear-gradient(135deg, #42a5f5, #1565c0); color: #fff; }
+.home-lane-tier[data-tier="C"] { background: linear-gradient(135deg, #757575, #424242); color: #fff; }
+.home-lane-content { position: relative; z-index: 2; display: grid; gap: 2px; padding: 11px; }
+.home-lane-label { color: var(--hp-gold); font-size: .58rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.home-lane-name {
+  overflow: hidden; color: #fff; font-family: var(--hp-display);
+  font-size: 1.06rem; font-weight: 700; letter-spacing: .02em; line-height: 1.05;
+  text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap;
+}
+.home-lane-meta { overflow: hidden; color: var(--hp-muted); font-size: .62rem; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.home-lane-thumbs { display: flex; gap: 4px; margin-top: 5px; }
+.home-lane-thumb {
+  display: block; width: 27px; height: 27px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.18); border-radius: 7px; background: var(--hp-surface);
+}
+.home-lane-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .home-meta-lanes .home-preview-empty { grid-column: 1 / -1; }
+.home-ticker-tag { color: var(--hp-muted); font-size: .6rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 
 
 /* ── 10. TORNEIO ──────────────────────────────────────────────────────────── */
@@ -451,6 +525,8 @@
   .home-tools-grid .home-tool-featured:first-child { grid-column: 1 / -1; min-height: 150px; }
   .home-community-columns { grid-template-columns: 1fr; }
   .home-tip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-meta-lanes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .home-lane-card { min-height: 205px; }
 }
 @media (max-width: 700px) {
   .home-hero { padding: 20px 18px; }
@@ -472,12 +548,19 @@
   .home-next-step > div:last-child { width: 100%; }
   .home-next-step button { flex: 1; }
   .play-heading { align-items: flex-start; flex-direction: column; }
+  .home-meta-lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .home-lane-card { min-height: 184px; }
+  .home-lane-name { font-size: .96rem; }
+  .home-lane-label { font-size: .54rem; }
+  .home-tier-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; }
+  .home-tier-name { font-size: .86rem; }
 }
 @media (max-width: 450px) {
   .home-tip-grid,
   .home-tools-grid { grid-template-columns: 1fr; }
   .home-tools-grid .home-tool-featured { min-height: 140px; }
   .home-hero.home-hero-banner h2 { font-size: clamp(2rem, 11vw, 2.8rem); }
+  .home-tier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .home-hero-banner .home-hero-actions button { flex: 1 1 100%; }
   .home-section { padding: 14px 12px; }
   .home-preview-group { padding: 10px; }

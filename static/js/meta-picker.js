@@ -1,526 +1,476 @@
-// /static/js/hero-tabs.js
-// Abas extras da página do herói: Matchups, Guia, Skills, Stats, Skins, Lore
-// + blocos da Visão geral (build dos pros, matchups, combo, dica) e selos do topo.
-// Depende de: hero-hub.js (window.HeroHub), hero-contrib.js, hero-data.js.
+// /static/js/meta-picker.js
+// Seletor de herói do formulário "Meta por rota" — mostra os retratos do
+// catálogo (window.HERO_CATALOG) em uma grade buscável.
+//
+// Depende de: hero-catalog.js (window.HERO_CATALOG, window.HeroCatalog.routeImg).
+// Expõe: window.MetaPicker.select(nome), .clear(), .current(), .refresh().
+//
+// O formulário é injetado por app.js depois do fetch de /static/views/meta.html,
+// por isso o módulo se monta quando o DOM aparece (evento society-app-ready,
+// troca de aba ou um poll curto de segurança).
 (function () {
   'use strict';
 
-  var Hub = window.HeroHub, HC = window.HeroCatalog, HX = window.HeroContrib, HD = window.HeroData;
-  if (!Hub || !HX || !HD) { console.warn('[hero-tabs] dependências ausentes'); return; }
+  var ui = null;                 // referências do DOM
+  var options = [];              // heróis na ordem exibida
+  var active = -1;               // índice destacado pelo teclado
+  var open = false;
+  var mountTimer = null;
+  var renderTimer = null;
 
-  var U = Hub.ui, el = U.el, S = function () { return window.Society; };
-  var NS = 'http://www.w3.org/2000/svg';
-  var cur = function () { return Hub.current(); };
-  var net = function (e) { return Number(e.helpful || 0) - Number(e.not_helpful || 0); };
+  function $(id) { return document.getElementById(id); }
 
-  // ───────────── utilidades ─────────────
-  function writable() { return HX.status(cur().name) !== 'unavailable'; }
-
-  function gate(panel) {
-    var b = HX.statusBlock(cur().name);
-    if (b) panel.appendChild(b);
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = String(text);
+    return node;
   }
 
-  function runHooks(name, panel) {
-    (Hub.hooks[name] || []).forEach(function (fn) {
-      try { var n = fn(); if (n) panel.appendChild(n); }
-      catch (e) { console.error('[hero-tabs] hook ' + name, e); }
-    });
+  function norm(value) {
+    return String(value || '').normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
 
-  function goTab(id) { return function () { Hub.setTab(id); window.scrollTo(0, 0); }; }
+  function heroes() { return window.HERO_CATALOG || []; }
 
-  function writeBox(summary, formEl) {
-    var d = el('details', null, 'ht-write');
-    d.appendChild(el('summary', summary));
-    d.appendChild(formEl);
-    return d;
-  }
-
-  function entryList(entries, max, opts) {
-    var wrap = el('div', null, 'ht-entries');
-    entries.slice(0, max).forEach(function (e) { wrap.appendChild(HX.entryCard(e, opts)); });
-    if (entries.length > max) {
-      var more = el('details', null, 'ht-more');
-      more.appendChild(el('summary', 'Ver mais ' + (entries.length - max)));
-      var inner = el('div', null, 'ht-entries');
-      entries.slice(max).forEach(function (e) { inner.appendChild(HX.entryCard(e, opts)); });
-      more.appendChild(inner);
-      wrap.appendChild(more);
+  function routeImg(url) {
+    if (!url) return '';
+    if (window.HeroCatalog && typeof window.HeroCatalog.routeImg === 'function') {
+      return window.HeroCatalog.routeImg(url);
     }
-    return wrap;
+    return url;
   }
 
-  function sendContrib(extra) {
-    return HX.submit(Object.assign({ hero: cur().name }, extra));
+  function heroImage(hero) {
+    return hero ? routeImg(hero.file || hero.head || hero.wallpaper || '') : '';
   }
 
-  // ───────────── selos do topo ─────────────
-  function verdict() {
-    var items = U.heroMeta().concat(cur().builds);
-    if (!items.length) return { text: 'Sem dados ainda', tone: 'muted', tip: 'Ninguém publicou builds ou meta para este herói.' };
-    var p = U.pct(items);
-    if (items.length < 3 || p == null) return { text: 'Poucos dados', tone: 'muted', tip: 'Poucas indicações para tirar conclusão.' };
-    if (p >= 75) return { text: 'Aprovado pela comunidade', tone: 'green', tip: p + '% de votos positivos' };
-    if (p >= 50) return { text: 'Em observação', tone: 'gold', tip: p + '% de votos positivos' };
-    return { text: 'Contestado', tone: 'red', tip: p + '% de votos positivos' };
+  function roleLabel(role) {
+    return (window.HeroCatalog && window.HeroCatalog.roleLabel)
+      ? window.HeroCatalog.roleLabel(role) : role;
   }
 
-  Hub.hooks.banner.push(function (main, row, facts) {
-    var line = el('div', null, 'ht-badges');
-    var v = verdict();
-    var vb = el('span', 'Veredito: ' + v.text, 'ht-verdict is-' + v.tone);
-    vb.title = v.tip;
-    line.appendChild(vb);
-    var h = HD.ready() ? HD.hero(cur().name) : null;
-    ((h && h.spec) || []).forEach(function (s) { line.appendChild(el('span', HD.specPt(s), 'ht-spec')); });
-    HD.proTiers(cur().name).forEach(function (p) {
-      var b = el('span', 'Pro ' + p.tier + ' · ' + U.laneName(p.lane), 'ht-pro');
-      b.title = 'Prioridade de pick no cenário profissional (MPL)';
-      line.appendChild(b);
+  function rolesText(hero) {
+    return (hero && hero.roles && hero.roles.length)
+      ? hero.roles.map(roleLabel).join(' / ') : '';
+  }
+
+  function initials(name) {
+    var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '—';
+    return parts.slice(0, 2).map(function (part) {
+      return part.charAt(0).toUpperCase();
+    }).join('');
+  }
+
+  function findHero(name) {
+    var n = norm(name);
+    if (!n) return null;
+    var list = heroes();
+    for (var i = 0; i < list.length; i++) {
+      if (norm(list[i].name) === n) return list[i];
+    }
+    return null;
+  }
+
+  // ───────────── render da grade de heróis ─────────────
+  function optionNode(hero, index) {
+    var button = el('button', 'hero-picker-option');
+    button.type = 'button';
+    button.id = 'metaHeroOption' + index;
+    button.setAttribute('role', 'option');
+    button.setAttribute('aria-selected', 'false');
+    button.dataset.hero = hero.name;
+
+    var thumb = el('span', 'hero-picker-thumb');
+    var url = heroImage(hero);
+    if (!url) {
+      thumb.classList.add('is-empty');
+      thumb.textContent = initials(hero.name);
+    } else {
+      var img = document.createElement('img');
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.src = url;
+      img.addEventListener('error', function () {
+        thumb.classList.add('is-empty');
+        thumb.textContent = initials(hero.name);
+      }, { once: true });
+      thumb.appendChild(img);
+    }
+    button.appendChild(thumb);
+
+    var copy = el('span', 'hero-picker-copy');
+    copy.appendChild(el('b', null, hero.name));
+    var sub = [hero.tier ? 'Tier ' + hero.tier : '', rolesText(hero)].filter(Boolean).join(' · ');
+    if (sub) copy.appendChild(el('small', null, sub));
+    button.appendChild(copy);
+
+    if (hero.tier) {
+      var tier = el('span', 'hero-picker-tier', hero.tier);
+      tier.dataset.tier = hero.tier;
+      button.appendChild(tier);
+    }
+
+    button.addEventListener('click', function (event) {
+      event.preventDefault();
+      select(hero.name, true);
     });
-    main.insertBefore(line, facts);
-  });
+    return button;
+  }
 
-  // ───────────── build de referência (pros) ─────────────
-  var proIdx = 0;
+  function renderOptions(query) {
+    if (!ui) return;
+    var q = norm(query);
+    var list = heroes().slice();
 
-  function proBuildBlock(b, heading) {
-    var box = el('div', null, 'ht-pro-build');
-    if (heading) box.appendChild(el('p', heading, 'hh-label'));
-    var items = el('div', null, 'hh-items is-big');
-    b.items.forEach(function (alts, i) {
-      var cell = el('div', null, 'hh-item');
-      var nm = HD.itemName(alts[0]);
-      var ic = S().getIcon('itens', nm); ic.title = (i + 1) + '. ' + nm;
-      cell.appendChild(ic);
-      cell.appendChild(el('span', nm, 'hh-item-name'));
-      if (alts.length > 1) cell.appendChild(el('span', 'ou ' + HD.itemName(alts[1]), 'ht-alt'));
-      items.appendChild(cell);
-    });
-    box.appendChild(items);
-    var cost = HD.costOfFiles(b.items);
-    box.appendChild(el('p', 'Custo total: ' + HD.fmtGold(cost.total) + (cost.partial ? ' (aproximado)' : ''), 'hh-cost'));
-    var gear = el('div', null, 'hh-gear-row');
-    gear.appendChild(U.gearBox('emblemas', 'EMBLEMA', HD.emblemPt(b.emblem)));
-    gear.appendChild(U.gearBox('feiticos', 'FEITIÇO', HD.spellPt(b.spell) || '—'));
-    box.appendChild(gear);
-    if (b.talents && b.talents.length) {
-      var tal = el('div', null, 'ht-talents');
-      tal.appendChild(el('small', 'TALENTOS'));
-      b.talents.forEach(function (t) {
-        var chip = el('span', t, 'ht-talent');
-        var d = HD.talentDesc(t);
-        if (d) chip.title = d;
-        tal.appendChild(chip);
+    if (q) {
+      list = list.filter(function (hero) {
+        if (norm(hero.name).indexOf(q) !== -1) return true;
+        return (hero.roles || []).some(function (role) {
+          return norm(role).indexOf(q) !== -1 || norm(roleLabel(role)).indexOf(q) !== -1;
+        });
       });
-      box.appendChild(tal);
     }
-    return box;
-  }
 
-  function proCard() {
-    var h = HD.ready() ? HD.hero(cur().name) : null;
-    if (!h || !h.builds.length) return null;
-    if (proIdx >= h.builds.length) proIdx = 0;
-    var c = U.card('BUILD DE REFERÊNCIA', 'Setups usados no cenário profissional',
-      h.builds.length > 1 ? U.linkBtn('Ver todas →', goTab('builds')) : null);
-    c.appendChild(proBuildBlock(h.builds[proIdx]));
-    if (h.builds.length > 1) {
-      var strip = el('div', null, 'hh-others');
-      strip.appendChild(el('small', 'VARIAÇÕES'));
-      h.builds.forEach(function (b, i) {
-        var chip = el('button', 'Setup ' + (i + 1), 'hh-chip-btn' + (i === proIdx ? ' is-on' : ''));
-        chip.type = 'button';
-        chip.addEventListener('click', function () { proIdx = i; Hub.rerender(); });
-        strip.appendChild(chip);
-      });
-      c.appendChild(strip);
-    }
-    c.appendChild(el('p', 'Fonte: ' + HD.source() + '. Não é meta oficial da Moonton.', 'hc-muted ht-source'));
-    return c;
-  }
-
-  Hub.hooks.overview.push(proCard);
-
-  Hub.hooks.builds.push(function () {
-    var h = HD.ready() ? HD.hero(cur().name) : null;
-    if (!h || !h.builds.length) return null;
-    var wrap = el('section', null, 'ht-pro-section');
-    wrap.appendChild(el('h3', 'BUILDS DE REFERÊNCIA (PROS)', 'ht-section-title'));
-    h.builds.forEach(function (b, i) {
-      var c = el('article', null, 'hh-panel hh-list-card');
-      c.appendChild(proBuildBlock(b, 'SETUP ' + (i + 1)));
-      wrap.appendChild(c);
+    list.sort(function (a, b) {
+      var an = norm(a.name), bn = norm(b.name);
+      var ap = q && an.indexOf(q) === 0 ? 0 : 1;
+      var bp = q && bn.indexOf(q) === 0 ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+      return an.localeCompare(bn, 'pt-BR');
     });
-    wrap.appendChild(el('p', 'Fonte: ' + HD.source() + '.', 'hc-muted ht-source'));
-    return wrap;
-  });
 
-  // ───────────── blocos da visão geral (comunidade) ─────────────
-  function groupTargets(kind) {
-    var map = new Map();
-    HX.byKind(cur().name, kind).forEach(function (e) {
-      var k = HC.norm(e.target);
-      if (!k) return;
-      if (!map.has(k)) map.set(k, { target: e.target, entries: [], score: 0 });
-      var g = map.get(k);
-      g.entries.push(e);
-      g.score += net(e) + 1;
-    });
-    return Array.from(map.values()).sort(function (a, b) { return b.score - a.score; });
+    options = list;
+    active = -1;
+    ui.input.removeAttribute('aria-activedescendant');
+
+    var frag = document.createDocumentFragment();
+    var count = el('p', 'hero-picker-count');
+    count.textContent = list.length
+      ? list.length + (list.length === 1 ? ' herói' : ' heróis') + ' · digite para filtrar'
+      : '';
+    if (count.textContent) frag.appendChild(count);
+
+    if (!list.length) {
+      frag.appendChild(el('p', 'hero-picker-empty',
+        q ? 'Nenhum herói encontrado para “' + query.trim() + '”.' : 'Catálogo de heróis carregando…'));
+    } else {
+      list.forEach(function (hero, index) { frag.appendChild(optionNode(hero, index)); });
+    }
+
+    ui.list.replaceChildren(frag);
+    if (open) ui.list.hidden = false;
+    markSelected(ui.hidden.value);
   }
 
-  function targetRow(g) {
-    var r = el('div', null, 'hh-row');
-    r.appendChild(U.portrait(g.target, 'hh-portrait-sm'));
-    var copy = el('span', null, 'hh-row-copy');
-    copy.append(el('b', g.target), el('small', g.entries.length + (g.entries.length === 1 ? ' relato' : ' relatos')));
-    r.appendChild(copy);
-    r.appendChild(el('span', (g.score >= 0 ? '▲ ' : '▼ ') + Math.abs(g.score), 'hh-row-score' + (g.score < 0 ? ' is-neg' : '')));
-    return r;
+  function scheduleRender(query) {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(function () { renderOptions(query); }, 90);
   }
 
-  Hub.hooks.overview.push(function () {
-    var weak = groupTargets('counter_weak'), strong = groupTargets('counter_strong');
-    var c = U.card('MATCHUPS', 'Segundo a comunidade', U.linkBtn('Ver tudo →', goTab('matchups')));
-    if (!weak.length && !strong.length) {
-      c.appendChild(U.emptyBlock('Ainda não há matchups para ' + cur().name + '.', writable() ? 'Contar minha experiência' : null, goTab('matchups')));
-      return c;
+  // ───────────── estado de seleção ─────────────
+  function showAvatar(hero) {
+    if (!ui || !ui.avatar) return;
+    var url = hero ? heroImage(hero) : '';
+    ui.avatar.replaceChildren();
+    if (!url) {
+      ui.avatar.innerHTML = ui.defaultAvatar;
+      return;
     }
-    var cols = el('div', null, 'ht-cols is-tight');
-    [['SOFRE CONTRA', weak], ['SE DÁ BEM CONTRA', strong]].forEach(function (p) {
-      var col = el('div', null, 'ht-col');
-      col.appendChild(el('p', p[0], 'hh-label'));
-      if (!p[1].length) col.appendChild(el('small', 'Sem relatos', 'hc-muted'));
-      p[1].slice(0, 3).forEach(function (g) { col.appendChild(targetRow(g)); });
-      cols.appendChild(col);
-    });
-    c.appendChild(cols);
-    return c;
-  });
-
-  Hub.hooks.overview.push(function () {
-    var combos = HX.byKind(cur().name, 'combo');
-    var tips = HX.byKind(cur().name, ['guide_tips', 'guide_when', 'guide_spike']);
-    if (!combos.length && !tips.length) return null;
-    var c = U.card('DESTAQUES DA COMUNIDADE', 'Combo e dica mais bem votados');
-    if (combos.length) {
-      c.appendChild(el('p', 'COMBO', 'hh-label'));
-      c.appendChild(HX.entryCard(combos[0]));
-    }
-    if (tips.length) {
-      c.appendChild(el('p', 'DICA · ' + HX.KINDS[tips[0].kind].toUpperCase(), 'hh-label'));
-      c.appendChild(HX.entryCard(tips[0]));
-    }
-    return c;
-  });
-
-  // ───────────── aba MATCHUPS ─────────────
-  function renderMatchups(panel) {
-    var name = cur().name;
-    runHooks('matchups', panel);
-    HX.ensure(name);
-    gate(panel);
-    var cols = el('div', null, 'ht-cols');
-    [['counter_weak', 'SOFRE CONTRA', 'Heróis que costumam atrapalhar ' + name],
-     ['counter_strong', 'SE DÁ BEM CONTRA', 'Heróis em que ' + name + ' leva vantagem']].forEach(function (d) {
-      var c = U.card(d[1], d[2]);
-      var groups = groupTargets(d[0]);
-      if (!groups.length) c.appendChild(el('p', 'Sem relatos ainda.', 'hc-muted'));
-      groups.forEach(function (g) {
-        var det = el('details', null, 'ht-group');
-        var sum = el('summary');
-        sum.appendChild(targetRow(g));
-        det.appendChild(sum);
-        det.appendChild(entryList(g.entries.slice().sort(function (a, b) { return net(b) - net(a); }), 5));
-        c.appendChild(det);
-      });
-      cols.appendChild(c);
-    });
-    panel.appendChild(cols);
-
-    if (!writable()) return;
-    var fc = U.card('CONTE SUA EXPERIÊNCIA', 'Um relato curto e específico ajuda mais que uma opinião geral');
-    fc.appendChild(HX.form({
-      fields: [
-        { name: 'kind', label: 'Tipo', type: 'select', options: [['counter_weak', name + ' sofre contra...'], ['counter_strong', name + ' se dá bem contra...']] },
-        { name: 'target', label: 'Herói', type: 'hero', placeholder: 'Buscar herói...' },
-        { name: 'body', label: 'Por quê?', type: 'textarea', max: 280, min: 10, placeholder: 'Ex.: o controle dele cancela meu combo; fico sem escapatória...' },
-        { name: 'patch', label: 'Patch', type: 'text', max: 24, required: false, placeholder: 'Ex.: S42' }
-      ],
-      submitText: 'Publicar relato',
-      onSubmit: function (v) { return sendContrib({ kind: v.kind, target: v.target, body: v.body, patch: v.patch }); }
-    }));
-    panel.appendChild(fc);
+    var img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.addEventListener('error', function () {
+      ui.avatar.innerHTML = ui.defaultAvatar;
+    }, { once: true });
+    ui.avatar.appendChild(img);
   }
 
-  // ───────────── aba GUIA ─────────────
-  var GUIDE = [
-    ['guide_when', 'Quando escolher', 'Em que situação vale pegar este herói? Contra quais composições?'],
-    ['guide_laning', 'Fase de rota', 'Como jogar o começo da partida e o que evitar.'],
-    ['guide_spike', 'Power spike', 'Em que momento (nível, itens, tempo) o herói fica forte?'],
-    ['guide_position', 'Posicionamento', 'Onde ficar nas lutas e quem focar.'],
-    ['guide_items', 'Itemização', 'Por que essa build? Quando trocar um item?'],
-    ['guide_mistakes', 'Erros comuns', 'O que costuma dar errado com esse herói?'],
-    ['guide_tips', 'Dicas', 'Truques rápidos que fazem diferença.']
-  ];
+  function updateHint(hero) {
+    if (!ui || !ui.hint) return;
+    if (!hero) {
+      ui.hint.textContent = heroes().length
+        ? 'Escolha um herói do catálogo.'
+        : 'Carregando o catálogo de heróis…';
+      return;
+    }
+    var bits = [];
+    if (hero.tier) bits.push('Tier ' + hero.tier);
+    if (rolesText(hero)) bits.push(rolesText(hero));
+    if (hero.win != null) bits.push(Number(hero.win).toFixed(1) + '% de win');
+    ui.hint.textContent = bits.join(' · ') || ('Selecionado: ' + hero.name);
+  }
 
-  function renderGuide(panel) {
-    var name = cur().name;
-    HX.ensure(name);
-    gate(panel);
-    panel.appendChild(el('p', 'Guia escrito pela comunidade. Os textos são dos jogadores, não são oficiais; confira o patch e teste no seu elo.', 'hc-muted ht-intro'));
-    var grid = el('div', null, 'ht-guide');
-    GUIDE.forEach(function (g) {
-      var entries = HX.byKind(name, g[0]);
-      var c = U.card(g[1].toUpperCase(), g[2]);
-      if (!entries.length) c.appendChild(el('p', 'Ninguém escreveu esta seção ainda.', 'hc-muted'));
-      else c.appendChild(entryList(entries, 2));
-      if (writable()) {
-        c.appendChild(writeBox('+ Escrever esta seção', HX.form({
-          fields: [
-            { name: 'body', label: g[1], type: 'textarea', max: 700, min: 20, placeholder: g[2] },
-            { name: 'patch', label: 'Patch', type: 'text', max: 24, required: false, placeholder: 'Ex.: S42' }
-          ],
-          submitText: 'Publicar',
-          onSubmit: function (v) { return sendContrib({ kind: g[0], body: v.body, patch: v.patch }); }
-        })));
+  function markSelected(name) {
+    if (!ui) return;
+    var n = norm(name);
+    ui.list.querySelectorAll('.hero-picker-option').forEach(function (node) {
+      node.setAttribute('aria-selected', String(!!n && norm(node.dataset.hero) === n));
+    });
+  }
+
+  function updatePreview() {
+    if (!ui) return;
+    var hero = findHero(ui.hidden.value);
+    if (hero) {
+      showAvatar(hero);
+      updateHint(hero);
+    } else {
+      showAvatar(null);
+      updateHint(null);
+    }
+    if (ui.clear) ui.clear.hidden = !ui.hidden.value;
+  }
+
+  function select(name, focus) {
+    if (!ui && !mount()) return false;
+    var hero = findHero(name);
+    if (!hero) {
+      // Catálogo ainda carregando: tenta de novo quando o índice chegar.
+      if (!heroes().length && window.HERO_CATALOG_READY &&
+          typeof window.HERO_CATALOG_READY.then === 'function') {
+        window.HERO_CATALOG_READY.then(function () { select(name, focus); });
       }
-      grid.appendChild(c);
-    });
-    panel.appendChild(grid);
-  }
-
-  // ───────────── aba SKILLS (combos + habilidades) ─────────────
-  var SKILLS = [['skill_p', 'Passiva'], ['skill_1', 'Skill 1'], ['skill_2', 'Skill 2'], ['skill_3', 'Skill 3'], ['skill_u', 'Ultimate']];
-
-  function renderSkills(panel) {
-    var name = cur().name;
-    runHooks('skills', panel);
-    HX.ensure(name);
-    gate(panel);
-
-    var combos = HX.byKind(name, 'combo');
-    var cc = U.card('COMBOS', 'Sequências que funcionam em teamfight e em duelo');
-    if (!combos.length) cc.appendChild(el('p', 'Nenhum combo publicado ainda.', 'hc-muted'));
-    else cc.appendChild(entryList(combos, 3));
-    if (writable()) {
-      cc.appendChild(writeBox('+ Compartilhar um combo', HX.form({
-        fields: [
-          { name: 'steps', label: 'Sequência', type: 'steps' },
-          { name: 'body', label: 'Quando usar', type: 'textarea', max: 280, required: false, placeholder: 'Contra quem, em que situação, o que cuidar...' }
-        ],
-        submitText: 'Publicar combo',
-        onSubmit: function (v) { return sendContrib({ kind: 'combo', steps: v.steps, body: v.body }); }
-      })));
+      return false;
     }
-    panel.appendChild(cc);
 
-    var grid = el('div', null, 'ht-guide');
-    SKILLS.forEach(function (sk) {
-      var entries = HX.byKind(name, sk[0]);
-      var c = U.card(sk[1].toUpperCase(), 'Como funciona e como aproveitar');
-      if (!entries.length) c.appendChild(el('p', 'Sem descrição da comunidade ainda.', 'hc-muted'));
-      else c.appendChild(entryList(entries, 2));
-      if (writable()) {
-        c.appendChild(writeBox('+ Descrever ' + sk[1], HX.form({
-          fields: [{ name: 'body', label: 'Descrição e dicas', type: 'textarea', max: 600, min: 20, placeholder: 'Explique com suas palavras: efeito, alcance, dicas de uso...' }],
-          submitText: 'Publicar',
-          hint: 'Use suas palavras; não copie a descrição de outros sites ou do jogo.',
-          onSubmit: function (v) { return sendContrib({ kind: sk[0], body: v.body }); }
-        })));
-      }
-      grid.appendChild(c);
+    ui.hidden.value = hero.name;
+    ui.input.value = hero.name;
+    if (ui.clear) ui.clear.hidden = false;
+    showAvatar(hero);
+    updateHint(hero);
+    markSelected(hero.name);
+    closeList();
+    if (focus) ui.input.focus();
+    try {
+      document.dispatchEvent(new CustomEvent('society:meta-hero', { detail: { name: hero.name } }));
+    } catch (error) { /* navegador antigo: ignora */ }
+    return true;
+  }
+
+  function clearSelection(focus) {
+    if (!ui) return;
+    ui.hidden.value = '';
+    ui.input.value = '';
+    if (ui.clear) ui.clear.hidden = true;
+    showAvatar(null);
+    updateHint(null);
+    markSelected('');
+    closeList();
+    if (focus && ui.input) ui.input.focus();
+  }
+
+  function restoreInput() {
+    if (!ui) return;
+    ui.input.value = ui.hidden.value || '';
+    updateHint(findHero(ui.hidden.value));
+  }
+
+  // ───────────── abrir/fechar e teclado ─────────────
+  function positionList() {
+    if (!ui) return;
+    ui.list.classList.remove('is-above');
+    var rect = ui.root.getBoundingClientRect();
+    var below = window.innerHeight - rect.bottom;
+    // perto do fim da tela: abre para cima para não ficar cortado
+    if (below < 260 && rect.top > below) ui.list.classList.add('is-above');
+  }
+
+  function openList() {
+    if (!ui) return;
+    if (!ui.list.childElementCount) renderOptions(ui.input.value);
+    open = true;
+    ui.list.hidden = false;
+    ui.input.setAttribute('aria-expanded', 'true');
+    positionList();
+  }
+
+  function closeList() {
+    if (!ui) return;
+    open = false;
+    ui.list.hidden = true;
+    ui.input.setAttribute('aria-expanded', 'false');
+    ui.input.removeAttribute('aria-activedescendant');
+    active = -1;
+    ui.list.querySelectorAll('.is-active').forEach(function (node) {
+      node.classList.remove('is-active');
     });
-    panel.appendChild(grid);
   }
 
-  // ───────────── aba STATS ─────────────
-  function svg(tag, attrs) {
-    var e = document.createElementNS(NS, tag);
-    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
-    return e;
+  function setActive(index) {
+    if (!ui || !options.length) return;
+    active = Math.max(0, Math.min(options.length - 1, index));
+    var node = ui.list.querySelector('#metaHeroOption' + active);
+    if (!node) return;
+    ui.list.querySelectorAll('.is-active').forEach(function (other) {
+      other.classList.remove('is-active');
+    });
+    node.classList.add('is-active');
+    ui.input.setAttribute('aria-activedescendant', node.id);
+    try { node.scrollIntoView({ block: 'nearest' }); } catch (error) { /* ignora */ }
   }
 
-  function radar(values, labels) {
-    var size = 280, c = size / 2, r = 90, n = values.length;
-    var root = svg('svg', { viewBox: '0 0 ' + size + ' ' + size, class: 'ht-radar', role: 'img',
-      'aria-label': 'Radar Society: ' + labels.map(function (l, i) { return l + ' ' + Math.round(values[i]) + '%'; }).join(', ') });
-    var pt = function (i, k) {
-      var a = -Math.PI / 2 + i * 2 * Math.PI / n;
-      return [c + Math.cos(a) * r * k, c + Math.sin(a) * r * k];
+  function onKeyDown(event) {
+    if (!ui) return;
+    var key = event.key;
+
+    if (key === 'ArrowDown' || key === 'ArrowUp') {
+      event.preventDefault();
+      if (!open) { openList(); return; }
+      setActive(active < 0
+        ? (key === 'ArrowDown' ? 0 : options.length - 1)
+        : active + (key === 'ArrowDown' ? 1 : -1));
+      return;
+    }
+
+    if (key === 'Home' || key === 'End') {
+      if (!open) return;
+      event.preventDefault();
+      setActive(key === 'Home' ? 0 : options.length - 1);
+      return;
+    }
+
+    if (key === 'Enter') {
+      if (!open) { openList(); return; }
+      var pick = options[active] || (options.length === 1 ? options[0] : null) || findHero(ui.input.value);
+      if (pick) {
+        event.preventDefault();
+        select(pick.name, true);
+      }
+      return;
+    }
+
+    if (key === 'Escape') {
+      if (!open) return;
+      event.preventDefault();
+      closeList();
+      restoreInput();
+      return;
+    }
+
+    if (key === 'Tab') closeList();
+  }
+
+  // ───────────── montagem ─────────────
+  function mount() {
+    if (ui) return true;
+
+    var root = $('metaHeroPicker');
+    var input = $('metaHeroSearch');
+    var hidden = $('metaHero');
+    var list = $('metaHeroList');
+    if (!root || !input || !hidden || !list) return false;
+
+    var avatar = $('metaHeroAvatar');
+    ui = {
+      root: root,
+      input: input,
+      hidden: hidden,
+      list: list,
+      clear: $('metaHeroClear'),
+      avatar: avatar,
+      hint: $('metaHeroHint'),
+      form: $('metaForm'),
+      defaultAvatar: avatar ? avatar.innerHTML : ''
     };
-    [0.25, 0.5, 0.75, 1].forEach(function (k) {
-      var pts = values.map(function (_, i) { return pt(i, k).join(','); }).join(' ');
-      root.appendChild(svg('polygon', { points: pts, class: 'ht-radar-grid' }));
-    });
-    values.forEach(function (_, i) {
-      var p = pt(i, 1);
-      root.appendChild(svg('line', { x1: c, y1: c, x2: p[0], y2: p[1], class: 'ht-radar-grid' }));
-      var lp = pt(i, 1.2);
-      var t = svg('text', { x: lp[0], y: lp[1], class: 'ht-radar-label', 'text-anchor': lp[0] < c - 4 ? 'end' : lp[0] > c + 4 ? 'start' : 'middle', 'dominant-baseline': 'middle' });
-      t.textContent = labels[i];
-      root.appendChild(t);
-    });
-    root.appendChild(svg('polygon', { points: values.map(function (v, i) { return pt(i, Math.max(0.03, v / 100)).join(','); }).join(' '), class: 'ht-radar-shape' }));
-    values.forEach(function (v, i) {
-      var p = pt(i, Math.max(0.03, v / 100));
-      root.appendChild(svg('circle', { cx: p[0], cy: p[1], r: 3.5, class: 'ht-radar-dot' }));
-    });
-    return root;
-  }
 
-  function topCounts(list, pick, limit) {
-    var count = {}, total = list.length;
-    list.forEach(function (b) {
-      var seen = {};
-      pick(b).forEach(function (x) {
-        if (!x || seen[x]) return;
-        seen[x] = 1;
-        count[x] = (count[x] || 0) + 1;
+    input.addEventListener('focus', openList);
+    input.addEventListener('click', openList);
+    input.addEventListener('input', function () {
+      if (hidden.value && norm(hidden.value) !== norm(input.value)) {
+        hidden.value = '';
+        if (ui.clear) ui.clear.hidden = true;
+        showAvatar(null);
+        updateHint(null);
+      }
+      scheduleRender(input.value);
+      openList();
+    });
+    input.addEventListener('keydown', onKeyDown);
+    input.addEventListener('blur', function () {
+      setTimeout(function () {
+        if (!ui || open || ui.hidden.value) return;
+        var hero = findHero(ui.input.value);
+        if (hero) select(hero.name, false);
+      }, 120);
+    });
+
+    // clique fora fecha a grade
+    document.addEventListener('pointerdown', function (event) {
+      if (ui && !ui.root.contains(event.target)) closeList();
+    }, true);
+
+    if (ui.clear) {
+      ui.clear.addEventListener('click', function (event) {
+        event.preventDefault();
+        clearSelection(true);
       });
-    });
-    return Object.keys(count).map(function (k) { return { name: k, n: count[k], pct: Math.round(count[k] * 100 / total) }; })
-      .sort(function (a, b) { return b.n - a.n; }).slice(0, limit);
-  }
-
-  function renderStats(panel) {
-    var name = cur().name;
-    runHooks('stats', panel);
-    var meta = U.heroMeta(), builds = cur().builds, contribs = HX.all(name);
-    var lanes = U.LANES.filter(function (l) {
-      return meta.some(function (e) { return e.lane === l; }) || builds.some(function (b) { return b.lane === l; });
-    });
-    var all = meta.concat(builds);
-    var latestPatch = all.slice().sort(U.newest)[0];
-    var fresh = latestPatch ? Math.round(all.filter(function (e) { return e.patch === latestPatch.patch; }).length * 100 / all.length) : 0;
-    var values = [U.pct(builds) || 0, U.pct(meta) || 0, lanes.length * 100 / U.LANES.length,
-      Math.min(100, (builds.length + meta.length + contribs.length) * 10), fresh];
-    var labels = ['Builds', 'Meta', 'Rotas', 'Atividade', 'Frescor'];
-
-    var grid = el('div', null, 'ht-stats');
-
-    var rc = U.card('RADAR SOCIETY', 'Resumo visual da comunidade sobre ' + name);
-    rc.appendChild(radar(values, labels));
-    rc.appendChild(el('p', 'Builds e Meta: % de votos positivos. Rotas: quantas das 5 rotas têm indicações. Atividade: volume de contribuições. Frescor: parte das indicações no patch mais recente.', 'hc-muted ht-source'));
-    grid.appendChild(rc);
-
-    var tc = U.card('TIERS VOTADOS', 'Indicações de meta por tier');
-    if (!meta.length) tc.appendChild(el('p', 'Sem indicações de meta ainda.', 'hc-muted'));
-    ['S', 'A', 'B'].forEach(function (t) {
-      var n = meta.filter(function (e) { return String(e.tier).charAt(0).toUpperCase() === t; }).length;
-      if (meta.length) tc.appendChild(U.bar('TIER ' + t, Math.round(n * 100 / meta.length), t === 'S' ? 'is-gold' : t === 'A' ? 'is-green' : 'is-blue'));
-    });
-    var lc = el('div', null, 'ht-lane-bars');
-    lc.appendChild(el('p', 'ROTAS INDICADAS', 'hh-label'));
-    U.LANES.forEach(function (l) {
-      var n = meta.filter(function (e) { return e.lane === l; }).length + builds.filter(function (b) { return b.lane === l; }).length;
-      var tot = meta.length + builds.length;
-      lc.appendChild(U.bar(U.laneName(l).toUpperCase(), tot ? Math.round(n * 100 / tot) : 0, 'is-blue'));
-    });
-    tc.appendChild(lc);
-    grid.appendChild(tc);
-
-    var ic = U.card('ITENS MAIS USADOS', 'Nas builds da comunidade');
-    var items = topCounts(builds, function (b) { return b.items || []; }, 6);
-    if (!items.length) ic.appendChild(el('p', 'Sem builds publicadas ainda.', 'hc-muted'));
-    items.forEach(function (it) {
-      var row = el('div', null, 'hh-row');
-      row.appendChild(S().getIcon('itens', it.name));
-      var copy = el('span', null, 'hh-row-copy'); copy.appendChild(el('b', it.name));
-      row.appendChild(copy);
-      row.appendChild(el('span', it.pct + '%', 'hh-row-score'));
-      ic.appendChild(row);
-    });
-    var sp = topCounts(builds, function (b) { return [b.spell]; }, 1)[0];
-    var em = topCounts(builds, function (b) { return [b.emblem]; }, 1)[0];
-    if (sp || em) {
-      var gr = el('div', null, 'hh-gear-row');
-      if (em) gr.appendChild(U.gearBox('emblemas', 'EMBLEMA MAIS USADO', em.name));
-      if (sp) gr.appendChild(U.gearBox('feiticos', 'FEITIÇO MAIS USADO', sp.name));
-      ic.appendChild(gr);
     }
-    grid.appendChild(ic);
 
-    var h = HD.ready() ? HD.hero(name) : null;
-    if (h) {
-      var pc = U.card('NO CENÁRIO PRO', 'Dados de referência (MPL)');
-      var tiers = HD.proTiers(name);
-      var tl = el('div', null, 'ht-badges');
-      if (tiers.length) tiers.forEach(function (p) { tl.appendChild(el('span', 'Prioridade ' + p.tier + ' · ' + U.laneName(p.lane), 'ht-pro')); });
-      else tl.appendChild(el('span', 'Fora da lista de prioridade do MPL', 'ht-spec'));
-      pc.appendChild(tl);
-      HD.proItemPopularity(name).slice(0, 6).forEach(function (it) {
-        var row = el('div', null, 'hh-row');
-        row.appendChild(S().getIcon('itens', HD.itemName(it.file)));
-        var copy = el('span', null, 'hh-row-copy');
-        copy.append(el('b', HD.itemName(it.file)), el('small', HD.fmtGold(HD.priceOf(it.file) || 0)));
-        row.appendChild(copy);
-        row.appendChild(el('span', it.pct + '%', 'hh-row-score'));
-        pc.appendChild(row);
+    if (ui.form) {
+      ui.form.addEventListener('reset', function () {
+        setTimeout(function () { clearSelection(false); }, 0);
       });
-      pc.appendChild(el('p', 'Fonte: ' + HD.source() + '.', 'hc-muted ht-source'));
-      grid.appendChild(pc);
     }
-    panel.appendChild(grid);
+
+    window.addEventListener('resize', function () {
+      if (open) positionList();
+    });
+
+    if (!heroes().length) {
+      if (window.HERO_CATALOG_READY && typeof window.HERO_CATALOG_READY.then === 'function') {
+        window.HERO_CATALOG_READY.then(function () { if (ui) renderOptions(ui.input.value); });
+      }
+      window.addEventListener('hero-catalog-ready', function () {
+        if (ui) renderOptions(ui.input.value);
+      }, { once: true });
+    }
+
+    updatePreview();
+    return true;
   }
 
-  // ───────────── abas SKINS e LORE ─────────────
-  function renderSkins(panel) {
-    var name = cur().name;
-    HX.ensure(name);
-    gate(panel);
-    var entries = HX.byKind(name, 'skin');
-    var c = U.card('SKINS', 'Skins de ' + name + ' que a comunidade recomenda ou comenta');
-    if (!entries.length) c.appendChild(el('p', 'Nenhuma skin cadastrada ainda.', 'hc-muted'));
-    else {
-      var list = el('div', null, 'ht-entries');
-      entries.forEach(function (e) { list.appendChild(HX.entryCard(e, { badge: e.target || 'Skin' })); });
-      c.appendChild(list);
+  function boot() {
+    if (mount()) {
+      if (mountTimer) { clearInterval(mountTimer); mountTimer = null; }
+      return;
     }
-    if (writable()) {
-      c.appendChild(writeBox('+ Indicar uma skin', HX.form({
-        fields: [
-          { name: 'target', label: 'Nome da skin', type: 'text', max: 60, placeholder: 'Nome como aparece no jogo' },
-          { name: 'body', label: 'O que você achou?', type: 'textarea', max: 300, required: false, placeholder: 'Efeitos, visual, vale a pena?' }
-        ],
-        submitText: 'Publicar',
-        onSubmit: function (v) { return sendContrib({ kind: 'skin', target: v.target, body: v.body }); }
-      })));
-    }
-    panel.appendChild(c);
+    if (mountTimer) return;
+    var tries = 0;
+    mountTimer = setInterval(function () {
+      if (mount() || ++tries > 40) {
+        clearInterval(mountTimer);
+        mountTimer = null;
+      }
+    }, 250);
   }
 
-  function renderLore(panel) {
-    var name = cur().name;
-    HX.ensure(name);
-    gate(panel);
-    var entries = HX.byKind(name, 'lore');
-    var c = U.card('LORE', 'História e curiosidades de ' + name + ', contadas pela comunidade');
-    if (!entries.length) c.appendChild(el('p', 'Ninguém contou a história deste herói ainda.', 'hc-muted'));
-    else c.appendChild(entryList(entries, 3));
-    if (writable()) {
-      c.appendChild(writeBox('+ Contar a história', HX.form({
-        fields: [{ name: 'body', label: 'História ou curiosidade', type: 'textarea', max: 700, min: 40, placeholder: 'Escreva com suas palavras, sem copiar textos do jogo ou de outros sites.' }],
-        submitText: 'Publicar',
-        onSubmit: function (v) { return sendContrib({ kind: 'lore', body: v.body }); }
-      })));
+  window.addEventListener('society-app-ready', boot);
+  window.addEventListener('society:tab', function (event) {
+    if (event && event.detail === 'meta') boot();
+    else if (ui) {
+      closeList();
+      restoreInput();
     }
-    panel.appendChild(c);
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
   }
 
-  // ───────────── registro ─────────────
-  var count = function (kinds) { return function () { var n = HX.byKind(cur().name, kinds).length; return n ? ' (' + n + ')' : ''; }; };
-  var matchCount = count(['counter_weak', 'counter_strong']);
-  Hub.register({ id: 'matchups', order: 40, label: function () { return 'Matchups' + matchCount(); }, render: renderMatchups });
-  Hub.register({ id: 'guide', order: 50, label: 'Guia', render: renderGuide });
-  Hub.register({ id: 'skills', order: 60, label: 'Skills', render: renderSkills });
-  Hub.register({ id: 'stats', order: 70, label: 'Stats', render: renderStats });
-  Hub.register({ id: 'skins', order: 80, label: 'Skins', render: renderSkins });
-  Hub.register({ id: 'lore', order: 90, label: 'Lore', render: renderLore });
-
-  // carrega os dados fixos assim que o app estiver pronto
-  function boot() { HD.load(); }
-  if (window.Society) boot(); else window.addEventListener('society-app-ready', boot, { once: true });
+  window.MetaPicker = {
+    select: function (name) { return select(name, false); },
+    clear: function () { clearSelection(false); },
+    current: function () { return ui ? ui.hidden.value : ''; },
+    refresh: function () { if (ui) renderOptions(ui.input.value); }
+  };
+  // Compatibilidade: app.js (Society.startMeta) usa este nome.
+  window.MetaHeroPicker = window.MetaPicker;
 })();

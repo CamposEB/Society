@@ -50,6 +50,7 @@ from pydantic import BaseModel
 from identity_store import IdentityError, identity_store
 from db import connect as _connect_db
 import social
+import quiz_system
 import profile_customization
 
 BOT_KEY = os.getenv("BOT_KEY", "").strip()
@@ -71,6 +72,16 @@ if not DEV_NICKS:
 
 VALID_ROLES = ("user", "beta", "streamer", "vip", "admin", "mod", "dev")
 VALID_VISIBILITIES = ("public", "friends", "private")
+# Cargos que podem usar a cor do próprio nome no site (cliente: role-colors.js)
+NAME_COLOR_ROLES = {"dev", "admin", "mod", "beta"}
+
+
+def name_color_for(role, data=None):
+    """Preferência de cor do nome: 'role' (cor do cargo) ou 'default'."""
+    pref = str((data or {}).get("name_color", "")).strip().lower()
+    if role not in NAME_COLOR_ROLES:
+        return "default"
+    return pref if pref in ("role", "default") else "role"
 
 # ─── VISITANTES (guest) ───
 # Visitantes são contas temporárias: existem só enquanto o WebSocket está
@@ -86,6 +97,7 @@ GUEST_ALLOWED_TYPES = {
     "move", "chat", "room", "room_list", "profile_view", "role_status",
     "community_meta_list", "community_build_list", "tournament_list",
     "lfg_list", "streamers_list",
+    "quiz_get", "quiz_ranking", "quiz_practice", "quiz_practice_answer",
 }
 # pedidos de leitura bloqueados que o cliente faz sozinho: não geram aviso
 GUEST_SILENT_SUFFIXES = ("_list", "_feed", "_seen", "_notifications", "_unread")
@@ -614,6 +626,7 @@ def profile(nick, viewer=None):
         "online": nick in online,
         "role": role,
         "verified": verified,
+        "name_color": name_color_for(role, data),
         "is_guest": nick in GUEST_NICKS,
         "friendship_status": friendship,
         "avatar": data.get("avatar", ""),
@@ -891,10 +904,13 @@ def threads(nick):
         user = get_user(row["other"])
         data = json.loads(user["profile_data"] or "{}")
         last_row = db.execute("SELECT m, ts FROM dm WHERE id=?", (row["last_id"],)).fetchone()
+        dm_role = role_for(row["other"])
         result.append({
             "nick": row["other"],
             "name": data.get("display_name") or user["display"],
             "avatar": data.get("avatar", ""),
+            "role": dm_role,
+            "name_color": name_color_for(dm_role, data),
             "unread": row["unread"],
             "last": last_row["m"] if last_row else "",
             "ts": last_row["ts"] if last_row else 0,
@@ -906,9 +922,7 @@ def quiz_idx(): return datetime.date.today().toordinal() % len(QUIZ)
 
 
 def quiz_state(nick):
-    q = QUIZ[quiz_idx()]
-    row = db.execute("SELECT 1 FROM quiz_done WHERE nick=? AND day=?", (nick, str(datetime.date.today()))).fetchone()
-    return {"q": q["q"], "o": q["o"], "done": row is not None}
+    return quiz_system.state(nick)
 
 
 def lfg_list():
@@ -921,6 +935,9 @@ def lfg_list():
         data = json.loads(item.pop("profile_data") or "{}")
         item["display"] = data.get("display_name") or item["display"]
         item["avatar"] = data.get("avatar", "")
+        role = role_for(item["nick"])
+        item["account_role"] = role
+        item["name_color"] = name_color_for(role, data)
         result.append({**item, "online": item["nick"] in online})
     return result
 
@@ -1329,6 +1346,13 @@ async def online_rewards():
                 await broadcast_streamers()
         except Exception as exc:
             print(f"⚠️  [online_rewards] expirar lives falhou: {exc}")
+
+
+quiz_system.init(
+    db=db, send=send, questions=QUIZ, add_coins=add_coins, add_activity=add_activity,
+    me=me, get_user=get_user, normalize_visibility=_normalize_visibility,
+    is_guest=lambda n: n in GUEST_NICKS,
+)
 
 
 @asynccontextmanager
@@ -1763,6 +1787,9 @@ async def ws_endpoint(ws: WebSocket):
             if t in social.WS_TYPES:
                 await social.handle(nick, m)
                 continue
+            if t in quiz_system.WS_TYPES:
+                await quiz_system.handle(nick, m)
+                continue
             if t == "move":
                 p["x"] = max(0, min(W, int(m.get("x", 0))))
                 p["y"] = max(0, min(H, int(m.get("y", 0))))
@@ -1781,7 +1808,13 @@ async def ws_endpoint(ws: WebSocket):
                 p["last_chat"] = time.time()
                 low = text.lower()
                 if any(b in low for b in BAD): text = "***"
-                await bc_room(nick, {"t": "chat", "nick": nick, "name": get_user(nick)["display"], "m": text})
+                chat_user = get_user(nick)
+                chat_role = role_for(nick)
+                chat_data = json.loads(chat_user["profile_data"] or "{}")
+                await bc_room(nick, {"t": "chat", "nick": nick, "name": chat_user["display"],
+                                     "role": chat_role,
+                                     "name_color": name_color_for(chat_role, chat_data),
+                                     "m": text})
             elif t == "room":
                 rid = m.get("id")
                 if rid in ROOMS and rid != p["room"]:
@@ -2015,6 +2048,9 @@ async def ws_endpoint(ws: WebSocket):
                         "frame": frame_val,           # ← validado
                         "theme": theme_val,           # ← validado
                         "avatar_shape": shape_val,    # ← NOVO
+                        "name_color": name_color_for(role_for(nick), {
+                            "name_color": str(m.get("name_color", data.get("name_color", ""))).strip().lower()
+                        }),
                         "title": str(m.get("title", data.get("title", ""))).strip()[:30],
                         "visibility": raw_vis,
                         "is_private": raw_vis == "private",
@@ -2661,16 +2697,6 @@ async def ws_endpoint(ws: WebSocket):
                 db.execute("DELETE FROM lfg WHERE nick=?", (nick,))
                 db.commit()
                 await broadcast({"t": "lfg", "list": lfg_list()})
-            elif t == "quiz_answer":
-                if not quiz_state(nick)["done"]:
-                    q = QUIZ[quiz_idx()]
-                    ok = m.get("i") == q["a"]
-                    db.execute("INSERT INTO quiz_done(nick,day) VALUES(?,?) ON CONFLICT DO NOTHING", (nick, str(datetime.date.today())))
-                    db.commit()
-                    add_activity(nick, "quiz", "Respondeu ao quiz do dia" + (" corretamente" if ok else ""))
-                    if ok: add_coins(nick, 10)
-                    await send(nick, {"t": "quiz_result", "ok": ok, "correct": q["a"]})
-                    await send(nick, {"t": "me", **me(nick)})
             elif t == "buy":
                 item, u = SHOP.get(m.get("id")), get_user(nick)
                 owned = json.loads(u["owned"])
@@ -2814,12 +2840,15 @@ def users_search(q: str = "", viewer: str = ""):
         data = json.loads(row["profile_data"] or "{}")
         avatar = data.get("avatar", "")
         fs = friendship_status(viewer, other) if viewer else "none"
+        role = role_for(other)
         result.append({
             "id": other,
             "nick": other,
             "username": other,
             "name": data.get("display_name") or row["display"],
             "avatar": avatar,
+            "role": role,
+            "name_color": name_color_for(role, data),
             "isFriend": fs == "friends",
             "friendship_status": fs,
         })

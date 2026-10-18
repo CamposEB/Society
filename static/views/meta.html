@@ -16,6 +16,20 @@
     <a href="https://www.mobilelegends.com/" target="_blank" rel="noopener noreferrer">comunicados oficiais</a>.
   </aside>
 
+  <!-- ═══════════ DESTAQUES POR ROTA (com fotos) ═══════════ -->
+  <section class="community-game-panel meta-showcase-panel" aria-labelledby="metaShowcaseTitle">
+    <header class="community-game-section-heading">
+      <div>
+        <p class="community-game-eyebrow">RADAR DA COMUNIDADE</p>
+        <h3 id="metaShowcaseTitle">Destaques por rota</h3>
+      </div>
+      <span class="meta-source-badge">Comunidade + catálogo</span>
+    </header>
+    <div id="metaLaneShowcase" class="meta-lane-showcase" aria-live="polite">
+      <p class="community-game-message">Carregando destaques...</p>
+    </div>
+  </section>
+
   <section class="community-game-panel">
     <header class="community-game-section-heading">
       <div>
@@ -40,15 +54,31 @@
 
     <p id="metaMessage" class="community-game-message" role="status" aria-live="polite"></p>
 
-    <div id="metaList" class="community-meta-list" aria-live="polite"></div>
+    <div id="metaList" class="community-meta-grid" aria-live="polite"></div>
 
     <div id="metaEmpty" class="community-game-empty" hidden>
       <span class="community-empty-icon" aria-hidden="true">
         <svg class="ico" focusable="false"><use href="#i-compass"/></svg>
       </span>
       <b>A comunidade ainda não publicou indicações para este filtro.</b>
-      <small>Compartilhe sua experiência para ajudar outros jogadores.</small>
+      <small>Escolha um herói nas sugestões abaixo e seja o primeiro a indicar.</small>
     </div>
+
+    <!-- Sugestões do catálogo: sempre há heróis com foto para indicar -->
+    <details id="metaSuggestions" class="meta-suggestions" open>
+      <summary>
+        <span>
+          <b>Heróis do catálogo para indicar</b>
+          <small id="metaSuggestCount">Carregando...</small>
+        </span>
+        <span class="meta-suggest-toggle" aria-hidden="true"></span>
+      </summary>
+      <p class="meta-suggest-hint">
+        Toque em <b>Indicar</b> para preencher o herói no formulário. O win rate
+        vem do catálogo e serve de referência, não é a opinião da comunidade.
+      </p>
+      <div id="metaSuggestGrid" class="meta-suggest-grid"></div>
+    </details>
   </section>
 
   <section class="community-game-panel">
@@ -73,10 +103,11 @@
               type="text"
               id="metaHeroSearch"
               autocomplete="off"
-              placeholder="Buscar herói..."
+              placeholder="Buscar herói por nome ou função..."
               role="combobox"
               aria-autocomplete="list"
               aria-controls="metaHeroList"
+              aria-describedby="metaHeroHint"
               aria-expanded="false"
               aria-haspopup="listbox"
             >
@@ -104,7 +135,7 @@
             hidden
           ></div>
         </div>
-        <small class="hero-picker-hint" id="metaHeroHint">Escolha um herói do catálogo.</small>
+        <small class="hero-picker-hint" id="metaHeroHint">Escolha um herói do catálogo — as fotos aparecem ao focar no campo.</small>
       </label>
       <!-- ═══════════════════════════════════════════════════ -->
 

@@ -945,11 +945,14 @@
     wsSend({ t: "chat", m: text });
   }
 
-  function appendLog(nick, text) {
+  function appendLog(nick, text, role, nameColor) {
     if (!logEl) return;
     const row = document.createElement("div");
     const b = document.createElement("b");
     b.textContent = String(nick).slice(0, 30);
+    if (window.RoleColors && (role || nameColor)) {
+      window.RoleColors.apply(b, { role: role, name_color: nameColor });
+    }
     row.appendChild(b);
     row.appendChild(document.createTextNode(": " + String(text).slice(0, 200)));
     logEl.appendChild(row);
@@ -1098,7 +1101,7 @@
       }
       case "chat": {
         const nick = m.nick, text = m.m, who = m.name || nick;
-        appendLog(who, text);
+        appendLog(who, text, m.role, m.name_color);
         if (nick === state.selfNick) {
           const self = state.players.get(state.selfNick);
           if (self) { self.say = text; self.sayUntil = performance.now() + BALLOON_MS; }

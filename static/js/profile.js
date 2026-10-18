@@ -409,6 +409,25 @@
     document.documentElement.dataset.avatarShape = v;
     return v;
   }
+
+  /* Molduras/formas do perfil também no avatar do topbar (home) e da sidebar. */
+  function applySidebarAvatarChrome(data) {
+    const avatar = safe("sidebarAvatar");
+    if (!avatar) return;
+    const frame = isFrameAllowed(data && data.frame) ? ((data && data.frame) || "default") : "default";
+    avatar.dataset.frame = frame;
+    avatar.classList.toggle("has-custom-frame", frame !== "default");
+    if (data && data.accent) avatar.style.setProperty("--profile-accent", data.accent);
+    else avatar.style.removeProperty("--profile-accent");
+
+    const nav = safe("profileNavAvatar");
+    if (nav) {
+      nav.dataset.frame = frame;
+      nav.classList.toggle("has-custom-frame", frame !== "default");
+      if (data && data.accent) nav.style.setProperty("--profile-accent", data.accent);
+      else nav.style.removeProperty("--profile-accent");
+    }
+  }
   function looksLikeSameName(a, b) {
     const clean = s => String(s||"").toLocaleLowerCase("pt-BR").normalize("NFD")
       .replace(/[\u0300-\u036f]/g,"").replace(/^@+/,"").replace(/[^a-z0-9]/g,"");
@@ -538,6 +557,7 @@
       nameEl.replaceChildren(textSpan);
     }
     textSpan.textContent = name;
+    if (window.RoleColors) window.RoleColors.apply(textSpan, data);
     nameEl.querySelectorAll(":scope > .profile-verified-badge-inline").forEach(b => b.remove());
     const role = roleFromProfile(data);
     const def = badgeDefForRole(role);
@@ -1287,6 +1307,7 @@
   function applyProfileCard(data, username, options = {}) {
     const displayName = data.display_name || username || "Jogador";
     setText("profileDisplayName", displayName);
+    if (window.RoleColors) window.RoleColors.apply(safe("profileDisplayName"), data);
     renderVerifiedBadge(data);
     renderStreamButton(data);
     setText("profileUsername", "@" + (data.username || username || "jogador"));
@@ -1350,6 +1371,7 @@
     const displayName = data.display_name || username || "Jogador";
     const handle = "@" + (data.username || username || "jogador");
     setAvatar(safe("sidebarAvatar"), data, "sidebar-avatar");
+    applySidebarAvatarChrome(data);
     const nav = safe("profileNavAvatar");
     if (nav) {
       const a = createAvatar(data, "nav-profile-avatar");
@@ -1512,6 +1534,17 @@
     setAvatar(safe("profilePreviewAvatar"),
       { display_name:n, username:u, avatar:draftAvatar },
       "profile-avatar profile-preview-avatar");
+    const previewName = safe("profilePreviewName");
+    if (previewName) {
+      previewName.textContent = n;
+      if (window.RoleColors) {
+        window.RoleColors.apply(previewName, {
+          ...profile,
+          display_name: n,
+          name_color: safe("pNameColor")?.value || profile.name_color
+        });
+      }
+    }
     applyBanner(safe("profilePreviewBanner"), draftBanner);
   }
 
@@ -1540,6 +1573,13 @@
     setVal("profileFrameInput", savedFrame);
     setVal("profileThemeInput", savedTheme);
     setVal("pAvatarShape", profile.avatar_shape || "round");
+
+    const colorKey = window.RoleColors ? window.RoleColors.keyFor(profile) : "";
+    const nameColor = safe("pNameColor");
+    if (nameColor) {
+      nameColor.disabled = !colorKey;
+      setVal("pNameColor", profile.name_color || (colorKey ? "role" : "default"));
+    }
 
     applyRoleGating();
     syncSwatchSelection("profileFrameInput");
@@ -1666,6 +1706,7 @@
       title: safe("profileTitleInput")?.value || "",
       accent: safe("profileAccentInput")?.value || "",
       frame, theme, avatar_shape: shape,
+      name_color: safe("pNameColor")?.value || "default",
       avatar: draftAvatar, banner: draftBanner,
       visibility: vis, is_private: isPrivate,
       show_stats: Boolean(safe("profileShowStatsInput")?.checked),
@@ -1762,6 +1803,7 @@
     safe("profileThemeInput")?.addEventListener("change", () => { syncSwatchSelection("profileThemeInput"); syncPreviewTheme(); });
 
     safe("pAvatarShape")?.addEventListener("change", () => applyAvatarShape(safe("pAvatarShape").value));
+    safe("pNameColor")?.addEventListener("change", syncDraftPreviews);
 
     safe("pRank")?.addEventListener("change", () => { syncStarsField(); refreshRankPreview(); syncRankSelection(); });
     safe("pStars")?.addEventListener("input", applyStarsToRank);
@@ -2053,12 +2095,14 @@
         renderSidebarVerifiedBadge(window.__selfProfile);
         renderSidebarUsername(window.__selfProfile, window.__selfProfile.username, window.__selfProfile.display_name);
         applyAvatarShape(window.__selfProfile.avatar_shape || "round");
+        applySidebarAvatarChrome(window.__selfProfile);
       }
     });
   } else if (window.__selfProfile) {
     renderSidebarVerifiedBadge(window.__selfProfile);
     renderSidebarUsername(window.__selfProfile, window.__selfProfile.username, window.__selfProfile.display_name);
     applyAvatarShape(window.__selfProfile.avatar_shape || "round");
+    applySidebarAvatarChrome(window.__selfProfile);
   }
 
   document.addEventListener("profile:self-updated", ev => {
@@ -2067,6 +2111,7 @@
       renderSidebarVerifiedBadge(d);
       renderSidebarUsername(d, d.username, d.display_name);
       applyAvatarShape(d.avatar_shape || "round");
+      applySidebarAvatarChrome(d);
     }
   });
   window.addEventListener("profile:self-updated", ev => {
@@ -2075,6 +2120,7 @@
       renderSidebarVerifiedBadge(d);
       renderSidebarUsername(d, d.username, d.display_name);
       applyAvatarShape(d.avatar_shape || "round");
+      applySidebarAvatarChrome(d);
     }
   });
 })();

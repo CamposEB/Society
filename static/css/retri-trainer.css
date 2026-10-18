@@ -1,16 +1,12 @@
 /* ============================================================================
-   Society MLBB — Treino de Retribution  (v3 · Modern + barra precisa)
+   Society MLBB — Treino de Caçar  (v5 · precisão de 1 ms)
    Carregar DEPOIS do tools.css.
 
-   v3
-   • Barra reconstruída: fill, zona e linha agora vivem dentro da MESMA "trilha"
-     (.rt-track), então 1% de HP = 1% de largura para todos. Antes o fill era
-     deslocado 3px e tinha transição de largura (atraso visual), fazendo a
-     barra parecer "antes da linha" quando o jogo já tinha aberto a janela.
-   • Zona de secure listrada (0 → linha) + ponta brilhante no fill.
-   • Barra mais alta, linha mais fina e sem corte dos marcadores.
-   • Estado "is-near" (aproximando) para treinar antecipação.
-   • Botão RETRI usa a imagem do Caçar (fallback para o SVG).
+   v5
+   • HP calculado por uma única fórmula (hpAt) usada no desenho e no cast.
+   • O erro é a diferença em ms entre o HP no instante do clique e o dano do
+     Caçar; por isso é possível registrar 1,0 ms.
+   • Leitura de precisão ao vivo abaixo da barra.
    ============================================================================ */
 
 .rt {
@@ -254,6 +250,29 @@
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
+
+/* leitura de precisão ao vivo (ms) */
+.rt-live {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 2px 0;
+  color: var(--rt-muted, #8b93a7);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.rt-live b {
+  color: var(--rt-text);
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
+.rt-live[data-state="early"] b { color: var(--rt-gold, #f0c14b); }
+.rt-live[data-state="late"] b,
+.rt-live[data-state="secure"] b { color: var(--rt-perfect, #4ade80); }
+.rt-live[data-state="fail"] b { color: var(--rt-fail, #ef4444); }
 
 /* moldura da barra (sem overflow:hidden para não cortar os marcadores) */
 .rt-bar {
@@ -596,6 +615,7 @@
 .rt-ov-title[data-kind="great"]   { color: var(--rt-great);   text-shadow: 0 0 26px rgba(34, 211, 238, .5); }
 .rt-ov-title[data-kind="good"]    { color: var(--rt-good);    text-shadow: 0 0 26px rgba(96, 165, 250, .5); }
 .rt-ov-title[data-kind="slow"]    { color: var(--rt-slow);    text-shadow: 0 0 26px rgba(251, 191, 36, .5); }
+.rt-ov-title[data-kind="late"]    { color: var(--rt-slow);    text-shadow: 0 0 26px rgba(251, 191, 36, .35); }
 .rt-ov-title[data-kind="fail"]    { color: var(--rt-fail);    text-shadow: 0 0 26px rgba(239, 68, 68, .5); }
 
 .rt-ov-sub {
@@ -992,6 +1012,7 @@
 .rt-chip-great   { color: var(--rt-great); }
 .rt-chip-good    { color: var(--rt-good); }
 .rt-chip-slow    { color: var(--rt-slow); }
+.rt-chip-late    { color: var(--rt-slow); }
 .rt-chip-fail    { color: var(--rt-fail); }
 
 .rt-note {
