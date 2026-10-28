@@ -1,0 +1,36 @@
+/* ===== MODO LEVE (so CSS) - celular / toque / tela estreita ===== */
+@media (pointer: coarse), (max-width: 820px) {
+  /* molduras e particulas ficam estaticas */
+  [data-frame],
+  [data-frame]::before,
+  [data-frame]::after,
+  .profile-card::after,
+  .profile-avatar-wrap::before,
+  .profile-status.is-online i,
+  .profile-stream-btn.is-live,
+  [data-theme="glitch"] .profile-card::after {
+    animation: none !important;
+  }
+
+  /* blend mode e blur sao caros em GPU de celular */
+  .profile-card::after,
+  .profile-preview-card::after {
+    mix-blend-mode: normal;
+    opacity: calc(var(--th-pattern-opacity, .35) * .45);
+  }
+  .profile-page::before,
+  .profile-avatar-wrap::before {
+    filter: none;
+  }
+  .profile-toolbar .profile-subtle-button,
+  .profile-toolbar .profile-friend-btn,
+  .profile-toolbar .profile-golive {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(10, 14, 26, .82);
+  }
+  .profile-dialog::backdrop {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

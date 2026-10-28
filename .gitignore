@@ -7,3 +7,4 @@ __pycache__/
 .DS_Store
 firebase-service-account.json
 token.txt
+dados-exportados/

@@ -1,0 +1,17 @@
+/* Ajustes da versão estática: sem login, sem sidebar, tudo visível */
+#game { display: block !important; }
+.tab { display: none; }
+.tab.on { display: block !important; }
+body.is-static #sidebar, body.is-static #mobileNav,
+body.is-static #scrim, body.is-static #sidebarHotzone { display: none !important; }
+body.is-static .tb-nav button { cursor: pointer; }
+.hero-page { max-width: 1100px; margin: 0 auto; padding: 1rem 1.25rem 3rem; }
+.hero-back { display: inline-block; margin-bottom: .75rem; color: var(--muted, #9a9aa6); text-decoration: none; }
+.hero-back:hover { color: inherit; }
+.static-toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0;
+  background: rgba(20, 20, 26, .96); color: #eee; border: 1px solid rgba(139, 114, 255, .55);
+  padding: 10px 16px; border-radius: 12px; z-index: 100; pointer-events: none;
+  transition: opacity .2s, transform .2s;
+}
+.static-toast.on { opacity: 1; transform: translate(-50%, 0); }
