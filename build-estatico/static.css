@@ -21,20 +21,19 @@ body.is-static {
 #tab-dm,
 #tab-lfg,
 #tab-tournaments,
-#tab-quiz,
 #tab-admin { 
   display: none !important; 
 }
 
 /* 3. Container Principal (Grid Layout) */
-/* Sidebar na esquerda (240px), Topbar e Conteúdo na direita */
 body.is-static #game {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: var(--sidebar-width, 260px) 1fr;
   grid-template-rows: 64px 1fr;
   min-height: 100vh;
   margin: 0;
   padding: 0;
+  transition: grid-template-columns 0.3s ease;
 }
 
 /* 4. Barra Lateral (Menu Esquerdo) */
@@ -47,13 +46,193 @@ body.is-static #sidebar {
   position: sticky;
   top: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex !important;
   flex-direction: column;
-  z-index: 100;
+  z-index: 1000;
+  width: 100%;
+  transition: left 0.3s ease;
+}
+
+/* Cabeçalho da Sidebar */
+body.is-static .sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  min-height: 64px;
+}
+
+body.is-static #brand img {
+  height: 32px;
+  width: auto;
+}
+
+/* Botão de encolher (setinha) */
+#sidebarToggle {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #8a8a93 !important;
+  border-radius: 6px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  padding: 0 !important;
+  flex-shrink: 0;
+}
+
+#sidebarToggle:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Navegação (Menu) */
+body.is-static #nav {
+  padding: 1.25rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+body.is-static .nav-group-label {
+  display: block;
+  padding: 0 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #6b6b7a;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+body.is-static #nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+body.is-static #nav button:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.is-static #nav button.on {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 3px 0 0 #e6c35c;
+}
+
+/* Textos do menu */
+body.is-static #sidebar .nav-text {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  min-width: 0;
+}
+
+body.is-static #sidebar .nav-text b {
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+}
+
+body.is-static #sidebar .nav-text small {
+  font-size: 0.7rem !important;
+  color: #8a8a93 !important;
+  margin-top: 2px !important;
+}
+
+body.is-static .nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #8a8a93;
+}
+
+body.is-static #nav button.on .nav-icon {
+  color: #e6c35c;
+}
+
+/* ==========================================================================
+   ESTADO OCULTO TOTALMENTE (Toggle Desktop)
+   ========================================================================== */
+body.is-static.sidebar-collapsed #game {
+  grid-template-columns: 0 1fr;
+}
+
+body.is-static.sidebar-collapsed #sidebar {
+  position: fixed;
+  left: -260px;
+  width: 260px;
+  height: 100vh;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  border-right: none;
+}
+
+/* Hotzone (a linha invisível para trazer a barra de volta) */
+body.is-static.sidebar-collapsed #sidebarHotzone:hover ~ #sidebar,
+body.is-static.sidebar-collapsed #sidebar:hover {
+  left: 0;
+}
+
+body.is-static.sidebar-collapsed #sidebarHotzone {
+  display: block !important;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 100vh;
+  z-index: 999;
+  cursor: pointer;
+}
+
+body.is-static.sidebar-collapsed #sidebarHotzone::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 0 4px 4px 0;
+  transition: background 0.2s, height 0.2s;
+}
+
+body.is-static.sidebar-collapsed #sidebarHotzone:hover::before {
+  background: #e6c35c;
+  height: 100px;
+}
+
+body.is-static.sidebar-collapsed #topbar {
+  grid-column: 1 / -1;
+  padding-left: 2rem !important;
+}
+
+body.is-static.sidebar-collapsed .tab.on {
+  grid-column: 1 / -1;
 }
 
 /* 5. Topbar (Cabeçalho) */
-/* Força a topbar a ocupar 100% do espaço à direita da sidebar */
 body.is-static #topbar {
   grid-column: 2;
   grid-row: 1;
@@ -66,48 +245,38 @@ body.is-static #topbar {
   position: sticky;
   top: 0;
   z-index: 99;
-  width: 100% !important;
-  max-width: none !important;
 }
 
-/* Esconde o botão de hambúrguer no desktop */
 body.is-static #menuBtn {
   display: none !important;
 }
 
-/* 6. Conteúdo Principal (Geral) */
+/* 6. Conteúdo Principal */
 body.is-static .tab.on {
   grid-column: 2;
   grid-row: 2;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 1400px; /* Limite máximo para não esticar demais em monitores ultra-wide */
+  max-width: 1400px;
   margin: 0 auto;
   padding: 1.5rem 2rem;
   box-sizing: border-box;
 }
 
-/* 7. Correções Específicas da Home (Sobrescrevendo home.css) */
-/* O home.css original limita a home a 1020px, vamos expandir */
+/* 7. Correções da Home */
 body.is-static .home-page,
 body.is-static #tab-home {
   max-width: 100% !important;
 }
 
-/* Corrige o Banner Principal (Hero) que estava esmagado */
 @media (min-width: 900px) {
   body.is-static .home-hero.home-hero-banner {
-    /* Remove a margem que forçava a tela cheia e quebrava com a sidebar */
     margin-inline: 0 !important; 
-    /* Mantém o padding interno bonito */
     padding-inline: 40px !important; 
-    /* Devolve as bordas arredondadas */
     border-radius: 16px !important; 
     border: 1px solid var(--hp-gold-line) !important;
   }
-
-  /* Corrige a faixa "Bombando" que estava invadindo a sidebar */
   body.is-static .home-ticker {
     margin: 0 0 1.5rem 0 !important;
     border-radius: 10px !important;
@@ -115,66 +284,80 @@ body.is-static #tab-home {
   }
 }
 
-/* Permite que o texto do banner respire melhor */
 body.is-static .home-hero-copy {
   max-width: 800px !important;
 }
 body.is-static .home-hero-banner .home-hero-copy > p.home-hero-text {
   max-width: 100% !important;
 }
-
-/* Força a imagem de fundo do banner a carregar (caminho relativo) */
 .home-hero-banner {
   --home-hero-image: url('../img/hero-bg.jpg') !important;
 }
 
-/* 8. Página do Herói */
-.hero-page {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 1rem 1.25rem 3rem;
-}
-
-.hero-back {
-  display: inline-block;
-  margin-bottom: .75rem;
-  color: var(--muted, #9a9aa6);
+/* ==========================================================================
+   ESTILOS DO NOVO BOTÃO DO WHATSAPP (A tag <a> agindo como botão)
+   ========================================================================== */
+body.is-static .home-tool-card-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--hp-border);
+  border-radius: var(--hp-radius);
+  background: var(--hp-surface-2);
+  color: var(--hp-text);
+  cursor: pointer;
   text-decoration: none;
+  transition: transform var(--hp-ease), border-color var(--hp-ease), background var(--hp-ease);
 }
 
-.hero-back:hover {
-  color: inherit;
+body.is-static .home-tool-card-link:hover {
+  border-color: var(--hp-gold-line);
+  transform: translateY(-2px);
 }
 
-/* 9. Toast (Avisos flutuantes) */
+body.is-static .home-tool-card-link > span:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+body.is-static .home-tool-card-link b {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--hp-text);
+}
+
+body.is-static .home-tool-card-link small {
+  color: var(--hp-muted);
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+body.is-static .home-tool-card-link .home-tool-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(58, 167, 255, 0.4);
+  border-radius: var(--hp-radius);
+  background: rgba(58, 167, 255, 0.12);
+  color: #3aa7ff;
+  font-size: 1.2rem;
+}
+
+/* 8. Toast */
 .static-toast {
-  position: fixed;
-  left: 50%;
-  bottom: 28px;
-  transform: translate(-50%, 20px);
-  opacity: 0;
-  background: rgba(20, 20, 26, .96);
-  color: #eee;
-  border: 1px solid rgba(139, 114, 255, .55);
-  padding: 10px 16px;
-  border-radius: 12px;
-  z-index: 1000;
-  pointer-events: none;
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0;
+  background: rgba(20, 20, 26, .96); color: #eee; border: 1px solid rgba(139, 114, 255, .55);
+  padding: 10px 16px; border-radius: 12px; z-index: 1000; pointer-events: none;
   transition: opacity .2s, transform .2s;
 }
-
-.static-toast.on {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-/* 10. Utilitários */
-#metaSuggestions {
-  display: none !important;
-}
+.static-toast.on { opacity: 1; transform: translate(-50%, 0); }
+#metaSuggestions { display: none !important; }
 
 /* ==========================================================================
-   Responsividade (Celular)
+   RESPONSIVIDADE E MENU MOBILE (Gaveta Deslizante)
    ========================================================================== */
 @media (max-width: 900px) {
   body.is-static #game {
@@ -182,19 +365,45 @@ body.is-static .home-hero-banner .home-hero-copy > p.home-hero-text {
   }
   
   body.is-static #sidebar {
-    display: none !important;
+    display: flex !important;
+    position: fixed;
+    top: 0; left: 0; width: 260px; height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    background: #0a0a0b;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  body.is-static.menu #sidebar {
+    transform: translateX(0);
+  }
+  
+  body.is-static #scrim {
+    display: block !important;
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
+    z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  
+  body.is-static.menu #scrim {
+    opacity: 1; pointer-events: auto;
+  }
+  
+  body.is-static #topbar {
+    grid-column: 1;
+    padding: 0 1rem !important;
   }
   
   body.is-static #menuBtn {
     display: flex !important;
   }
   
-  body.is-static #topbar,
   body.is-static .tab.on {
     grid-column: 1;
+    padding: 1rem;
   }
   
-  body.is-static .tab.on {
-    padding: 1rem;
+  #sidebarToggle, #sidebarHotzone {
+    display: none !important;
   }
 }

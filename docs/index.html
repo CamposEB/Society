@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="css/hero-official.css">
 <link rel="stylesheet" href="css/meta-builds.css">
 <link rel="stylesheet" href="css/guide.css">
+<link rel="stylesheet" href="css/quiz.css">
 <link rel="stylesheet" href="css/topbar.css">
 <link rel="stylesheet" href="css/role-colors.css">
 <link rel="stylesheet" href="css/static.css">
@@ -67,7 +68,7 @@
 <section id="tab-home" class="tab on">
 <main class="home-page">
 
-  <!-- TICKER (preenchido via JS em #homeTickerTrack) -->
+  <!-- TICKER -->
   <div class="home-ticker" aria-label="Heróis em alta no meta">
     <span class="home-ticker-badge"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-flame"/></svg> Bombando</span>
     <div class="home-ticker-viewport">
@@ -138,27 +139,30 @@
         <svg class="ico home-tool-mark" aria-hidden="true" focusable="false"><use href="#i-build"/></svg>
       </button>
 
-      <button type="button" data-shortcut="lfg" class="tool-blue">
-        <span class="home-tool-icon" aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-duo"/></svg></span>
+      <!-- Novo botão: WhatsApp -->
+      <a href="https://chat.whatsapp.com/HhR63anlmfAH8jsRgcPjnv" target="_blank" rel="noopener noreferrer" class="home-tool-card-link tool-blue">
+        <span class="home-tool-icon" aria-hidden="true">💬</span>
         <span>
-          <b>Encontrar duo</b>
-          <small>Parceiros no seu rank e horário.</small>
+          <b>Grupo no WhatsApp</b>
+          <small>Junte-se à comunidade para achar duo e trocar ideias.</small>
+        </span>
+      </a>
+
+      <!-- Novo botão: Sorteador de Herói -->
+      <button type="button" id="btnRandomHero" class="tool-purple">
+        <span class="home-tool-icon" aria-hidden="true">🎲</span>
+        <span>
+          <b>Sorteador de Herói</b>
+          <small>Não sabe quem jogar? Deixe o destino escolher.</small>
         </span>
       </button>
 
-      <button type="button" data-shortcut="lobby" class="tool-purple">
-        <span class="home-tool-icon" aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-gamepad"/></svg></span>
-        <span>
-          <b>Lobby</b>
-          <small>Converse e organize partidas.</small>
-        </span>
-      </button>
-
+      <!-- Botão Quiz -->
       <button type="button" data-shortcut="quiz" class="tool-orange">
         <span class="home-tool-icon" aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-help"/></svg></span>
         <span>
-          <b>Quiz</b>
-          <small>Teste o que você sabe sobre o jogo.</small>
+          <b>Quiz de Conhecimento</b>
+          <small>Teste o que você sabe sobre o jogo (sem moedas).</small>
         </span>
       </button>
     </div>
@@ -229,25 +233,6 @@
     </header>
     <div id="homeMetaLanes" class="home-meta-lanes" aria-live="polite">
       <p class="home-preview-empty">Carregando meta da comunidade...</p>
-    </div>
-  </section>
-
-  <!-- TORNEIOS -->
-  <section class="home-section home-event-section">
-    <div>
-      <p class="home-eyebrow">PRÓXIMA DISPUTA</p>
-      <h3>Tem lugar para o seu time.</h3>
-      <p>Acompanhe campeonatos da comunidade, monte sua equipe e veja os resultados.</p>
-      <button type="button" data-shortcut="tournaments" class="home-text-button">
-        Explorar torneios <span aria-hidden="true">→</span>
-      </button>
-    </div>
-    <div id="lobbyTournamentPreview" class="home-tournament-preview" aria-live="polite">
-      <span>🏆</span>
-      <div class="home-preview-copy">
-        <b>Carregando campeonatos...</b>
-        <small>Buscando a próxima disputa</small>
-      </div>
     </div>
   </section>
 
@@ -329,14 +314,15 @@
     </div>
   </section>
 
-  <!-- PRÓXIMO PASSO -->
+  <!-- PRÓXIMO PASSO (RODAPÉ) -->
   <footer class="home-next-step">
     <div>
       <p class="home-eyebrow">PRONTO PARA A PRÓXIMA?</p>
       <h3>Boa partida começa com boas pessoas.</h3>
     </div>
     <div>
-      <button type="button" data-shortcut="lfg">Encontrar duo</button>
+      <!-- Botão do WhatsApp estilizado para o rodapé -->
+      <a href="https://chat.whatsapp.com/HhR63anlmfAH8jsRgcPjnv" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;justify-content:center;padding:10px 22px;border-radius:8px;background:var(--hp-gold);color:#17120a;font-weight:700;font-family:var(--hp-display);text-transform:uppercase;letter-spacing:.06em;font-size:.98rem;text-decoration:none;gap:8px;">Entrar no WhatsApp</a>
       <button type="button" data-shortcut="quiz" class="home-button-secondary">Responder o quiz</button>
     </div>
   </footer>
@@ -363,18 +349,19 @@
   <nav id="nav" aria-label="Navegação principal">
     <div class="nav-group">
       <span class="nav-group-label">COMUNIDADE</span>
-      <button type="button" data-t="home" data-shortcut="home" class="on"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span class="nav-text"><b>Início</b><small>Sua página inicial</small></span></button>
+      <button type="button" data-t="home" data-shortcut="home" data-title="Início" class="on"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span class="nav-text"><b>Início</b><small>Sua página inicial</small></span></button>
     </div>
     <div class="nav-group">
       <span class="nav-group-label">JOGO</span>
-      <button type="button" data-t="meta" data-shortcut="meta"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-chart"/></svg><span class="nav-text"><b>Meta por rota</b><small>Heróis em alta por lane</small></span></button>
-      <button type="button" data-t="heroes" data-shortcut="heroes"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-swords"/></svg><span class="nav-text"><b>Heróis</b><small>Catálogo com builds e meta</small></span></button>
-      <button type="button" data-t="builds" data-shortcut="builds"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-build"/></svg><span class="nav-text"><b>Builds</b><small>Itens e emblemas testados</small></span></button>
-      <button type="button" data-t="guide" data-shortcut="guide"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-book"/></svg><span class="nav-text"><b>Guia</b><small>Termos e jogadas explicados</small></span></button>
+      <button type="button" data-t="meta" data-shortcut="meta" data-title="Meta por rota"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-chart"/></svg><span class="nav-text"><b>Meta por rota</b><small>Heróis em alta por lane</small></span></button>
+      <button type="button" data-t="heroes" data-shortcut="heroes" data-title="Heróis"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-swords"/></svg><span class="nav-text"><b>Heróis</b><small>Catálogo com builds e meta</small></span></button>
+      <button type="button" data-t="builds" data-shortcut="builds" data-title="Builds"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-build"/></svg><span class="nav-text"><b>Builds</b><small>Itens e emblemas testados</small></span></button>
+      <button type="button" data-t="guide" data-shortcut="guide" data-title="Guia"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-book"/></svg><span class="nav-text"><b>Guia</b><small>Termos e jogadas explicados</small></span></button>
     </div>
     <div class="nav-group">
       <span class="nav-group-label">MAIS</span>
-      <button type="button" data-t="tools" data-shortcut="tools"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-percent"/></svg><span class="nav-text"><b>Ferramentas</b><small>Win rate e treino de caçar</small></span></button>
+      <button type="button" data-t="tools" data-shortcut="tools" data-title="Ferramentas"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-percent"/></svg><span class="nav-text"><b>Ferramentas</b><small>Win rate e treino de caçar</small></span></button>
+      <button type="button" data-t="quiz" data-shortcut="quiz" data-title="Quiz"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-help"/></svg><span class="nav-text"><b>Quiz</b><small>Teste seu conhecimento</small></span></button>
     </div>
   </nav>
 </aside>

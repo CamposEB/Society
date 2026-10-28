@@ -2,13 +2,61 @@
  {
   "id": 1,
   "author": "campos",
-  "lane": "Roam",
-  "hero": "Khufra",
+  "lane": "EXP",
+  "hero": "Barats",
   "tier": "S",
   "patch": "S42",
-  "notes": "Forte em todos os elos e adaptavel a todas as composições",
+  "notes": "Referência para a rota EXP.",
   "created_at": 1790957152.17167,
-  "helpful": 3,
+  "helpful": 5,
+  "not_helpful": 0
+ },
+ {
+  "id": 2,
+  "author": "campos",
+  "lane": "Jungle",
+  "hero": "Hirara",
+  "tier": "S",
+  "patch": "S42",
+  "notes": "Referência para a Selva.",
+  "created_at": 1790957153.17167,
+  "helpful": 5,
+  "not_helpful": 0
+ },
+ {
+  "id": 3,
+  "author": "campos",
+  "lane": "Mid",
+  "hero": "Eudora",
+  "tier": "S",
+  "patch": "S42",
+  "notes": "Referência para o Meio.",
+  "created_at": 1790957154.17167,
+  "helpful": 5,
+  "not_helpful": 0
+ },
+ {
+  "id": 4,
+  "author": "campos",
+  "lane": "Gold",
+  "hero": "Melissa",
+  "tier": "S",
+  "patch": "S42",
+  "notes": "Referência para a rota de Ouro.",
+  "created_at": 1790957155.17167,
+  "helpful": 5,
+  "not_helpful": 0
+ },
+ {
+  "id": 5,
+  "author": "campos",
+  "lane": "Roam",
+  "hero": "Atlas",
+  "tier": "S",
+  "patch": "S42",
+  "notes": "Referência para a rota de Rotação.",
+  "created_at": 1790957156.17167,
+  "helpful": 5,
   "not_helpful": 0
  }
 ]

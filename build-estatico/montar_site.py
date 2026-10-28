@@ -13,12 +13,14 @@ import comunidade  # noqa: E402
 
 PAGES = {
     "home": "index.html", "heroes": "herois.html", "hero": "heroi.html",
-    "meta": "meta.html", "builds": "builds.html", "tools": "tools.html"
+    "meta": "meta.html", "builds": "builds.html", "tools": "tools.html",
+    "guide": "guide.html", "quiz": "quiz.html"
 }
 
+# O quiz.css NÃO está na lista, então ele será incluído.
 CSS_FORA = {
     "login.css", "admin-v2.css", "moderation.css", "lfg.css", "profile.css",
-    "profile-lite.css", "tournaments.css", "lobby.css", "quiz.css",
+    "profile-lite.css", "tournaments.css", "lobby.css", 
     "command-palette.css", "sidebar-hover.css",
 }
 
@@ -71,13 +73,13 @@ TOPBAR = """<header id="topbar" class="tb">
   </a>
 </header>"""
 
-ATIVA = {"home": "home", "heroes": "heroes", "hero": "heroes", "meta": "meta", "builds": "builds", "tools": "tools"}
+ATIVA = {"home": "home", "heroes": "heroes", "hero": "heroes", "meta": "meta", "builds": "builds", "tools": "tools", "guide": "guide", "quiz": "quiz"}
 
 def sidebar(tab):
     ativo = ATIVA.get(tab, tab)
     def item(chave, icone, titulo, sub):
         on = ' class="on"' if chave == ativo else ""
-        return (f'<button type="button" data-t="{chave}" data-shortcut="{chave}"{on}>'
+        return (f'<button type="button" data-t="{chave}" data-shortcut="{chave}" data-title="{titulo}"{on}>'
                 f'<svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-{icone}"/></svg>'
                 f'<span class="nav-text"><b>{titulo}</b><small>{sub}</small></span></button>')
     def mobile(chave, icone, rotulo):
@@ -109,6 +111,7 @@ def sidebar(tab):
     <div class="nav-group">
       <span class="nav-group-label">MAIS</span>
       {item("tools", "percent", "Ferramentas", "Win rate e treino de caçar")}
+      {item("quiz", "help", "Quiz", "Teste seu conhecimento")}
     </div>
   </nav>
 </aside>
@@ -168,6 +171,7 @@ def main():
         sys.exit(f"Não achei {SRC}/index.html. Rode na raiz do repositório.")
     avisos = []
 
+    # 1. Copiar pastas base
     for pasta in ("css", "data", "img", "icons", "assets"):
         if (SRC / pasta).exists():
             shutil.copytree(SRC / pasta, OUT / pasta, dirs_exist_ok=True,
@@ -180,6 +184,7 @@ def main():
     (OUT / "css").mkdir(parents=True, exist_ok=True)
     (OUT / ".nojekyll").write_text("")
 
+    # 2. Tratar CSS
     for css_arq in (OUT / "css").glob("*.css"):
         t = ler(css_arq)
         novo = re.sub(r"""url\(\s*(['"]?)/static/""", r"url(\1../", t)
@@ -187,10 +192,10 @@ def main():
         if novo != t:
             css_arq.write_text(novo, encoding="utf-8")
 
+    # 3. Aplicar patches nos JS
     for nome, trocas in PATCHES.items():
         origem = SRC / "js" / nome
         if not origem.exists():
-            # Se não existir no site-antigo, ignora
             continue
         txt = ler(origem)
         for velho, novo in trocas:
@@ -200,6 +205,7 @@ def main():
                 avisos.append(f"{nome}: trecho NÃO encontrado -> {velho[:70]}")
         (OUT / "js" / nome).write_text(txt, encoding="utf-8")
 
+    # 4. Copiar dados (Meta e Builds)
     cont = Path("conteudo")
     cont.mkdir(exist_ok=True)
     (OUT / "data").mkdir(parents=True, exist_ok=True)
@@ -211,6 +217,7 @@ def main():
             print(f"Criado {alvo} " + ("(a partir da exportação)" if fonte.exists() else "(vazio)"))
         shutil.copy2(alvo, OUT / "data" / nome)
 
+    # 5. Extrair lógica do App.js antigo
     app = SRC / "js" / "app.js"
     if app.exists():
         codigo, faltando, nomes = comunidade.gerar(ler(app))
@@ -222,13 +229,18 @@ def main():
     else:
         avisos.append("site-antigo/js/app.js não encontrado: meta e builds ficarão sem conteúdo")
 
-    for nome in ("heroi-page.js", "shell.js"):
+    # 6. Copiar scripts estáticos próprios
+    for nome in ("heroi-page.js", "shell.js", "guide.js", "quiz.js"):
         shutil.copy2(AQUI / nome, OUT / "js" / nome)
     
+    # 7. Copiar CSS estático próprio
     shutil.copy2(AQUI / "static.css", OUT / "css" / "static.css")
+    
+    # 8. Gerar pages-config.js
     cfg = "window.SOCIETY_PAGES = " + repr(PAGES).replace("'", '"') + ";\n"
     (OUT / "js" / "pages-config.js").write_text(cfg, encoding="utf-8")
 
+    # 9. Encontrar sprite e montar lista de CSS
     antigo = ler(SRC / "index.html")
     m = re.search(r'<svg width="0" height="0"[\s\S]*?</svg>', antigo)
     sprite = m.group(0) if m else ""
@@ -243,9 +255,15 @@ def main():
     for n in nomes_css:
         if n not in CSS_FORA and (OUT / "css" / n).exists():
             links.append(f'<link rel="stylesheet" href="css/{n}">')
+            
+    # FORÇA a inclusão do quiz.css se ele não estiver na lista
+    if "quiz.css" not in nomes_css and (OUT / "css" / "quiz.css").exists():
+        links.append('<link rel="stylesheet" href="css/quiz.css">')
+        
     links.append('<link rel="stylesheet" href="css/static.css">')
     css = "\n".join(links)
 
+    # 10. Função geradora de páginas
     def pagina(arq, titulo, tab, conteudo, scripts):
         tags = "\n".join(f'<script src="js/{s}"></script>' for s in scripts)
         html = (PAGINA.replace("@@TITULO@@", titulo).replace("@@CSS@@", css)
@@ -261,6 +279,7 @@ def main():
         avisos.append(f"views/{nome} não encontrada")
         return "<main><p>Conteúdo indisponível.</p></main>"
 
+    # 11. Gerar as páginas HTML
     base = ["hero-catalog.js", "hero-official.js"]
     com = ["community-static.js"]
     
@@ -271,9 +290,12 @@ def main():
     pagina("heroi.html", "Herói", "hero", '<main class="hero-page"><div id="heroPage"></div></main>',
            base + ["shell.js", "heroi-page.js"])
     
-    # A página de ferramentas precisa que o HTML seja injetado no #toolsContent
     tools_conteudo = '<div id="toolsContent" class="tools-page">' + view("tools.html") + '</div>'
     pagina("tools.html", "Ferramentas", "tools", tools_conteudo, ["tools.js", "retri-trainer.js", "shell.js"])
+
+    pagina("guide.html", "Guia", "guide", view("guide.html"), ["guide.js", "shell.js"])
+    
+    pagina("quiz.html", "Quiz", "quiz", view("quiz.html"), ["quiz.js", "shell.js"])
 
     print(f"Site montado em {OUT}/")
     print("Páginas: " + ", ".join(PAGES.values()))
