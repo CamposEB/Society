@@ -1,0 +1,16 @@
+[
+ {
+  "id": 1,
+  "author": "campos",
+  "hero": "Chou",
+  "lane": "EXP",
+  "patch": "S42",
+  "spell": "Flash",
+  "emblem": "Assassino - ignição letal",
+  "items": "[\"Botas Ligeiras\", \"Lâmina das Heptaseas\", \"Lâmina da Desespero\", \"Batalha Infinita\", \"Rugido do Maléfico\", \"Imortalidade\"]",
+  "notes": "Confia no pai",
+  "created_at": 1790957480.3038,
+  "helpful": 2,
+  "not_helpful": 0
+ }
+]

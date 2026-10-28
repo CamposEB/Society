@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Builds · Society MLBB</title>
+<meta name="description" content="Society MLBB: comunidade de Mobile Legends com catálogo de heróis, meta, builds e ferramentas.">
+<meta name="theme-color" content="#0a0a0b">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/tools.css">
+<link rel="stylesheet" href="css/retri-trainer.css">
+<link rel="stylesheet" href="css/home.css">
+<link rel="stylesheet" href="css/home-hero-icons.css">
+<link rel="stylesheet" href="css/hero-hub.css">
+<link rel="stylesheet" href="css/hero-tabs.css">
+<link rel="stylesheet" href="css/heroes-catalog.css">
+<link rel="stylesheet" href="css/hero-official.css">
+<link rel="stylesheet" href="css/meta-builds.css">
+<link rel="stylesheet" href="css/guide.css">
+<link rel="stylesheet" href="css/topbar.css">
+<link rel="stylesheet" href="css/role-colors.css">
+<link rel="stylesheet" href="css/static.css">
+</head>
+<body class="is-static is-guest">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3.5 10.5 8.5-7 8.5 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></symbol>
+  <symbol id="i-duo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19v-1.5A4.5 4.5 0 0 1 8 13h2a4.5 4.5 0 0 1 4.5 4.5V19M16 5.5a3 3 0 0 1 0 5.8M17 13h.5a3.5 3.5 0 0 1 3.5 3.5V19"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5.5h16v11H11l-5.5 3v-3H4z"/><path d="M8 10h8M8 13.5h5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19h16M6 16V9M12 16V5M18 16v-4"/></symbol>
+  <symbol id="i-build" viewBox="0 0 24 24"><path d="m14.5 6.5 3-3 3 3-3 3"/><path d="m17.5 3.5-7.8 7.8M9 9l6 6M5 13l6 6-3 2-5-5z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v13A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 10h8"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.5 1.8c-1.2 1.1-2 1.4-2 3M12 17.5h.01"/></symbol>
+  <symbol id="i-tools" viewBox="0 0 24 24"><path d="M14 6.5a4 4 0 0 0-5.5 5.5L4 16.5 7.5 20l4.5-4.5a4 4 0 0 0 5.5-5.5l-2.3 2.3-3-3z"/><path d="m15 4 5 5"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v2a4 4 0 0 0 4 4M16 6h4v2a4 4 0 0 1-4 4M12 13v5M8 21h8M9 18h6"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 4.5-3.2 7.8-8 10-4.8-2.2-8-5.5-8-10V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.7 1.7 0 1 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.3a1.7 1.7 0 1 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 1 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9h-.3a1.7 1.7 0 1 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 1 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2v-.3a1.7 1.7 0 1 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 1 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.3a1.7 1.7 0 1 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9z"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></symbol>
+  <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="7" cy="7" r="2.2"/><circle cx="17" cy="17" r="2.2"/></symbol>
+  <symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M7 8h10a4 4 0 0 1 4 4.5l-.6 3.2a2 2 0 0 1-3.4 1L15 15H9l-2 1.7a2 2 0 0 1-3.4-1L3 12.5A4 4 0 0 1 7 8z"/><path d="M8 10.5v3M6.5 12h3M16 11.5h.01M18 13h.01"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4 .2 1.2.8 2 1.6 2.3C10.2 8.5 10.8 5.5 12 3z"/></symbol>
+  <symbol id="i-swords" viewBox="0 0 24 24"><path d="m4 4 9 9M20 4l-9 9M11 15l-3 3M13 15l3 3M6 21l2-3M18 21l-2-3"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+</svg>
+<div id="game">
+<header id="topbar" class="tb">
+  <button id="menuBtn" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <button id="topbarBrand" type="button" data-shortcut="home" aria-label="Society MLBB, início">
+    <span class="logo"><img src="img/logo.png" alt=""></span>
+    <span class="tb-wordmark" aria-hidden="true">Society <b>MLBB</b></span>
+  </button>
+  <a id="topbarDiscord" class="tb-icon-link" href="https://discord.gg/pXdxDDJWdk" target="_blank" rel="noopener noreferrer" aria-label="Entrar no Discord da comunidade">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M6 6.2C7.6 5.2 9.2 4.7 10.3 4.6l.4.9a11 11 0 0 1 2.6 0l.4-.9c1.1.1 2.7.6 4.3 1.6 1.7 2.4 2.5 5.1 2.2 8.3-1.2.9-2.5 1.5-3.8 1.9l-.9-1.5c.5-.2 1-.4 1.4-.7l-.3-.3a9 9 0 0 1-7.2 0l-.3.3c.4.3.9.5 1.4.7l-.9 1.5c-1.3-.4-2.6-1-3.8-1.9-.3-3.2.5-5.9 2.2-8.3ZM9.2 11a1.5 1.6 0 1 0 0 3.2 1.5 1.6 0 0 0 0-3.2Zm5.6 0a1.5 1.6 0 1 0 0 3.2 1.5 1.6 0 0 0 0-3.2Z"/></svg>
+  </a>
+</header>
+<section id="tab-builds" class="tab on">
+<main class="community-game-page builds-page">
+  <header class="community-game-hero builds-page-hero">
+    <div><p class="community-game-eyebrow">IDEIAS DE QUEM JOGA</p><h2>Builds da comunidade</h2>
+      <p>Compare configurações compartilhadas por jogadores e adapte-as ao contexto da partida.</p></div>
+    <span class="community-hero-icon" aria-hidden="true"><svg class="ico" focusable="false"><use href="#i-build"/></svg></span>
+  </header>
+  <aside class="community-game-disclaimer" role="note">
+    <b>Conteúdo criado por jogadores.</b> As builds não são oficiais e podem não servir para toda partida. Adapte a compra aos adversários, à composição e ao patch atual. Society MLBB é uma criação da comunidade, não oficial e sem afiliação com a Moonton. Imagens e nomes pertencem aos seus titulares.
+  </aside>
+  <section class="community-game-panel builds-browser" aria-label="Biblioteca de builds">
+    <header class="community-game-section-heading">
+      <div><p class="community-game-eyebrow">BIBLIOTECA DA COMUNIDADE</p><h3>Encontre uma build</h3></div>
+      <button id="buildFormToggle" class="builds-form-toggle" type="button" aria-expanded="false" aria-controls="buildFormPanel"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg> Publicar build</button>
+    </header>
+    <form id="buildFilters" class="build-filters">
+      <label>Herói<input id="buildHeroFilter" type="search" maxlength="40" placeholder="Todos os heróis" autocomplete="off"></label>
+      <label>Rota<select id="buildLaneFilter"><option value="">Todas as rotas</option><option value="EXP">EXP</option><option value="Jungle">Selva · Jungle</option><option value="Mid">Meio · Mid</option><option value="Gold">Ouro · Gold</option><option value="Roam">Roam · Suporte</option></select></label>
+      <label>Período<select id="buildPeriodFilter"><option value="7d">7 dias</option><option value="30d" selected>30 dias</option><option value="all">Sempre</option></select></label>
+      <label>Destaque<select id="buildSortFilter"><option value="popular">Mais curtidas</option><option value="recent">Mais recentes</option></select></label>
+    </form>
+    <p id="buildMessage" class="community-game-message" role="status" aria-live="polite"></p>
+    <div id="buildLists" class="build-lists">
+      <section id="buildPopularSection" class="build-list-section" aria-labelledby="buildPopularTitle">
+        <header class="build-list-heading"><div><h4 id="buildPopularTitle">Mais curtidas, últimos 30 dias</h4><small>Ordenadas pelas avaliações positivas no período.</small></div></header>
+        <div id="buildPopularList" class="community-build-list" aria-live="polite" aria-busy="true"></div>
+        <div id="buildPopularEmpty" class="community-game-empty" hidden><b>Nenhuma build neste período.</b><small>Altere os filtros ou publique uma contribuição.</small></div>
+      </section>
+      <section id="buildRecentSection" class="build-list-section" aria-labelledby="buildRecentTitle">
+        <header class="build-list-heading"><div><h4 id="buildRecentTitle">Builds recentes</h4><small>Publicações mais novas primeiro.</small></div></header>
+        <div id="buildRecentList" class="community-build-list" aria-live="polite" aria-busy="true"></div>
+        <div id="buildRecentEmpty" class="community-game-empty" hidden><b>Nenhuma build encontrada.</b><small>Tente outros filtros ou publique uma contribuição.</small></div>
+      </section>
+    </div>
+    <div id="buildLoadError" class="build-load-error" role="alert" hidden>
+      <p>Não foi possível carregar as builds agora.</p><button id="buildRetry" type="button">Tentar novamente</button>
+    </div>
+  </section>
+  <section id="buildFormPanel" class="community-game-panel" hidden>
+    <header class="community-game-section-heading"><div><p class="community-game-eyebrow">COMPARTILHE SUA EXPERIÊNCIA</p><h3>Enviar uma build</h3></div></header>
+    <form id="buildForm" class="community-game-form">
+      <label>Herói<input id="buildHero" maxlength="40" required placeholder="Nome do herói"></label>
+      <label>Rota<select id="buildLane" required><option value="">Selecione</option><option value="EXP">EXP</option><option value="Jungle">Selva · Jungle</option><option value="Mid">Meio · Mid</option><option value="Gold">Ouro · Gold</option><option value="Roam">Roam · Suporte</option></select></label>
+      <label>Patch / temporada<input id="buildPatch" maxlength="24" required placeholder="Ex.: patch 2.1.XX"></label>
+      <label>Feitiço de batalha<input id="buildSpell" maxlength="40" required placeholder="Ex.: Flicker"></label>
+      <label>Emblema e talentos<input id="buildEmblem" maxlength="100" required placeholder="Ex.: Assassino · Ruptura"></label>
+      <div class="build-item-picker community-form-wide">
+        <div class="build-item-picker-heading">
+          <div><b>Itens da build</b><small>Escolha de 3 a 6 itens. A ordem dos cliques será a ordem de compra.</small></div>
+          <span id="buildItemCount" aria-live="polite">0/6</span>
+        </div>
+        <label class="build-item-search" for="buildItemSearch">Buscar item
+          <input id="buildItemSearch" type="search" autocomplete="off" placeholder="Ex.: botas, dano, defesa">
+        </label>
+        <div id="buildItemGrid" class="build-item-grid" role="group" aria-label="Selecione os itens da build" tabindex="-1"></div>
+        <div class="build-item-order">
+          <b>Ordem de compra</b>
+          <div id="buildItemOrder" class="build-item-order-list" aria-live="polite"></div>
+        </div>
+        <input id="buildItems" type="hidden">
+        <p id="buildItemsMessage" class="build-items-message" role="status"></p>
+      </div>
+      <label class="community-form-wide">Quando usar / observações <span>Opcional</span><textarea id="buildNotes" maxlength="350" rows="3" placeholder="Composição, matchup ou momento para adaptar os itens"></textarea></label>
+      <div class="community-form-footer"><p>Compartilhe sua própria configuração, sem dados pessoais nem conteúdo copiado. Seu nome público aparece como autor; perfis privados são identificados como “Jogador da comunidade”.</p><button type="submit">Publicar build</button></div>
+    </form>
+  </section>
+</main>
+
+<dialog id="buildDetailDialog" class="build-detail-dialog" aria-labelledby="buildDetailTitle">
+  <article id="buildDetailContent"></article>
+</dialog>
+
+</section>
+<div id="scrim"></div>
+<div id="sidebarHotzone" aria-hidden="true"></div>
+<aside id="sidebar">
+  <div class="sidebar-heading">
+    <div id="brand"><span class="logo"><img src="img/logo.png" alt="Society MLBB"></span></div>
+    <button id="menuClose" type="button" aria-label="Fechar menu">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <nav id="nav" aria-label="Navegação principal">
+    <div class="nav-group">
+      <span class="nav-group-label">COMUNIDADE</span>
+      <button type="button" data-t="home" data-shortcut="home"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span class="nav-text"><b>Início</b><small>Sua página inicial</small></span></button>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">JOGO</span>
+      <button type="button" data-t="meta" data-shortcut="meta"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-chart"/></svg><span class="nav-text"><b>Meta por rota</b><small>Heróis em alta por lane</small></span></button>
+      <button type="button" data-t="heroes" data-shortcut="heroes"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-swords"/></svg><span class="nav-text"><b>Heróis</b><small>Catálogo com builds e meta</small></span></button>
+      <button type="button" data-t="builds" data-shortcut="builds" class="on"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-build"/></svg><span class="nav-text"><b>Builds</b><small>Itens e emblemas testados</small></span></button>
+      <button type="button" data-t="guide" data-shortcut="guide"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-book"/></svg><span class="nav-text"><b>Guia</b><small>Termos e jogadas explicados</small></span></button>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">MAIS</span>
+      <button type="button" data-t="tools" data-shortcut="tools"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-percent"/></svg><span class="nav-text"><b>Ferramentas</b><small>Win rate e treino de caçar</small></span></button>
+    </div>
+  </nav>
+</aside>
+<nav id="mobileNav" aria-label="Navegação principal para celular">
+  <button type="button" data-t="home" data-shortcut="home"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-home"/></svg><small>Início</small></button>
+  <button type="button" data-t="heroes" data-shortcut="heroes"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-swords"/></svg><small>Heróis</small></button>
+  <button type="button" data-t="meta" data-shortcut="meta"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-chart"/></svg><small>Meta</small></button>
+  <button type="button" data-t="builds" data-shortcut="builds" class="on"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-build"/></svg><small>Builds</small></button>
+  <button id="mobileMore" type="button" aria-label="Abrir mais opções" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg><small>Mais</small></button>
+</nav>
+</div>
+<script src="js/pages-config.js"></script>
+<script src="js/hero-catalog.js"></script>
+<script src="js/hero-official.js"></script>
+<script src="js/community-static.js"></script>
+<script src="js/shell.js"></script>
+</body>
+</html>

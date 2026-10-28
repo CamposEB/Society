@@ -1,0 +1,734 @@
+﻿
+===== LINHAS 1-120 =====
+const views = {
+  home: "/static/views/home.html",
+  meta: "/static/views/meta.html",
+  builds: "/static/views/builds.html",
+  lobby: "/static/views/lobby.html",
+  guide: "/static/views/guide.html",
+  lfg: "/static/views/lfg.html",
+  dm: "/static/views/dm.html",
+  quiz: "/static/views/quiz.html",
+  profile: "/static/views/profile.html",
+  settings: "/static/views/settings.html",
+  tournaments: "/static/views/tournaments.html",
+  admin: "/static/views/admin.html",
+  heroes: "/static/views/heroes.html",
+  hero: "/static/views/hero.html"
+};
+
+Promise.all(Object.entries(views).map(async ([name, url]) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Falha ao carregar a aba " + name + ": HTTP " + response.status);
+  return [name, await response.text()];
+})).then(entries => {
+  entries.forEach(([name, markup]) => {
+    document.getElementById("tab-" + name).innerHTML = markup;
+  });
+  initializeApp();
+}).catch(error => {
+  console.error(error);
+  document.querySelectorAll(".tab-loading").forEach(message => {
+    message.textContent = "Não foi possível carregar esta aba. Atualize a página e tente novamente.";
+  });
+});
+
+function initializeApp() {
+const $ = id => document.getElementById(id);
+const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+const send = o => {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+  ws.send(JSON.stringify(o));
+  return true;
+};
+
+// ⭐ Expõe send() globalmente para o dm-extras.js e outros módulos
+window.appSend = send;
+window.send = send;
+
+const TITLES = {home:"", meta:"", builds:"", lobby:"", guide:"Guia do jogo", rooms:"Salas", lfg:"", dm:"Mensagens", shop:"Loja", inv:"Inventário", quiz:"Quiz do dia", tools:"", tournaments:"", profile:"", settings:"", admin:"", heroes:"", hero:""};
+
+let ws, SHOP = {}, ME = {coins:0, owned:[], equip:{}}, SELF = null, LFG = [];
+let PROFILE = {}, DM = {with:null}, DM_PROFILE_TARGET = null, UNREAD = 0, QZ = null;
+let LFG_DETAILS = {}, LFG_PROFILE_TARGET = null, LFG_TOAST_TIMER = null, LFG_LOADED = false;
+let IS_ADMIN = false, IS_MODERATOR = false, IS_DEV = false;
+let IS_VIP = false, IS_STREAMER = false, IS_BETA = false;
+let IS_GUEST = false;
+// abas que exigem conta (o servidor também bloqueia; isto é só UX)
+new Set(["dm", "settings", "profile", "admin"])
+let TOURNAMENTS = [], TOURNAMENT_EDIT_ID = null;
+let COMMUNITY_META = [], COMMUNITY_BUILDS = [], COMMUNITY_BUILDS_TRENDING = [], COMMUNITY_BUILDS_RECENT = [];
+let COMMUNITY_META_LANE = "all", BUILD_REQUEST_ID = 0, BUILD_LOAD_TIMER = null, BUILD_FILTER_TIMER = null;
+let BUILD_LIST_STATE = "idle", BUILD_DETAIL_ID = null, BUILD_LAST_KEY = "", BUILD_PENDING_KEY = "";
+
+let selectedBuildItems = [], selectedItemCategory = "all", COMMUNITY_SETUP_DONE = false;
+
+let HERO_REQUEST_SEQ = 0;
+
+let DM_THREADS = [];
+let DM_FILTER = "all";
+let DM_SEARCH = "";
+let DM_LAST_DAY_KEY = null;
+
+let LOBBY_STARTED = false;
+
+let PROFILE_VIEW_TARGET = null;
+let PROFILE_PREVIOUS_TAB = "home";
+
+// ⭐ Painel de amigos
+let FRIENDS_BOOTED = false;
+let SOCIAL_BOOTED = false;
+
+// ⭐ NOVO: filtros de moderação
+let MODERATION_FILTER = "open";
+let MODERATION_SEARCH = "";
+
+const INIT_CACHE_KEY = "society.init_cache";
+
+function saveInitCache(m) {
+  try {
+    const cache = {
+      shop: m.shop, me: m.me, self: m.self, profile: m.profile || {},
+      quiz: m.quiz || null,
+      is_admin: Boolean(m.is_admin),
+      is_moderator: Boolean(m.is_moderator),
+      is_dev: Boolean(m.is_dev),
+      is_vip: Boolean(m.is_vip),
+      is_streamer: Boolean(m.is_streamer),
+      is_beta: Boolean(m.is_beta),
+      role: m.role || "user", auth_provider: m.auth_provider || "password",
+      unread: m.unread || 0,
+      saved_at: Date.now()
+    };
+    localStorage.setItem(INIT_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) { /* quota cheia: ignora */ }
+}
+
+function loadInitCache() {
+  try {
+    const raw = localStorage.getItem(INIT_CACHE_KEY);
+    if (!raw) return null;
+    const cache = JSON.parse(raw);
+    if (!cache || typeof cache !== "object" || !cache.self) return null;
+    if (cache.saved_at && Date.now() - cache.saved_at > 30 * 86400 * 1000) return null;
+    return cache;
+  } catch (e) { return null; }
+}
+
+function clearInitCache() {
+  try { localStorage.removeItem(INIT_CACHE_KEY); } catch (e) {}
+}
+
+const ITEM_IMAGE_DIR = "/static/img/icons/itens/";
+
+===== LINHAS 1240-1440 =====
+
+  const info = el("span", null, "meta-lane-info");
+  const badge = tierBadge(tier, "meta-tier-badge is-small");
+  if (badge) info.append(badge);
+  info.append(el("small", entries.length
+    ? "▲ " + communityRating(entries[0]) + " relevantes · " + entries[0].patch
+    : "Referência do catálogo"));
+  content.append(info);
+
+  const picks = entries.length
+    ? entries.slice(0, 4).map(entry => entry.hero)
+    : referenceHeroes.map(item => item.name);
+  const thumbs = el("span", null, "meta-lane-thumbs");
+  picks.filter(name => name && name !== primaryName).slice(0, 3).forEach(name => {
+    const thumb = el("span", null, "meta-lane-thumb");
+    thumb.title = name;
+    const thumbUrl = heroPortraitUrl(catalogHeroByName(name));
+    if (thumbUrl) thumb.append(heroImageEl(thumbUrl, name, ""));
+    else thumb.append(el("span", heroInitials(name), "hero-photo-fallback"));
+    thumbs.append(thumb);
+  });
+  if (thumbs.childElementCount) content.append(thumbs);
+  card.append(content);
+
+  card.addEventListener("click", () => {
+    COMMUNITY_META_LANE = lane;
+    tab("meta");
+    const target = $("metaList");
+    if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+  return card;
+}
+
+function renderMetaLaneShowcase(){
+  const wrap = $("metaLaneShowcase");
+  if (!wrap) return;
+  wrap.replaceChildren();
+  if (!(window.HERO_CATALOG || []).length && !COMMUNITY_META.length) {
+    wrap.append(el("p", "Carregando heróis do catálogo...", "community-game-message"));
+    return;
+  }
+  const used = new Set();
+  META_LANE_ORDER.forEach(lane => wrap.append(metaLaneCard(lane, used)));
+}
+
+function metaSuggestionCard(hero, lane){
+  const card = el("article", null, "meta-suggest-card");
+  const art = el("span", null, "meta-suggest-art");
+  const url = heroArtUrl(hero);
+  if (url) art.append(heroImageEl(url, hero.name, "meta-suggest-img"));
+  else art.append(el("span", heroInitials(hero.name), "hero-photo-fallback"));
+  const badge = tierBadge(hero.tier, "meta-tier-badge is-small");
+  if (badge) art.append(badge);
+  card.append(art);
+
+  const body = el("div", null, "meta-suggest-body");
+  body.append(el("b", hero.name, "meta-suggest-name"));
+  const details = [heroRolesText(hero),
+    hero.win != null ? Number(hero.win).toFixed(1) + "% win" : ""].filter(Boolean).join(" · ");
+  body.append(el("small", details || "Herói do catálogo", "meta-suggest-meta"));
+
+  const pick = el("button", "Indicar", "meta-suggest-pick");
+  pick.type = "button";
+  pick.setAttribute("aria-label", "Indicar " + hero.name + " para o meta");
+  pick.addEventListener("click", () => indicateHero(hero.name, lane));
+  body.append(pick);
+  card.append(body);
+  return card;
+}
+
+function indicateHero(name, lane){
+  if (window.MetaPicker && typeof window.MetaPicker.select === "function") {
+    window.MetaPicker.select(name);
+  }
+  if (lane && $("metaLane")) $("metaLane").value = lane;
+  showCommunityMessage("meta", name + " selecionado. Complete rota, nível e patch para publicar.", false);
+  const form = $("metaForm");
+  if (form) {
+    form.scrollIntoView({behavior:"smooth", block:"center"});
+    setTimeout(() => {
+      const patch = $("metaPatch");
+      if (patch) patch.focus({preventScroll:true});
+    }, 320);
+  }
+}
+
+function renderMetaSuggestions(){
+  const box = $("metaSuggestions"), grid = $("metaSuggestGrid");
+  if (!box || !grid) return;
+
+  const lane = COMMUNITY_META_LANE;
+  let heroes;
+  if (lane === "all") {
+    const seen = new Set();
+    heroes = META_LANE_ORDER
+      .flatMap(item => catalogLaneHeroes(item, 2))
+      .filter(hero => {
+        const key = String(hero.name).toLocaleLowerCase("pt-BR");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  } else {
+    heroes = catalogLaneHeroes(lane, 10);
+  }
+  heroes = heroes.slice(0, 12);
+
+  grid.replaceChildren();
+  const count = $("metaSuggestCount");
+  if (!heroes.length) {
+    box.hidden = true;
+    if (count) count.textContent = "";
+    return;
+  }
+  box.hidden = false;
+  if (count) {
+    count.textContent = heroes.length + (heroes.length === 1 ? " herói" : " heróis") +
+      (lane === "all" ? " · todas as rotas" : " · " + communityLaneName(lane));
+  }
+  heroes.forEach(hero => grid.append(metaSuggestionCard(hero, lane === "all" ? "" : lane)));
+}
+
+function metaHeroStats(hero){
+  const row = el("div", null, "meta-route-stats");
+  [["WIN", hero.win, "win"], ["PICK", hero.pick, "pick"], ["BAN", hero.ban, "ban"]].forEach(([label, value, kind]) => {
+    if (value == null) return;
+    const cell = el("span", null, "meta-route-stat");
+    cell.dataset.kind = kind;
+    cell.append(el("small", label), el("b", Number(value).toFixed(1) + "%"));
+    row.append(cell);
+  });
+  return row;
+}
+
+function metaHeroCard(entry){
+  const hero = catalogHeroByName(entry.hero);
+  const card = el("article", null, "community-meta-card meta-route-card");
+
+  const art = el("button", null, "meta-route-art");
+  art.type = "button";
+  art.setAttribute("aria-label", "Abrir a página de " + entry.hero);
+  const url = heroArtUrl(hero);
+  if (url) art.append(heroImageEl(url, entry.hero, "meta-route-img"));
+  else {
+    art.classList.add("is-empty");
+    art.append(el("span", heroInitials(entry.hero), "hero-photo-fallback"));
+  }
+  const badge = tierBadge(entry.tier, "meta-route-tier");
+  if (badge) art.append(badge);
+  art.append(el("span", communityLaneName(entry.lane), "meta-route-lane"));
+  art.append(el("span", entry.hero, "meta-route-name"));
+  art.addEventListener("click", () => openHeroPage(entry.hero));
+  card.append(art);
+
+  const body = el("div", null, "meta-route-body");
+  const tags = el("div", null, "meta-route-tags");
+  tags.append(el("span", "Patch " + entry.patch, "community-game-tag"));
+  const roles = heroRolesText(hero);
+  if (roles) tags.append(el("span", roles, "community-game-tag is-muted"));
+  body.append(tags);
+
+  if (entry.notes) body.append(el("p", entry.notes, "meta-route-notes"));
+  if (hero) body.append(metaHeroStats(hero));
+
+  const byline = el("p", null, "community-meta-subline");
+  byline.textContent = "por " + entry.author + " · " + communityDate(entry.created_at);
+  body.append(byline);
+
+  const votes = createCommunityVoteActions("meta", entry);
+  votes.classList.add("meta-route-votes");
+  body.append(votes);
+
+  card.append(body);
+  return card;
+}
+
+function renderCommunityMeta(){
+  const list = $("metaList");
+  if (!list) return;
+  document.querySelectorAll("[data-meta-lane]").forEach(option => {
+    option.setAttribute("aria-pressed", String(option.dataset.metaLane === COMMUNITY_META_LANE));
+  });
+  refreshMetaPatchFilter();
+  renderMetaLaneShowcase();
+  renderMetaSuggestions();
+
+  list.replaceChildren();
+  const patch = $("metaPatchFilter") ? $("metaPatchFilter").value : "";
+  const entries = COMMUNITY_META
+    .filter(entry => (COMMUNITY_META_LANE === "all" || entry.lane === COMMUNITY_META_LANE) &&
+      (!patch || entry.patch === patch))
+    .sort((a, b) => communityRating(b) - communityRating(a) ||
+      Number(b.created_at) - Number(a.created_at));
+
+  const empty = $("metaEmpty");
+  if (empty) empty.hidden = entries.length > 0;
+  list.classList.toggle("is-empty", entries.length === 0);
+  entries.forEach(entry => list.append(metaHeroCard(entry)));
+}
+
+function homeHeroCard(item){
+
+===== LINHAS 1500-1700 =====
+    else thumb.append(el("span", heroInitials(name), "hero-photo-fallback"));
+    thumbs.append(thumb);
+  });
+  if (thumbs.childElementCount) content.append(thumbs);
+
+  card.append(art, content);
+  card.addEventListener("click", () => {
+    COMMUNITY_META_LANE = lane;
+    tab("meta");
+    const target = $("metaList");
+    if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
+  });
+  return card;
+}
+
+function renderHomeMetaLanes(){
+  const wrap = $("homeMetaLanes");
+  if (!wrap) return;
+  wrap.replaceChildren();
+  if (!COMMUNITY_META.length && !(window.HERO_CATALOG || []).length) {
+    wrap.append(el("p", "Carregando meta da comunidade...", "home-preview-empty"));
+    return;
+  }
+  const used = new Set();
+  META_LANE_ORDER.forEach(lane => wrap.append(homeLaneCard(lane, used)));
+}
+
+function renderHomeLiveMeta(){
+  const track = $("homeTickerTrack"), grid = $("homeTierPreview");
+  if (!track && !grid) return;
+  const byRating = (a, b) => communityRating(b) - communityRating(a) ||
+    Number(b.created_at) - Number(a.created_at);
+  const rated = [...COMMUNITY_META].sort(byRating);
+  const byTier = [...COMMUNITY_META].sort((a, b) =>
+    homeTierRank(a.tier) - homeTierRank(b.tier) || byRating(a, b));
+  const referenceMode = rated.length === 0;
+
+  if (track) {
+    track.replaceChildren();
+    const hot = referenceMode
+      ? catalogTopHeroes(12).map(hero => ({hero:hero.name, tier:hero.tier, reference:true}))
+      : rated.slice(0, 12);
+    if (!hot.length) {
+      track.classList.add("is-static");
+      track.append(el("span", "Carregando heróis...", "home-ticker-item"));
+    } else {
+      track.classList.remove("is-static");
+      [false, true].forEach(isCopy => hot.forEach(item => {
+        const node = el("span", null, "home-ticker-item");
+        if (isCopy) node.setAttribute("aria-hidden", "true");
+        node.append(
+          getIcon("herois", item.hero),
+          el("b", item.hero),
+          el("span", "Tier " + item.tier)
+        );
+        if (item.reference) node.append(el("span", "catálogo", "home-ticker-tag"));
+        else node.append(el("span", "▲ " + communityRating(item), "home-ticker-up"));
+        track.append(node);
+      }));
+    }
+  }
+
+  if (grid) {
+    grid.replaceChildren();
+    const cards = referenceMode
+      ? catalogTopHeroes(8).map(hero => ({
+          name: hero.name,
+          tier: hero.tier,
+          lane: laneFromCatalog((hero.lanes || [])[0]),
+          metric: hero.win != null ? Number(hero.win).toFixed(1) + "% win" : "referência",
+          reference: true
+        }))
+      : byTier.slice(0, 8).map(entry => ({
+          name: entry.hero,
+          tier: entry.tier,
+          lane: entry.lane,
+          metric: communityRating(entry) + " 👍 · " + entry.patch,
+          reference: false
+        }));
+    if (!cards.length) grid.append(el("p", "Ainda não há heróis para mostrar.", "home-preview-empty"));
+    cards.forEach(item => grid.append(homeHeroCard(item)));
+    grid.classList.toggle("is-reference", cards.length > 0 && cards.every(item => item.reference));
+  }
+}
+
+function renderHomeCommunityPreviews(){
+  renderHomeLiveMeta();
+  renderHomeMetaLanes();
+  const trending = $("homeBuildTrending"), recent = $("homeBuildRecent");
+  if (!trending || !recent) return;
+  const topBuilds = COMMUNITY_BUILDS_TRENDING.slice(0, 3);
+  const recentBuilds = COMMUNITY_BUILDS_RECENT.slice(0, 3);
+
+  trending.replaceChildren();
+  recent.replaceChildren();
+  if (!topBuilds.length) trending.append(el("p", "Ainda não há builds para destacar.", "home-preview-empty"));
+  topBuilds.forEach(entry => trending.append(homeCommunityRow(
+    entry.hero,
+    communityLaneName(entry.lane) + " · " + entry.patch + " · por " + entry.author,
+    entry.helpful_30d + " úteis nos últimos 30 dias",
+    "builds",
+    entry.hero
+  )));
+  if (!recentBuilds.length) recent.append(el("p", "Ainda não há builds publicadas.", "home-preview-empty"));
+  recentBuilds.forEach(entry => recent.append(homeCommunityRow(
+    entry.hero,
+    communityLaneName(entry.lane) + " · " + entry.patch + " · por " + entry.author,
+    communityDate(entry.created_at),
+    "builds",
+    entry.hero
+  )));
+}
+
+function getBuildFilters(){
+  return {
+    hero:$("buildHeroFilter").value.trim(),
+    lane:$("buildLaneFilter").value,
+    period:$("buildPeriodFilter").value,
+    sort:$("buildSortFilter").value
+  };
+}
+
+function loadBuildFiltersFromUrl(){
+  const params = new URLSearchParams(location.search);
+  $("buildHeroFilter").value = params.get("hero") || "";
+  $("buildLaneFilter").value = ["EXP","Jungle","Mid","Gold","Roam"].includes(params.get("lane"))
+    ? params.get("lane") : "";
+  $("buildPeriodFilter").value = ["7d","30d","all"].includes(params.get("period"))
+    ? params.get("period") : "30d";
+  $("buildSortFilter").value = ["popular","recent"].includes(params.get("sort"))
+    ? params.get("sort") : "popular";
+}
+
+function updateBuildUrl(filters){
+  const url = new URL(location.href);
+  ["hero","lane","period","sort"].forEach(key => url.searchParams.delete(key));
+  if (filters.hero) url.searchParams.set("hero", filters.hero);
+  if (filters.lane) url.searchParams.set("lane", filters.lane);
+  url.searchParams.set("period", filters.period);
+  url.searchParams.set("sort", filters.sort);
+  history.pushState(null, "", url);
+}
+
+function showBuildSkeletons(list){
+  list.replaceChildren();
+  for (let index = 0; index < 4; index++) {
+    const row = el("div", null, "build-row build-row-skeleton");
+    row.setAttribute("aria-hidden", "true");
+    const hero = el("span", null, "build-skeleton build-skeleton-hero");
+    const identity = el("span", null, "build-skeleton build-skeleton-identity");
+    const items = el("span", null, "build-skeleton build-skeleton-items");
+    const meta = el("span", null, "build-skeleton build-skeleton-meta");
+    row.append(hero, identity, items, meta);
+    list.append(row);
+  }
+  list.setAttribute("aria-busy", "true");
+}
+
+function showBuildLoadError(){
+  clearTimeout(BUILD_LOAD_TIMER);
+  BUILD_LIST_STATE = "error";
+  $("buildLoadError").hidden = false;
+  renderCommunityBuilds();
+}
+
+function requestCommunityBuilds(updateUrl){
+  const filters = getBuildFilters();
+  if (updateUrl) updateBuildUrl(filters);
+  const key = JSON.stringify(filters);
+  const silent = BUILD_LIST_STATE === "ready" && key === BUILD_LAST_KEY;
+  BUILD_PENDING_KEY = key;
+  if (!silent) {
+    BUILD_LIST_STATE = "loading";
+    $("buildLoadError").hidden = true;
+    showBuildSkeletons($("buildPopularList"));
+    showBuildSkeletons($("buildRecentList"));
+    $("buildPopularEmpty").hidden = true;
+    $("buildRecentEmpty").hidden = true;
+  }
+  const requestId = ++BUILD_REQUEST_ID;
+  if (!send({t:"community_build_list", ...filters, request_id:requestId})) {
+    if (!silent) showBuildLoadError();
+    return;
+  }
+  if (silent) return;
+  clearTimeout(BUILD_LOAD_TIMER);
+  BUILD_LOAD_TIMER = setTimeout(() => {
+    if (BUILD_REQUEST_ID === requestId && BUILD_LIST_STATE === "loading") showBuildLoadError();
+  }, 10000);
+}
+
+function scheduleBuildFilterRequest(){
+  clearTimeout(BUILD_FILTER_TIMER);
+  BUILD_FILTER_TIMER = setTimeout(() => requestCommunityBuilds(true), 220);
+}
+
+function setupCommunity(){
+  if (COMMUNITY_SETUP_DONE) return;
+  COMMUNITY_SETUP_DONE = true;
+  document.querySelectorAll("[data-meta-lane]").forEach(button => {
+    button.addEventListener("click", () => {
+
+===== LINHAS 1880-2000 =====
+  if (index >= 0) {
+    selectedBuildItems.splice(index, 1);
+  } else if (selectedBuildItems.length < 6) {
+    selectedBuildItems.push(name);
+  } else {
+    $("buildItemsMessage").textContent = "A build já tem 6 itens. Remova um antes de escolher outro.";
+    $("buildItemsMessage").classList.add("is-error");
+    return;
+  }
+  $("buildItemsMessage").textContent = "";
+  $("buildItemsMessage").classList.remove("is-error");
+  renderBuildItemSelection();
+}
+
+function renderBuildItemSelection(){
+  const selected = new Set(selectedBuildItems);
+  const grid = $("buildItemGrid");
+  if (grid) {
+    grid.querySelectorAll(".build-item-option").forEach(button => {
+      const active = selected.has(button.dataset.itemName);
+      button.setAttribute("aria-pressed", String(active));
+      button.classList.toggle("is-selected", active);
+    });
+  }
+  $("buildItemCount").textContent = selectedBuildItems.length + "/6";
+  $("buildItems").value = selectedBuildItems.join(", ");
+  const order = $("buildItemOrder");
+  order.replaceChildren();
+  if (!selectedBuildItems.length) {
+    order.append(el("span", "Os itens escolhidos aparecerão aqui, na ordem de compra.", "build-item-order-empty"));
+    return;
+  }
+  selectedBuildItems.forEach((name, index) => {
+    const item = el("span", null, "build-item-order-entry");
+    item.append(el("b", String(index + 1)), getIcon("itens", name), el("span", name));
+    const remove = el("button", "Remover " + name, "build-item-remove");
+    remove.type = "button";
+    remove.setAttribute("aria-label", "Remover " + name + " da ordem de compra");
+    remove.addEventListener("click", () => toggleBuildItem(name));
+    item.append(remove);
+    order.append(item);
+  });
+}
+
+function refreshMetaPatchFilter(){
+  const select = $("metaPatchFilter");
+  if (!select) return;
+  const selected = select.value;
+  const patches = [...new Set(COMMUNITY_META.map(entry => entry.patch))]
+    .filter(Boolean).sort().reverse();
+  select.textContent = "";
+  select.append(new Option("Todos", ""));
+  patches.forEach(patch => select.append(new Option(patch, patch)));
+  select.value = patches.includes(selected) ? selected : "";
+}
+
+function createCommunityVoteActions(scope, entry){
+  const actions = el("div", null, scope === "builds"
+    ? "community-vote-actions community-build-row-actions"
+    : "community-vote-actions");
+  const kind = scope === "meta" ? "community_meta_vote" : "community_build_vote";
+  const choices = scope === "meta"
+    ? [[1, "👍 Relevante", entry.helpful], [-1, "👎 Não concordo", entry.not_helpful]]
+    : [[1, "▲ " + entry.helpful, entry.helpful], [-1, "▼ " + entry.not_helpful, entry.not_helpful]];
+  choices.forEach(([value, label]) => {
+    const button = el("button", label);
+    button.type = "button";
+    button.disabled = entry.own;
+    button.setAttribute("aria-pressed", String(entry.my_vote === value));
+    if (scope === "builds") {
+      button.setAttribute("aria-label", value === 1
+        ? "Marcar build como útil" : "Marcar build como não funcionou");
+      button.title = entry.own ? "Você não pode avaliar sua própria publicação."
+        : value === 1 ? "Útil na partida" : "Não funcionou";
+    } else if (entry.own) {
+      button.title = "Você não pode avaliar sua própria publicação.";
+    }
+    button.addEventListener("click", () => {
+      if (IS_GUEST) return guestPrompt("Crie uma conta para avaliar publicações.");
+      send({t:kind, id:entry.id, value});
+    });
+    actions.append(button);
+  });
+  return actions;
+}
+
+function iconSlug(name){
+  return String(name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function getIcon(tipo, nome){
+  const folders = {herois:"herois", itens:"itens", emblemas:"emblemas", feiticos:"feiticos"};
+  const folder = folders[tipo];
+  if (!folder) throw new Error("Tipo de ícone inválido: " + tipo);
+  const name = String(nome || "").trim();
+  const wrapper = el("span", null, "build-icon build-icon-" + tipo);
+  wrapper.setAttribute("role", "img");
+  wrapper.setAttribute("aria-label", name || "Ícone não informado");
+  wrapper.title = name || "Ícone não informado";
+
+  const size = tipo === "herois" ? 40 : tipo === "itens" ? 30 : 22;
+  const image = el("img");
+  const nameLower = name.toLocaleLowerCase("pt-BR");
+  const nameSlug = iconSlug(name);
+  let imageUrl = null;
+
+  if (tipo === "herois") {
+    const list = window.HERO_CATALOG || [];
+    const knownHero = list.find(hero => hero.name.toLocaleLowerCase("pt-BR") === nameLower);
+    if (knownHero && knownHero.file) {
+      imageUrl = (window.HeroCatalog && window.HeroCatalog.imageUrl)
+        ? window.HeroCatalog.imageUrl(knownHero)
+        : knownHero.file;
+    }
+  } else if (tipo === "itens") {
+    const knownItem = BUILD_ITEM_CATALOG.find(item => {
+      if (item.name.toLocaleLowerCase("pt-BR") === nameLower) return true;
+      if (Array.isArray(item.aliases) &&
+          item.aliases.some(a => a.toLocaleLowerCase("pt-BR") === nameLower)) return true;
+      if (iconSlug(item.name) === nameSlug) return true;
+
+===== LINHAS 2120-2200 =====
+    el("span", entry.helpful + " úteis · " + entry.not_helpful + " não funcionaram", "build-detail-vote-counts"),
+    createCommunityVoteActions("builds", entry));
+  content.append(header, metadata, itemsSection, equipment, notes, votes);
+  if (!$("buildDetailDialog").open) $("buildDetailDialog").showModal();
+}
+
+function renderBuildRows(list, entries, period, empty){
+  list.replaceChildren();
+  list.setAttribute("aria-busy", "false");
+  empty.hidden = entries.length > 0;
+  entries.forEach(entry => list.append(createBuildRow(entry, period)));
+}
+
+function renderCommunityBuilds(){
+  if (BUILD_LIST_STATE === "loading") return;
+  const popularList = $("buildPopularList"), recentList = $("buildRecentList");
+  const popularSection = $("buildPopularSection"), recentSection = $("buildRecentSection");
+  const filters = getBuildFilters();
+  const periodLabel = filters.period === "all" ? "sempre"
+    : filters.period === "7d" ? "últimos 7 dias" : "últimos 30 dias";
+  $("buildPopularTitle").textContent = "Mais curtidas, " + periodLabel;
+  const lists = $("buildLists");
+  if (filters.sort === "popular") lists.append(popularSection, recentSection);
+  else lists.append(recentSection, popularSection);
+  if (BUILD_LIST_STATE === "error") {
+    popularList.replaceChildren();
+    recentList.replaceChildren();
+    popularList.setAttribute("aria-busy", "false");
+    recentList.setAttribute("aria-busy", "false");
+    $("buildPopularEmpty").hidden = true;
+    $("buildRecentEmpty").hidden = true;
+    return;
+  }
+  renderBuildRows(popularList, COMMUNITY_BUILDS_TRENDING, filters.period, $("buildPopularEmpty"));
+  renderBuildRows(recentList, COMMUNITY_BUILDS_RECENT, filters.period, $("buildRecentEmpty"));
+}
+
+function formatTournamentDate(value){
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Data a confirmar";
+  return new Intl.DateTimeFormat("pt-BR", {dateStyle:"medium", timeStyle:"short"}).format(date);
+}
+
+function tournamentDateInput(value){
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function tournamentState(tournament){
+  if (tournament.status === "completed") return "finished";
+  if (tournament.status === "cancelled") return "cancelled";
+  const now = Date.now(), start = new Date(tournament.start_at).getTime(), end = new Date(tournament.end_at).getTime();
+  if (end <= now) return "finished";
+  if (tournament.status === "live" || (start <= now && end > now)) return "live";
+  return "upcoming";
+}
+
+function showTournamentMessage(message, isError){
+  const status = $("tournamentAdminMessage");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("is-error", Boolean(isError));
+  if (!isError && message) showLfgToast(message);
+}
+
+function setTournamentEditor(tournament){
+  $("tournamentAdminForm").reset();
+  TOURNAMENT_EDIT_ID = tournament ? tournament.id : null;
+  $("tournamentEditId").value = tournament ? tournament.id : "";
+  $("tournamentTitle").value = tournament ? tournament.title : "";
+  $("tournamentGame").value = tournament ? tournament.game : "Mobile Legends: Bang Bang";
+  $("tournamentFormat").value = tournament ? tournament.format : "";
+  $("tournamentPrize").value = tournament ? tournament.prize : "";
+  $("tournamentStart").value = tournament ? tournamentDateInput(tournament.start_at) : "";
+  $("tournamentEnd").value = tournament ? tournamentDateInput(tournament.end_at) : "";
+  $("tournamentMaxTeams").value = tournament ? tournament.max_teams : 16;
+  $("tournamentStatus").value = tournament ? tournament.status : "scheduled";
+  $("tournamentWinner").required = $("tournamentStatus").value === "completed";
+  $("tournamentDescription").value = tournament ? tournament.description : "";
+  $("tournamentWinner").value = tournament ? tournament.winner : "";

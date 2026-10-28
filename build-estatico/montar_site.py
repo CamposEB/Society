@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
-"""montar_site.py — monta a versão estática (GitHub Pages) do site antigo.
+"""montar_site.py — monta a versão estática (GitHub Pages) do site antigo."""
 
-Uso, na raiz do repositório:
-    python build-estatico/montar_site.py
-Lê  : site-antigo/   (o antigo static/)
-Gera: docs/          (Settings > Pages > Deploy from a branch > main > /docs)
-
-Não altera nada em site-antigo/. Pode rodar de novo sempre que quiser.
-"""
 import argparse
 import re
 import shutil
@@ -15,18 +8,18 @@ import sys
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
+sys.path.insert(0, str(AQUI))
+import comunidade  # noqa: E402
 
-# Páginas já montadas (o shell.js usa isto para navegar). Novas etapas entram aqui.
-PAGES = {"home": "index.html", "heroes": "herois.html", "hero": "heroi.html"}
+PAGES = {"home": "index.html", "heroes": "herois.html", "hero": "heroi.html",
+         "meta": "meta.html", "builds": "builds.html"}
 
-# CSS do site antigo que não faz sentido sem servidor
 CSS_FORA = {
     "login.css", "admin-v2.css", "moderation.css", "lfg.css", "profile.css",
     "profile-lite.css", "tournaments.css", "lobby.css", "quiz.css",
     "command-palette.css", "sidebar-hover.css",
 }
 
-# Imagem do CDN: o proxy /api/img vira um caminho local (img/cdn/<host>/<caminho>)
 IMG_LOCAL = ("return 'img/cdn/' + new URL(f).hostname + "
              "decodeURIComponent(new URL(f).pathname);")
 PROXY = "return '/api/img?url=' + encodeURIComponent(f);"
@@ -56,22 +49,66 @@ PATCHES = {
 }
 
 TOPBAR = """<header id="topbar" class="tb">
+  <button id="menuBtn" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
   <button id="topbarBrand" type="button" data-shortcut="home" aria-label="Society MLBB, início">
     <span class="logo"><img src="img/logo.png" alt=""></span>
     <span class="tb-wordmark" aria-hidden="true">Society <b>MLBB</b></span>
   </button>
-  <nav id="topbarNav" class="tb-nav" aria-label="Seções do site">
-    <button type="button" class="tb-link" data-shortcut="home">Início</button>
-    <button type="button" class="tb-link" data-shortcut="heroes">Heróis</button>
-    <button type="button" class="tb-link" data-shortcut="meta">Meta</button>
-    <button type="button" class="tb-link" data-shortcut="builds">Builds</button>
-    <button type="button" class="tb-link" data-shortcut="guide">Guia</button>
-    <button type="button" class="tb-link" data-shortcut="winrate">Win rate</button>
-  </nav>
   <a id="topbarDiscord" class="tb-icon-link" href="https://discord.gg/pXdxDDJWdk" target="_blank" rel="noopener noreferrer" aria-label="Entrar no Discord da comunidade">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M6 6.2C7.6 5.2 9.2 4.7 10.3 4.6l.4.9a11 11 0 0 1 2.6 0l.4-.9c1.1.1 2.7.6 4.3 1.6 1.7 2.4 2.5 5.1 2.2 8.3-1.2.9-2.5 1.5-3.8 1.9l-.9-1.5c.5-.2 1-.4 1.4-.7l-.3-.3a9 9 0 0 1-7.2 0l-.3.3c.4.3.9.5 1.4.7l-.9 1.5c-1.3-.4-2.6-1-3.8-1.9-.3-3.2.5-5.9 2.2-8.3ZM9.2 11a1.5 1.6 0 1 0 0 3.2 1.5 1.6 0 0 0 0-3.2Zm5.6 0a1.5 1.6 0 1 0 0 3.2 1.5 1.6 0 0 0 0-3.2Z"/></svg>
   </a>
 </header>"""
+
+ATIVA = {"home": "home", "heroes": "heroes", "hero": "heroes", "meta": "meta", "builds": "builds"}
+
+def sidebar(tab):
+    ativo = ATIVA.get(tab, tab)
+    def item(chave, icone, titulo, sub):
+        on = ' class="on"' if chave == ativo else ""
+        return (f'<button type="button" data-t="{chave}" data-shortcut="{chave}"{on}>'
+                f'<svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-{icone}"/></svg>'
+                f'<span class="nav-text"><b>{titulo}</b><small>{sub}</small></span></button>')
+    def mobile(chave, icone, rotulo):
+        on = ' class="on"' if chave == ativo else ""
+        return (f'<button type="button" data-t="{chave}" data-shortcut="{chave}"{on}>'
+                f'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-{icone}"/></svg>'
+                f'<small>{rotulo}</small></button>')
+    return f"""<div id="scrim"></div>
+<div id="sidebarHotzone" aria-hidden="true"></div>
+<aside id="sidebar">
+  <div class="sidebar-heading">
+    <div id="brand"><span class="logo"><img src="img/logo.png" alt="Society MLBB"></span></div>
+    <button id="menuClose" type="button" aria-label="Fechar menu">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <nav id="nav" aria-label="Navegação principal">
+    <div class="nav-group">
+      <span class="nav-group-label">COMUNIDADE</span>
+      {item("home", "home", "Início", "Sua página inicial")}
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">JOGO</span>
+      {item("meta", "chart", "Meta por rota", "Heróis em alta por lane")}
+      {item("heroes", "swords", "Heróis", "Catálogo com builds e meta")}
+      {item("builds", "build", "Builds", "Itens e emblemas testados")}
+      {item("guide", "book", "Guia", "Termos e jogadas explicados")}
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">MAIS</span>
+      {item("tools", "percent", "Ferramentas", "Win rate e treino de caçar")}
+    </div>
+  </nav>
+</aside>
+<nav id="mobileNav" aria-label="Navegação principal para celular">
+  {mobile("home", "home", "Início")}
+  {mobile("heroes", "swords", "Heróis")}
+  {mobile("meta", "chart", "Meta")}
+  {mobile("builds", "build", "Builds")}
+  <button id="mobileMore" type="button" aria-label="Abrir mais opções" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg><small>Mais</small></button>
+</nav>"""
 
 PAGINA = """<!DOCTYPE html>
 <html lang="pt-BR">
@@ -95,6 +132,7 @@ PAGINA = """<!DOCTYPE html>
 <section id="tab-@@TAB@@" class="tab on">
 @@CONTEUDO@@
 </section>
+@@SIDEBAR@@
 </div>
 <script src="js/pages-config.js"></script>
 @@SCRIPTS@@
@@ -102,10 +140,12 @@ PAGINA = """<!DOCTYPE html>
 </html>
 """
 
+def rel_html(txt):
+    txt = re.sub(r"""((?:src|href|poster|data-src)\s*=\s*['"])/static/""", r"\1", txt)
+    return re.sub(r"""url\(\s*(['"]?)/static/""", r"url(\1", txt)
 
 def ler(p):
-    return Path(p).read_text(encoding="utf-8-sig")  # tira BOM e normaliza quebras de linha
-
+    return Path(p).read_text(encoding="utf-8-sig")
 
 def main():
     ap = argparse.ArgumentParser()
@@ -118,7 +158,6 @@ def main():
         sys.exit(f"Não achei {SRC}/index.html. Rode na raiz do repositório.")
     avisos = []
 
-    # 1) pastas de dados, estilos e imagens
     for pasta in ("css", "data", "img", "icons", "assets"):
         if (SRC / pasta).exists():
             shutil.copytree(SRC / pasta, OUT / pasta, dirs_exist_ok=True,
@@ -131,7 +170,13 @@ def main():
     (OUT / "css").mkdir(parents=True, exist_ok=True)
     (OUT / ".nojekyll").write_text("")
 
-    # 2) scripts de heróis, com os caminhos corrigidos
+    for css_arq in (OUT / "css").glob("*.css"):
+        t = ler(css_arq)
+        novo = re.sub(r"""url\(\s*(['"]?)/static/""", r"url(\1../", t)
+        novo = re.sub(r"""(@import\s+(?:url\()?\s*['"]?)/static/css/""", r"\1", novo)
+        if novo != t:
+            css_arq.write_text(novo, encoding="utf-8")
+
     for nome, trocas in PATCHES.items():
         origem = SRC / "js" / nome
         if not origem.exists():
@@ -145,20 +190,45 @@ def main():
                 avisos.append(f"{nome}: trecho NÃO encontrado -> {velho[:70]}")
         (OUT / "js" / nome).write_text(txt, encoding="utf-8")
 
-    # 3) arquivos próprios desta etapa
-    for nome in ("shell.js", "heroi-page.js"):
+    cont = Path("conteudo")
+    cont.mkdir(exist_ok=True)
+    (OUT / "data").mkdir(parents=True, exist_ok=True)
+    for nome, exportado in (("meta.json", "community_meta.json"), ("builds.json", "community_builds.json")):
+        alvo = cont / nome
+        if not alvo.exists():
+            fonte = Path("dados-exportados") / exportado
+            alvo.write_text(ler(fonte) if fonte.exists() else "[]", encoding="utf-8")
+            print(f"Criado {alvo} " + ("(a partir da exportação)" if fonte.exists() else "(vazio)"))
+        shutil.copy2(alvo, OUT / "data" / nome)
+
+    app = SRC / "js" / "app.js"
+    if app.exists():
+        codigo, faltando, nomes = comunidade.gerar(ler(app))
+        shim = ler(AQUI / "community-shim.js").replace("/*__EXTRAIDO__*/", codigo)
+        (OUT / "js" / "community-static.js").write_text(shim, encoding="utf-8")
+        print(f"community-static.js: {len(nomes)} declarações extraídas do app.js")
+        for nome in faltando:
+            avisos.append(f"função-raiz não encontrada no app.js: {nome}")
+    else:
+        avisos.append("site-antigo/js/app.js não encontrado: meta e builds ficarão sem conteúdo")
+
+    for nome in ("heroi-page.js", "shell.js"):
         shutil.copy2(AQUI / nome, OUT / "js" / nome)
+    
     shutil.copy2(AQUI / "static.css", OUT / "css" / "static.css")
     cfg = "window.SOCIETY_PAGES = " + repr(PAGES).replace("'", '"') + ";\n"
     (OUT / "js" / "pages-config.js").write_text(cfg, encoding="utf-8")
 
-    # 4) ícones (sprite SVG) e lista de CSS, na ordem do index antigo
     antigo = ler(SRC / "index.html")
     m = re.search(r'<svg width="0" height="0"[\s\S]*?</svg>', antigo)
     sprite = m.group(0) if m else ""
     if not m:
         avisos.append("sprite de ícones não encontrado no index.html antigo")
-    nomes_css = re.findall(r'href="/static/css/([^"]+\.css)"', antigo)
+    
+    nomes_css = re.findall(r"""href=['"]/static/css/([^'"]+\.css)['"]""", antigo)
+    if not nomes_css:
+        nomes_css = [f.name for f in (SRC / "css").glob("*.css")]
+        
     links = []
     for n in nomes_css:
         if n not in CSS_FORA and (OUT / "css" / n).exists():
@@ -169,7 +239,7 @@ def main():
     def pagina(arq, titulo, tab, conteudo, scripts):
         tags = "\n".join(f'<script src="js/{s}"></script>' for s in scripts)
         html = (PAGINA.replace("@@TITULO@@", titulo).replace("@@CSS@@", css)
-                .replace("@@SPRITE@@", sprite).replace("@@TOPBAR@@", TOPBAR)
+                .replace("@@SPRITE@@", sprite).replace("@@TOPBAR@@", TOPBAR).replace("@@SIDEBAR@@", sidebar(tab))
                 .replace("@@TAB@@", tab).replace("@@CONTEUDO@@", conteudo)
                 .replace("@@SCRIPTS@@", tags))
         (OUT / arq).write_text(html, encoding="utf-8")
@@ -177,27 +247,22 @@ def main():
     def view(nome):
         p = SRC / "views" / nome
         if p.exists():
-            return ler(p)
+            return rel_html(ler(p))
         avisos.append(f"views/{nome} não encontrada")
         return "<main><p>Conteúdo indisponível.</p></main>"
 
     base = ["hero-catalog.js", "hero-official.js"]
-    pagina("index.html", "Início", "home", view("home.html"), base + ["shell.js"])
-    pagina("herois.html", "Heróis", "heroes", view("heroes.html"),
-           base + ["heroes-catalog.js", "shell.js"])
-    pagina("heroi.html", "Herói", "hero",
-           '<main class="hero-page"><div id="heroPage"></div></main>',
+    com = ["community-static.js"]
+    
+    pagina("index.html", "Início", "home", view("home.html"), base + com + ["shell.js"])
+    pagina("meta.html", "Meta por rota", "meta", view("meta.html"), base + com + ["shell.js"])
+    pagina("builds.html", "Builds", "builds", view("builds.html"), base + com + ["shell.js"])
+    pagina("herois.html", "Heróis", "heroes", view("heroes.html"), base + ["heroes-catalog.js", "shell.js"])
+    pagina("heroi.html", "Herói", "hero", '<main class="hero-page"><div id="heroPage"></div></main>',
            base + ["shell.js", "heroi-page.js"])
 
     print(f"Site montado em {OUT}/")
     print("Páginas: " + ", ".join(PAGES.values()))
-    if avisos:
-        print("\nAVISOS (cole isto na conversa se algo não funcionar):")
-        for av in avisos:
-            print("  -", av)
-    else:
-        print("Sem avisos.")
-
 
 if __name__ == "__main__":
     main()

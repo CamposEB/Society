@@ -580,4 +580,4 @@
 
 
 /* ── 19. IMAGEM DO HERO ───────────────────────────────────────────────────── */
-.home-hero-banner { --home-hero-image: url('/static/img/hero-bg.jpg'); }
+.home-hero-banner { --home-hero-image: url('../img/hero-bg.jpg'); }
