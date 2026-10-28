@@ -123,7 +123,7 @@ def sidebar(tab):
   <button id="mobileMore" type="button" aria-label="Abrir mais opções" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg><small>Mais</small></button>
 </nav>"""
 
-# TEMPLATE ATUALIZADO COM META TAGS DO PWA
+# TEMPLATE ATUALIZADO COM META TAGS DE COMPARTILHAMENTO E PWA
 PAGINA = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -132,6 +132,20 @@ PAGINA = """<!DOCTYPE html>
 <title>@@TITULO@@ · Society MLBB</title>
 <meta name="description" content="Society MLBB: comunidade de Mobile Legends com catálogo de heróis, meta, builds e ferramentas.">
 <meta name="referrer" content="no-referrer">
+
+<!-- Open Graph / Redes Sociais -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://society-128.pages.dev/">
+<meta property="og:title" content="@@TITULO@@ · Society MLBB">
+<meta property="og:description" content="Comunidade de Mobile Legends com meta por rota, builds testadas, calculadora de win rate e muito mais.">
+<meta property="og:image" content="https://society-128.pages.dev/img/social-preview.webp">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="@@TITULO@@ · Society MLBB">
+<meta name="twitter:description" content="Comunidade de Mobile Legends com meta por rota, builds testadas, calculadora de win rate e muito mais.">
+<meta name="twitter:image" content="https://society-128.pages.dev/img/social-preview.webp">
+
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <!-- PWA Configs -->
 <link rel="manifest" href="manifest.json">
@@ -177,7 +191,6 @@ def ler(p):
 
 def gerar_arquivos_pwa(OUT):
     """Gera o manifest.json e o sw.js na pasta de saída."""
-    # 1. Manifest
     manifest_data = {
         "name": "Society MLBB",
         "short_name": "Society",
@@ -203,7 +216,6 @@ def gerar_arquivos_pwa(OUT):
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
 
-    # 2. Service Worker
     sw_code = """const CACHE_NAME = 'society-mlbb-v1';
 const ASSETS = [
   './',
