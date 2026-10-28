@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""montar_site.py — monta a versão estática (GitHub Pages) do site antigo."""
+"""montar_site.py — monta a versão estática (GitHub Pages) do site antigo e gera os arquivos PWA."""
 
 import argparse
+import json
 import re
 import shutil
 import sys
@@ -17,7 +18,6 @@ PAGES = {
     "guide": "guide.html", "quiz": "quiz.html"
 }
 
-# O quiz.css NÃO está na lista, então ele será incluído.
 CSS_FORA = {
     "login.css", "admin-v2.css", "moderation.css", "lfg.css", "profile.css",
     "profile-lite.css", "tournaments.css", "lobby.css", 
@@ -123,6 +123,7 @@ def sidebar(tab):
   <button id="mobileMore" type="button" aria-label="Abrir mais opções" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg><small>Mais</small></button>
 </nav>"""
 
+# TEMPLATE ATUALIZADO COM META TAGS DO PWA
 PAGINA = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -130,9 +131,15 @@ PAGINA = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>@@TITULO@@ · Society MLBB</title>
 <meta name="description" content="Society MLBB: comunidade de Mobile Legends com catálogo de heróis, meta, builds e ferramentas.">
-<meta name="theme-color" content="#0a0a0b">
 <meta name="referrer" content="no-referrer">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<!-- PWA Configs -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a0b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -149,6 +156,14 @@ PAGINA = """<!DOCTYPE html>
 </div>
 <script src="js/pages-config.js"></script>
 @@SCRIPTS@@
+<!-- Registro do Service Worker (PWA) -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW falhou:', err));
+    });
+  }
+</script>
 </body>
 </html>
 """
@@ -159,6 +174,64 @@ def rel_html(txt):
 
 def ler(p):
     return Path(p).read_text(encoding="utf-8-sig")
+
+def gerar_arquivos_pwa(OUT):
+    """Gera o manifest.json e o sw.js na pasta de saída."""
+    # 1. Manifest
+    manifest_data = {
+        "name": "Society MLBB",
+        "short_name": "Society",
+        "description": "Comunidade de Mobile Legends com meta, builds e ferramentas.",
+        "start_url": "./index.html",
+        "display": "standalone",
+        "background_color": "#0a0a0b",
+        "theme_color": "#0a0a0b",
+        "icons": [
+            {
+                "src": "icon-192.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable"
+            },
+            {
+                "src": "icon-512.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable"
+            }
+        ]
+    }
+    (OUT / "manifest.json").write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
+
+    # 2. Service Worker
+    sw_code = """const CACHE_NAME = 'society-mlbb-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './css/static.css',
+  './js/shell.js',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
+];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
+});
+
+self.addEventListener('fetch', (e) => {
+  e.respondWith(
+    caches.match(e.request).then((res) => {
+      return res || fetch(e.request);
+    })
+  );
+});
+"""
+    (OUT / "sw.js").write_text(sw_code, encoding="utf-8")
+    print("Arquivos PWA gerados (manifest.json e sw.js).")
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -184,7 +257,10 @@ def main():
     (OUT / "css").mkdir(parents=True, exist_ok=True)
     (OUT / ".nojekyll").write_text("")
 
-    # 2. Tratar CSS
+    # 2. Gerar arquivos PWA
+    gerar_arquivos_pwa(OUT)
+
+    # 3. Tratar CSS
     for css_arq in (OUT / "css").glob("*.css"):
         t = ler(css_arq)
         novo = re.sub(r"""url\(\s*(['"]?)/static/""", r"url(\1../", t)
@@ -192,7 +268,7 @@ def main():
         if novo != t:
             css_arq.write_text(novo, encoding="utf-8")
 
-    # 3. Aplicar patches nos JS
+    # 4. Aplicar patches nos JS
     for nome, trocas in PATCHES.items():
         origem = SRC / "js" / nome
         if not origem.exists():
@@ -205,7 +281,7 @@ def main():
                 avisos.append(f"{nome}: trecho NÃO encontrado -> {velho[:70]}")
         (OUT / "js" / nome).write_text(txt, encoding="utf-8")
 
-    # 4. Copiar dados (Meta e Builds)
+    # 5. Copiar dados (Meta e Builds)
     cont = Path("conteudo")
     cont.mkdir(exist_ok=True)
     (OUT / "data").mkdir(parents=True, exist_ok=True)
@@ -217,7 +293,7 @@ def main():
             print(f"Criado {alvo} " + ("(a partir da exportação)" if fonte.exists() else "(vazio)"))
         shutil.copy2(alvo, OUT / "data" / nome)
 
-    # 5. Extrair lógica do App.js antigo
+    # 6. Extrair lógica do App.js antigo
     app = SRC / "js" / "app.js"
     if app.exists():
         codigo, faltando, nomes = comunidade.gerar(ler(app))
@@ -229,18 +305,18 @@ def main():
     else:
         avisos.append("site-antigo/js/app.js não encontrado: meta e builds ficarão sem conteúdo")
 
-    # 6. Copiar scripts estáticos próprios
+    # 7. Copiar scripts estáticos próprios
     for nome in ("heroi-page.js", "shell.js", "guide.js", "quiz.js"):
         shutil.copy2(AQUI / nome, OUT / "js" / nome)
     
-    # 7. Copiar CSS estático próprio
+    # 8. Copiar CSS estático próprio
     shutil.copy2(AQUI / "static.css", OUT / "css" / "static.css")
     
-    # 8. Gerar pages-config.js
+    # 9. Gerar pages-config.js
     cfg = "window.SOCIETY_PAGES = " + repr(PAGES).replace("'", '"') + ";\n"
     (OUT / "js" / "pages-config.js").write_text(cfg, encoding="utf-8")
 
-    # 9. Encontrar sprite e montar lista de CSS
+    # 10. Encontrar sprite e montar lista de CSS
     antigo = ler(SRC / "index.html")
     m = re.search(r'<svg width="0" height="0"[\s\S]*?</svg>', antigo)
     sprite = m.group(0) if m else ""
@@ -256,14 +332,13 @@ def main():
         if n not in CSS_FORA and (OUT / "css" / n).exists():
             links.append(f'<link rel="stylesheet" href="css/{n}">')
             
-    # FORÇA a inclusão do quiz.css se ele não estiver na lista
     if "quiz.css" not in nomes_css and (OUT / "css" / "quiz.css").exists():
         links.append('<link rel="stylesheet" href="css/quiz.css">')
         
     links.append('<link rel="stylesheet" href="css/static.css">')
     css = "\n".join(links)
 
-    # 10. Função geradora de páginas
+    # 11. Função geradora de páginas
     def pagina(arq, titulo, tab, conteudo, scripts):
         tags = "\n".join(f'<script src="js/{s}"></script>' for s in scripts)
         html = (PAGINA.replace("@@TITULO@@", titulo).replace("@@CSS@@", css)
@@ -279,7 +354,7 @@ def main():
         avisos.append(f"views/{nome} não encontrada")
         return "<main><p>Conteúdo indisponível.</p></main>"
 
-    # 11. Gerar as páginas HTML
+    # 12. Gerar as páginas HTML
     base = ["hero-catalog.js", "hero-official.js"]
     com = ["community-static.js"]
     
