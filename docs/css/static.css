@@ -10,7 +10,7 @@ body.is-static {
   overflow-x: hidden;
 }
 
-/* 2. Esconder elementos removidos */
+/* 2. Esconder elementos removidos (Login, Conta, Busca, Torneios, etc.) */
 #login, 
 #guestBanner, 
 #topbarAccount, 
@@ -27,6 +27,7 @@ body.is-static {
 }
 
 /* 3. Container Principal (Grid Layout) */
+/* Sidebar na esquerda (240px), Topbar e Conteúdo na direita */
 body.is-static #game {
   display: grid;
   grid-template-columns: 240px 1fr;
@@ -34,7 +35,6 @@ body.is-static #game {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  transition: grid-template-columns 0.3s ease; /* Animação ao encolher */
 }
 
 /* 4. Barra Lateral (Menu Esquerdo) */
@@ -47,159 +47,13 @@ body.is-static #sidebar {
   position: sticky;
   top: 0;
   overflow-y: auto;
-  overflow-x: hidden;
   display: flex !important;
   flex-direction: column;
   z-index: 100;
-  width: 100%;
 }
-
-/* Cabeçalho da Sidebar (Logo + Botão de Encolher) */
-body.is-static .sidebar-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-body.is-static #brand img {
-  height: 32px;
-  width: auto;
-}
-
-/* Botão de encolher */
-#sidebarToggle {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-radius: 6px;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-#sidebarToggle:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-/* Conserta o alinhamento dos textos do menu */
-body.is-static #sidebar #nav {
-  padding: 1rem 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-body.is-static .nav-group-label {
-  display: block;
-  padding: 0 0.75rem;
-  margin-bottom: 0.5rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #6b6b7a;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-body.is-static #sidebar button {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 10px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.2s;
-}
-
-body.is-static #sidebar button:hover,
-body.is-static #sidebar button.on {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-body.is-static #sidebar button.on {
-  box-shadow: inset 3px 0 0 #e6c35c;
-}
-
-/* Empilha o texto (Título em cima, Subtítulo embaixo) */
-body.is-static .nav-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-body.is-static .nav-text b {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #fff;
-}
-
-body.is-static .nav-text small {
-  font-size: 0.7rem;
-  color: #8a8a93;
-  margin-top: 2px;
-}
-
-body.is-static .nav-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  color: #8a8a93;
-}
-
-body.is-static #sidebar button.on .nav-icon {
-  color: #e6c35c;
-}
-
-/* ==========================================================================
-   ESTADO ENCOLHIDO (Toggle)
-   ========================================================================== */
-body.is-static.sidebar-collapsed #game {
-  grid-template-columns: 72px 1fr; /* Largura apenas para os ícones */
-}
-
-body.is-static.sidebar-collapsed .sidebar-heading {
-  justify-content: center;
-  padding: 1rem 0;
-}
-
-body.is-static.sidebar-collapsed #brand {
-  display: none; /* Esconde a logo grande */
-}
-
-body.is-static.sidebar-collapsed #sidebarToggle svg {
-  transform: rotate(180deg); /* Inverte a setinha */
-}
-
-body.is-static.sidebar-collapsed .nav-group-label {
-  display: none; /* Esconde os títulos "JOGO", "MAIS" */
-}
-
-body.is-static.sidebar-collapsed .nav-text {
-  display: none; /* Esconde os textos */
-}
-
-body.is-static.sidebar-collapsed #sidebar button {
-  justify-content: center;
-  padding: 12px 0;
-}
-
-body.is-static.sidebar-collapsed .nav-icon {
-  width: 24px;
-  height: 24px;
-}
-
 
 /* 5. Topbar (Cabeçalho) */
+/* Força a topbar a ocupar 100% do espaço à direita da sidebar */
 body.is-static #topbar {
   grid-column: 2;
   grid-row: 1;
@@ -216,36 +70,44 @@ body.is-static #topbar {
   max-width: none !important;
 }
 
+/* Esconde o botão de hambúrguer no desktop */
 body.is-static #menuBtn {
   display: none !important;
 }
 
-/* 6. Conteúdo Principal */
+/* 6. Conteúdo Principal (Geral) */
 body.is-static .tab.on {
   grid-column: 2;
   grid-row: 2;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 1400px;
+  max-width: 1400px; /* Limite máximo para não esticar demais em monitores ultra-wide */
   margin: 0 auto;
   padding: 1.5rem 2rem;
   box-sizing: border-box;
 }
 
-/* 7. Correções da Home */
+/* 7. Correções Específicas da Home (Sobrescrevendo home.css) */
+/* O home.css original limita a home a 1020px, vamos expandir */
 body.is-static .home-page,
 body.is-static #tab-home {
   max-width: 100% !important;
 }
 
+/* Corrige o Banner Principal (Hero) que estava esmagado */
 @media (min-width: 900px) {
   body.is-static .home-hero.home-hero-banner {
+    /* Remove a margem que forçava a tela cheia e quebrava com a sidebar */
     margin-inline: 0 !important; 
+    /* Mantém o padding interno bonito */
     padding-inline: 40px !important; 
+    /* Devolve as bordas arredondadas */
     border-radius: 16px !important; 
     border: 1px solid var(--hp-gold-line) !important;
   }
+
+  /* Corrige a faixa "Bombando" que estava invadindo a sidebar */
   body.is-static .home-ticker {
     margin: 0 0 1.5rem 0 !important;
     border-radius: 10px !important;
@@ -253,17 +115,38 @@ body.is-static #tab-home {
   }
 }
 
+/* Permite que o texto do banner respire melhor */
 body.is-static .home-hero-copy {
   max-width: 800px !important;
 }
 body.is-static .home-hero-banner .home-hero-copy > p.home-hero-text {
   max-width: 100% !important;
 }
+
+/* Força a imagem de fundo do banner a carregar (caminho relativo) */
 .home-hero-banner {
   --home-hero-image: url('../img/hero-bg.jpg') !important;
 }
 
-/* 8. Toast */
+/* 8. Página do Herói */
+.hero-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 3rem;
+}
+
+.hero-back {
+  display: inline-block;
+  margin-bottom: .75rem;
+  color: var(--muted, #9a9aa6);
+  text-decoration: none;
+}
+
+.hero-back:hover {
+  color: inherit;
+}
+
+/* 9. Toast (Avisos flutuantes) */
 .static-toast {
   position: fixed;
   left: 50%;
@@ -279,18 +162,39 @@ body.is-static .home-hero-banner .home-hero-copy > p.home-hero-text {
   pointer-events: none;
   transition: opacity .2s, transform .2s;
 }
+
 .static-toast.on {
   opacity: 1;
   transform: translate(-50%, 0);
 }
 
-#metaSuggestions { display: none !important; }
+/* 10. Utilitários */
+#metaSuggestions {
+  display: none !important;
+}
 
-/* Responsividade */
+/* ==========================================================================
+   Responsividade (Celular)
+   ========================================================================== */
 @media (max-width: 900px) {
-  body.is-static #game { grid-template-columns: 1fr; }
-  body.is-static #sidebar { display: none !important; }
-  body.is-static #menuBtn { display: flex !important; }
-  body.is-static #topbar, body.is-static .tab.on { grid-column: 1; }
-  body.is-static .tab.on { padding: 1rem; }
+  body.is-static #game {
+    grid-template-columns: 1fr;
+  }
+  
+  body.is-static #sidebar {
+    display: none !important;
+  }
+  
+  body.is-static #menuBtn {
+    display: flex !important;
+  }
+  
+  body.is-static #topbar,
+  body.is-static .tab.on {
+    grid-column: 1;
+  }
+  
+  body.is-static .tab.on {
+    padding: 1rem;
+  }
 }

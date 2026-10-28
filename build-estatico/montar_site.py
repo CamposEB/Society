@@ -11,8 +11,10 @@ AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
 import comunidade  # noqa: E402
 
-PAGES = {"home": "index.html", "heroes": "herois.html", "hero": "heroi.html",
-         "meta": "meta.html", "builds": "builds.html"}
+PAGES = {
+    "home": "index.html", "heroes": "herois.html", "hero": "heroi.html",
+    "meta": "meta.html", "builds": "builds.html", "tools": "tools.html"
+}
 
 CSS_FORA = {
     "login.css", "admin-v2.css", "moderation.css", "lfg.css", "profile.css",
@@ -46,6 +48,14 @@ PATCHES = {
         ("img.src = imgUrl(h.wallpaper || h.head || h.square);",
          r"""var orig = h.wallpaper || h.head || h.square; img.src = imgUrl(orig); img.onerror = function () { img.onerror = null; if (/^https?:\/\//i.test(String(orig || ''))) img.src = orig; };"""),
     ],
+    "tools.js": [
+        ('const response = await fetch("/static/views/tools.html");', '// Versão estática: conteúdo já injetado no DOM'),
+        ('if (!response.ok) throw new Error("Falha ao carregar ferramentas: HTTP " + response.status);', ''),
+        ('content.innerHTML = await response.text();', ''),
+    ],
+    "retri-trainer.js": [
+        ('const RETRI_ICON = "/static/assets/ca%C3%A7ar.png";', 'const RETRI_ICON = "assets/ca%C3%A7ar.png";'),
+    ],
 }
 
 TOPBAR = """<header id="topbar" class="tb">
@@ -61,7 +71,7 @@ TOPBAR = """<header id="topbar" class="tb">
   </a>
 </header>"""
 
-ATIVA = {"home": "home", "heroes": "heroes", "hero": "heroes", "meta": "meta", "builds": "builds"}
+ATIVA = {"home": "home", "heroes": "heroes", "hero": "heroes", "meta": "meta", "builds": "builds", "tools": "tools"}
 
 def sidebar(tab):
     ativo = ATIVA.get(tab, tab)
@@ -180,7 +190,7 @@ def main():
     for nome, trocas in PATCHES.items():
         origem = SRC / "js" / nome
         if not origem.exists():
-            avisos.append(f"{nome}: arquivo não encontrado em {SRC}/js")
+            # Se não existir no site-antigo, ignora
             continue
         txt = ler(origem)
         for velho, novo in trocas:
@@ -260,6 +270,10 @@ def main():
     pagina("herois.html", "Heróis", "heroes", view("heroes.html"), base + ["heroes-catalog.js", "shell.js"])
     pagina("heroi.html", "Herói", "hero", '<main class="hero-page"><div id="heroPage"></div></main>',
            base + ["shell.js", "heroi-page.js"])
+    
+    # A página de ferramentas precisa que o HTML seja injetado no #toolsContent
+    tools_conteudo = '<div id="toolsContent" class="tools-page">' + view("tools.html") + '</div>'
+    pagina("tools.html", "Ferramentas", "tools", tools_conteudo, ["tools.js", "retri-trainer.js", "shell.js"])
 
     print(f"Site montado em {OUT}/")
     print("Páginas: " + ", ".join(PAGES.values()))

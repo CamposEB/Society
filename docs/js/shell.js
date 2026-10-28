@@ -3,7 +3,6 @@
   'use strict';
   var PAGES = window.SOCIETY_PAGES || {};
   var ALIAS = { winrate: 'tools' };
-  
   var timer;
 
   function toast(msg) {
@@ -14,7 +13,6 @@
     clearTimeout(timer);
     timer = setTimeout(function () { t.classList.remove('on'); }, 2600);
   }
-
   window.SocietyToast = toast;
 
   function ir(chave) {
@@ -30,7 +28,7 @@
     ir(el.getAttribute('data-shortcut'));
   });
 
-  // Menu lateral no celular
+  // Menu no celular
   function menu(abrir) {
     document.body.classList.toggle('menu', abrir);
     ['menuBtn', 'mobileMore'].forEach(function (id) {
@@ -58,5 +56,24 @@
   window.SocietyHero = { open: abrirHeroi };
   window.Society = window.Society || {};
   window.Society.openHero = abrirHeroi;
+
+  // ---- INJETAR BOTÃO DE ENCOLHER A SIDEBAR ----
+  document.addEventListener('DOMContentLoaded', function() {
+    var sidebarHeading = document.querySelector('.sidebar-heading');
+    if (sidebarHeading && !document.getElementById('sidebarToggle')) {
+      var btn = document.createElement('button');
+      btn.id = 'sidebarToggle';
+      btn.setAttribute('aria-label', 'Encolher menu');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>';
+      
+      btn.addEventListener('click', function() {
+        document.body.classList.toggle('sidebar-collapsed');
+        var isCollapsed = document.body.classList.contains('sidebar-collapsed');
+        btn.setAttribute('aria-label', isCollapsed ? 'Expandir menu' : 'Encolher menu');
+      });
+      
+      sidebarHeading.appendChild(btn);
+    }
+  });
 
 })();

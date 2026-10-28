@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ferramentas · Society MLBB</title>
+<meta name="description" content="Society MLBB: comunidade de Mobile Legends com catálogo de heróis, meta, builds e ferramentas.">
+<meta name="theme-color" content="#0a0a0b">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/tools.css">
+<link rel="stylesheet" href="css/retri-trainer.css">
+<link rel="stylesheet" href="css/home.css">
+<link rel="stylesheet" href="css/home-hero-icons.css">
+<link rel="stylesheet" href="css/hero-hub.css">
+<link rel="stylesheet" href="css/hero-tabs.css">
+<link rel="stylesheet" href="css/heroes-catalog.css">
+<link rel="stylesheet" href="css/hero-official.css">
+<link rel="stylesheet" href="css/meta-builds.css">
+<link rel="stylesheet" href="css/guide.css">
+<link rel="stylesheet" href="css/topbar.css">
+<link rel="stylesheet" href="css/role-colors.css">
+<link rel="stylesheet" href="css/static.css">
+</head>
+<body class="is-static is-guest">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3.5 10.5 8.5-7 8.5 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></symbol>
+  <symbol id="i-duo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19v-1.5A4.5 4.5 0 0 1 8 13h2a4.5 4.5 0 0 1 4.5 4.5V19M16 5.5a3 3 0 0 1 0 5.8M17 13h.5a3.5 3.5 0 0 1 3.5 3.5V19"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5.5h16v11H11l-5.5 3v-3H4z"/><path d="M8 10h8M8 13.5h5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19h16M6 16V9M12 16V5M18 16v-4"/></symbol>
+  <symbol id="i-build" viewBox="0 0 24 24"><path d="m14.5 6.5 3-3 3 3-3 3"/><path d="m17.5 3.5-7.8 7.8M9 9l6 6M5 13l6 6-3 2-5-5z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v13A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 10h8"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.5 1.8c-1.2 1.1-2 1.4-2 3M12 17.5h.01"/></symbol>
+  <symbol id="i-tools" viewBox="0 0 24 24"><path d="M14 6.5a4 4 0 0 0-5.5 5.5L4 16.5 7.5 20l4.5-4.5a4 4 0 0 0 5.5-5.5l-2.3 2.3-3-3z"/><path d="m15 4 5 5"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v2a4 4 0 0 0 4 4M16 6h4v2a4 4 0 0 1-4 4M12 13v5M8 21h8M9 18h6"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 4.5-3.2 7.8-8 10-4.8-2.2-8-5.5-8-10V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.7 1.7 0 1 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.3a1.7 1.7 0 1 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 1 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9h-.3a1.7 1.7 0 1 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 1 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2v-.3a1.7 1.7 0 1 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 1 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.3a1.7 1.7 0 1 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9z"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></symbol>
+  <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="7" cy="7" r="2.2"/><circle cx="17" cy="17" r="2.2"/></symbol>
+  <symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M7 8h10a4 4 0 0 1 4 4.5l-.6 3.2a2 2 0 0 1-3.4 1L15 15H9l-2 1.7a2 2 0 0 1-3.4-1L3 12.5A4 4 0 0 1 7 8z"/><path d="M8 10.5v3M6.5 12h3M16 11.5h.01M18 13h.01"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4 .2 1.2.8 2 1.6 2.3C10.2 8.5 10.8 5.5 12 3z"/></symbol>
+  <symbol id="i-swords" viewBox="0 0 24 24"><path d="m4 4 9 9M20 4l-9 9M11 15l-3 3M13 15l3 3M6 21l2-3M18 21l-2-3"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+</svg>
+<div id="game">
+<header id="topbar" class="tb">
+  <button id="menuBtn" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+  <button id="topbarBrand" type="button" data-shortcut="home" aria-label="Society MLBB, início">
+    <span class="logo"><img src="img/logo.png" alt=""></span>
+    <span class="tb-wordmark" aria-hidden="true">Society <b>MLBB</b></span>
+  </button>
+  <a id="topbarDiscord" class="tb-icon-link" href="https://discord.gg/pXdxDDJWdk" target="_blank" rel="noopener noreferrer" aria-label="Entrar no Discord da comunidade">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M6 6.2C7.6 5.2 9.2 4.7 10.3 4.6l.4.9a11 11 0 0 1 2.6 0l.4-.9c1.1.1 2.7.6 4.3 1.6 1.7 2.4 2.5 5.1 2.2 8.3-1.2.9-2.5 1.5-3.8 1.9l-.9-1.5c.5-.2 1-.4 1.4-.7l-.3-.3a9 9 0 0 1-7.2 0l-.3.3c.4.3.9.5 1.4.7l-.9 1.5c-1.3-.4-2.6-1-3.8-1.9-.3-3.2.5-5.9 2.2-8.3ZM9.2 11a1.5 1.6 0 1 0 0 3.2 1.5 1.6 0 0 0 0-3.2Zm5.6 0a1.5 1.6 0 1 0 0 3.2 1.5 1.6 0 0 0 0-3.2Z"/></svg>
+  </a>
+</header>
+<section id="tab-tools" class="tab on">
+<div id="toolsContent" class="tools-page"><div class="tools-page">
+  <div class="tools-intro">
+    <span class="tools-icon">🧮</span>
+    <div>
+      <h2>Ferramentas</h2>
+      <p>Calculadora e treinos para ajudar nas suas partidas de MLBB.</p>
+    </div>
+  </div>
+
+  <h3 class="tools-picker-heading">Todas as ferramentas</h3>
+
+  <!--
+    QUAIS FERRAMENTAS APARECEM: a lista ENABLED_TOOLS no topo do tools.js.
+    Os cards e painéis de "stars", "skin" e "event-skin" continuam aqui no HTML,
+    só não aparecem enquanto não estiverem nessa lista.
+  -->
+  <div class="tools-grid" id="toolsMenu">
+    <button class="tool-card" type="button" data-tool="wr">
+      <span class="tool-card-icon">📈</span>
+      <span class="tool-card-content">
+        <strong>Calcular Win Rate</strong>
+        <small>Descubra quantas partidas você precisa ganhar para atingir o WR desejado.</small>
+      </span>
+      <span class="tool-arrow">›</span>
+    </button>
+
+    <button class="tool-card" type="button" data-tool="retri">
+      <span class="tool-card-icon">🎯</span>
+      <span class="tool-card-content">
+        <strong>Treino de Caçar</strong>
+        <small>Treine o ms do secure no Turtle e no Lord, com jungler rival e precisão medida em milissegundos.</small>
+      </span>
+      <span class="tool-arrow">›</span>
+    </button>
+
+    <button class="tool-card" type="button" data-tool="stars">
+      <span class="tool-card-icon">⭐</span>
+      <span class="tool-card-content">
+        <strong>Próximo rank</strong>
+        <small>Estime quantas partidas faltam para alcançar seu próximo rank.</small>
+      </span>
+      <span class="tool-arrow">›</span>
+    </button>
+
+    <button class="tool-card" type="button" data-tool="skin">
+      <span class="tool-card-icon">💎</span>
+      <span class="tool-card-content">
+        <strong>Custo de skin</strong>
+        <small>Estime quanto uma skin custa em reais usando o preço do seu pacote.</small>
+      </span>
+      <span class="tool-arrow">›</span>
+    </button>
+
+    <button class="tool-card" type="button" data-tool="event-skin">
+      <span class="tool-card-icon">🎟️</span>
+      <span class="tool-card-content">
+        <strong>Skin por evento</strong>
+        <small>Estime quantos giros e diamantes faltam para resgatar sua skin.</small>
+      </span>
+      <span class="tool-arrow">›</span>
+    </button>
+  </div>
+
+  <!-- ================= WIN RATE ================= -->
+  <div class="tool-panel" id="tool-wr" hidden>
+    <button class="tool-back" type="button" data-back-tools>← Voltar para ferramentas</button>
+    <div class="wr-shell">
+      <div class="tool-heading wr-shell-heading">
+        <span class="tool-panel-icon">📈</span>
+        <div>
+          <h2>Calcular Win Rate</h2>
+          <p class="hint">Pegue os números do seu perfil no jogo. Nada é enviado e não precisa de conta.</p>
+        </div>
+      </div>
+      <div class="wr-board">
+        <section class="wr-card wr-card-history" aria-labelledby="wrHistoryTitle">
+          <h3 id="wrHistoryTitle">Seu histórico</h3>
+          <div class="wr-fields">
+            <label>Partidas jogadas
+              <input id="wrN" type="number" min="1" step="1" inputmode="numeric" placeholder="Ex.: 163">
+            </label>
+            <label>Winrate atual %
+              <input id="wrW" type="number" min="0" max="100" step="0.01" placeholder="Ex.: 69.33">
+            </label>
+          </div>
+          <div class="wr-split" id="wrSplit">
+            <div><small>Vitórias</small><b id="wrWins">—</b></div>
+            <div><small>Derrotas</small><b id="wrLosses">—</b></div>
+          </div>
+          <p class="wr-record" id="wrRecord">Preencha partidas e win rate atual para calcular vitórias e derrotas.</p>
+          <div class="wr-hero"><span>Seu win rate</span><strong id="wrHero">—</strong></div>
+          <div class="wr-meter" aria-hidden="true">
+            <div class="wr-meter-fill" id="barNow"></div>
+            <div class="wr-meter-goal" id="barGoal"></div>
+          </div>
+          <div class="wr-meter-labels">
+            <span>Atual: <b id="wrNowLabel">—</b></span>
+            <span>Meta: <b id="wrGoalLabel">—</b></span>
+          </div>
+          <button class="wr-reset" id="wrReset" type="button">Redefinir</button>
+        </section>
+        <div class="wr-side">
+          <section class="wr-card wr-card-goal" aria-labelledby="wrGoalTitle">
+            <h3 id="wrGoalTitle">Alcance sua meta</h3>
+            <div class="wr-fields">
+              <label>Win rate desejado %
+                <input id="wrT" type="number" min="0" max="100" step="0.01" placeholder="Ex.: 70">
+              </label>
+              <label>Win rate daqui em diante %
+                <input id="wrFuture" type="number" min="0" max="100" step="0.01" value="100" placeholder="100">
+              </label>
+            </div>
+            <p class="wr-hint">100% significa uma sequência de vitórias sem interrupção.</p>
+            <div class="wr-callout" id="wrOut" role="status">Preencha partidas, win rate atual e a meta.</div>
+          </section>
+          <section class="wr-card wr-card-margin" aria-labelledby="wrMarginTitle">
+            <h3 id="wrMarginTitle">Quanta margem você tem</h3>
+            <div class="wr-margin-row">
+              <label>Ficar acima de %
+                <input id="wrFloor" type="number" min="0" max="99.99" step="0.01" value="50" placeholder="50">
+              </label>
+              <p class="wr-margin-copy" id="wrMarginOut">Informe seu histórico para ver quantas derrotas cabem antes de cair dessa linha.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+      <p class="tool-note">Vitórias e derrotas são estimadas a partir do win rate do perfil, que o jogo arredonda.</p>
+    </div>
+  </div>
+
+  <!-- ================= TREINO DE CAÇAR ================= -->
+  <div class="tool-panel" id="tool-retri" hidden>
+    <button class="tool-back" type="button" data-back-tools>← Voltar para ferramentas</button>
+    <div class="tool-heading">
+      <span class="tool-panel-icon">🎯</span>
+      <div>
+        <h2>Treino de Caçar</h2>
+        <p class="hint">Aperte (botão, toque ou Espaço) no instante em que o HP do objetivo cruza o seu dano de Caçar. O erro é medido em milissegundos e nada é enviado.</p>
+      </div>
+    </div>
+    <div id="retriRoot"></div>
+  </div>
+
+  <!-- ================= STARS (escondido: ver ENABLED_TOOLS) ================= -->
+  <div class="tool-panel" id="tool-stars" hidden>
+    <button class="tool-back" type="button" data-back-tools>← Voltar para ferramentas</button>
+    <div class="card calc">
+      <div class="tool-heading">
+        <span class="tool-panel-icon">⭐</span>
+        <div><h2>Quanto falta pro próximo rank?</h2><p class="hint">Estimativa simples para saber quantas partidas você pode precisar.</p></div>
+      </div>
+      <p class="hint">Não conta proteção de estrela nem bônus de sequência.</p>
+      <div class="grid">
+        <label>Estrelas que faltam <input id="stN" type="number" min="1" step="1" placeholder="Ex.: 20"></label>
+        <label>Seu winrate % <input id="stW" type="number" min="0.01" max="100" step="0.01" placeholder="Ex.: 55"></label>
+        <label>Partidas por dia <input id="stD" type="number" min="0" step="1" placeholder="Ex.: 10"></label>
+        <label>Estrelas por vitória <input id="stUp" type="number" min="0" step="0.1" value="1" placeholder="1"></label>
+        <label>Estrelas por derrota <input id="stDown" type="number" min="0" step="0.1" value="1" placeholder="1"></label>
+      </div>
+      <div class="tool-result" id="stOut" role="status">Preencha as estrelas e o winrate.</div>
+    </div>
+  </div>
+
+  <!-- ================= SKIN COST (escondido: ver ENABLED_TOOLS) ================= -->
+  <div class="tool-panel" id="tool-skin" hidden>
+    <button class="tool-back" type="button" data-back-tools>← Voltar para ferramentas</button>
+    <div class="card calc">
+      <div class="tool-heading">
+        <span class="tool-panel-icon">💎</span>
+        <div><h2>Essa skin sai quanto em reais?</h2><p class="hint">Calcule uma estimativa usando o pacote de diamantes que você costuma comprar.</p></div>
+      </div>
+      <div class="grid">
+        <label>Pacote de recarga (Opcional)
+          <select id="skPreset">
+            <option value="">Selecione para preencher automaticamente</option>
+            <option value="50,4.50">50+5 Diamantes (R$4,50)</option>
+            <option value="78,6.25">78+8 Diamantes (R$6,25)</option>
+            <option value="150,13.60">150+15 Diamantes (R$13,60)</option>
+            <option value="250,22.70">250+25 Diamantes (R$22,70)</option>
+            <option value="500,45.60">500+65 Diamantes (R$45,60)</option>
+            <option value="625,50.00">625+81 Diamantes (R$50,00)</option>
+            <option value="1860,150.00">1860+335 Diamantes (R$150,00)</option>
+            <option value="3099,250.00">3099+589 Diamantes (R$250,00)</option>
+            <option value="4649,374.00">4649+883 Diamantes (R$374,00)</option>
+            <option value="7740,625.00">7740+1548 Diamantes (R$625,00)</option>
+          </select>
+        </label>
+        <label>Diamantes da skin <input id="skD" type="number" min="1" step="1" placeholder="Ex.: 899"></label>
+        <label>Diamantes do pacote <input id="skPD" type="number" min="1" step="1" placeholder="Ex.: 500"></label>
+        <label>Preço do pacote (R$) <input id="skPR" type="number" min="0.01" step="0.01" placeholder="Ex.: 25,00"></label>
+      </div>
+      <div class="tool-result" id="skOut" role="status">Preencha os três campos.</div>
+    </div>
+  </div>
+
+  <!-- ================= EVENT SKIN (escondido: ver ENABLED_TOOLS) ================= -->
+  <div class="tool-panel" id="tool-event-skin" hidden>
+    <button class="tool-back" type="button" data-back-tools>← Voltar para ferramentas</button>
+    <div class="card calc event-skin-card">
+      <div class="tool-heading">
+        <span class="tool-panel-icon">🎟️</span>
+        <div><h2>Calculadora de skin por evento</h2><p class="hint">Veja quantos giros e diamantes você precisa para chegar à skin.</p></div>
+      </div>
+      <p class="event-skin-notice">Os eventos e valores iniciais são exemplos editáveis em <code>tools.js</code>; confira as regras do evento no jogo antes de gastar.</p>
+
+      <div class="grid event-skin-fields">
+        <label>Selecionar evento <select id="eventSkinEvent"></select></label>
+        <label>Skin desejada <input id="eventSkinName" maxlength="50" placeholder="Ex.: Skin épica"></label>
+
+        <!-- Campos para eventos de Token -->
+        <div class="token-field">
+          <label>Tokens necessários <input id="eventSkinCost" type="number" min="0" step="1" inputmode="numeric"></label>
+          <label>Tokens que você já possui <input id="eventSkinOwned" type="number" min="0" step="1" inputmode="numeric" value="0"></label>
+          <label>Descontos ainda disponíveis hoje <input id="eventSkinDiscountsToday" type="number" min="0" step="1" inputmode="numeric" value="1"><small>Limitado ao desconto diário definido para este evento.</small></label>
+        </div>
+
+        <!-- Campos para eventos de Bingo (Aspirants 5.0) -->
+        <div class="bingo-field">
+          <label>Giros já realizados <input id="eventSkinSpinsDone" type="number" min="0" step="1" inputmode="numeric" value="0"></label>
+          <label>Bolinhas no baú (acertos) <input id="eventSkinHitsDone" type="number" min="0" max="3" step="1" inputmode="numeric" value="0"><small>Precisa de 3 bolinhas no mesmo baú.</small></label>
+
+          <label>Estimativa de giros totais (padrão do evento)
+            <select id="eventSkinExpectedSpins">
+              <option value="40">40 giros (Otimista)</option>
+              <option value="45" selected>45 giros (Padrão)</option>
+              <option value="50">50 giros (Pessimista)</option>
+            </select>
+            <small>Baseado no padrão de bingo aleatório (40 a 50 giros).</small>
+          </label>
+        </div>
+
+        <label>Diamantes disponíveis <input id="eventSkinDiamonds" type="number" min="0" step="1" inputmode="numeric" value="0"></label>
+        <label>Data e hora de término <input id="eventSkinEndDate" type="datetime-local"><small>Preencha para calcular os dias automaticamente. Se não souber a data, informe os dias restantes abaixo.</small></label>
+        <label>Quantos dias faltam para o evento acabar? <input id="eventSkinDays" type="number" min="0" max="365" step="1" inputmode="numeric" placeholder="Obrigatório se não informar a data"></label>
+      </div>
+
+      <div class="event-skin-rules">
+        <span id="eventSkinTokenRule"></span>
+        <span id="eventSkinSpinRule"></span>
+        <span id="eventSkinDiscountRule"></span>
+      </div>
+      <p id="eventSkinDaysStatus" class="event-skin-days-status" role="status"></p>
+      <button id="eventSkinCalculate" class="event-skin-calculate" type="button">CALCULAR</button>
+
+      <section id="eventSkinResult" class="event-skin-result" aria-live="polite" hidden>
+        <h3 id="eventSkinResultTitle">Resultado</h3>
+        <div id="eventSkinSummary" class="event-skin-summary"></div>
+        <div id="eventSkinPlan" class="event-skin-plan"></div>
+        <div id="eventSkinTimeline" class="event-skin-timeline"></div>
+      </section>
+    </div>
+  </div>
+</div></div>
+</section>
+<div id="scrim"></div>
+<div id="sidebarHotzone" aria-hidden="true"></div>
+<aside id="sidebar">
+  <div class="sidebar-heading">
+    <div id="brand"><span class="logo"><img src="img/logo.png" alt="Society MLBB"></span></div>
+    <button id="menuClose" type="button" aria-label="Fechar menu">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <nav id="nav" aria-label="Navegação principal">
+    <div class="nav-group">
+      <span class="nav-group-label">COMUNIDADE</span>
+      <button type="button" data-t="home" data-shortcut="home"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span class="nav-text"><b>Início</b><small>Sua página inicial</small></span></button>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">JOGO</span>
+      <button type="button" data-t="meta" data-shortcut="meta"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-chart"/></svg><span class="nav-text"><b>Meta por rota</b><small>Heróis em alta por lane</small></span></button>
+      <button type="button" data-t="heroes" data-shortcut="heroes"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-swords"/></svg><span class="nav-text"><b>Heróis</b><small>Catálogo com builds e meta</small></span></button>
+      <button type="button" data-t="builds" data-shortcut="builds"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-build"/></svg><span class="nav-text"><b>Builds</b><small>Itens e emblemas testados</small></span></button>
+      <button type="button" data-t="guide" data-shortcut="guide"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-book"/></svg><span class="nav-text"><b>Guia</b><small>Termos e jogadas explicados</small></span></button>
+    </div>
+    <div class="nav-group">
+      <span class="nav-group-label">MAIS</span>
+      <button type="button" data-t="tools" data-shortcut="tools" class="on"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="#i-percent"/></svg><span class="nav-text"><b>Ferramentas</b><small>Win rate e treino de caçar</small></span></button>
+    </div>
+  </nav>
+</aside>
+<nav id="mobileNav" aria-label="Navegação principal para celular">
+  <button type="button" data-t="home" data-shortcut="home"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-home"/></svg><small>Início</small></button>
+  <button type="button" data-t="heroes" data-shortcut="heroes"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-swords"/></svg><small>Heróis</small></button>
+  <button type="button" data-t="meta" data-shortcut="meta"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-chart"/></svg><small>Meta</small></button>
+  <button type="button" data-t="builds" data-shortcut="builds"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-build"/></svg><small>Builds</small></button>
+  <button id="mobileMore" type="button" aria-label="Abrir mais opções" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg><small>Mais</small></button>
+</nav>
+</div>
+<script src="js/pages-config.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/retri-trainer.js"></script>
+<script src="js/shell.js"></script>
+</body>
+</html>
