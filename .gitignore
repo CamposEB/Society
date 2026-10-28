@@ -1,51 +1,9 @@
-# ─── Segredos e tokens ───
-.env
-.env.*
-!.env.example
-token.txt
-*.token
-
-# ─── Firebase / credenciais ───
-firebase-admin*.json
-*-firebase-admin*.json
-firebase-service-account.json
-*service-account*.json
-*adminsdk*.json
-
-# ─── Banco local ───
-lobby.db
-lobby.db-*
-*.db
-*.db.*
-backup-r2-*
-
-# ─── Python ───
-__pycache__/
-*.pyc
+﻿node_modules/
 .venv/
-venv/
-
-# ─── Cache dos scripts ───
-.cache/
-
-# ─── Arquivos temporários (SÓ no root) ───
-/*.tmp
-/*.bak
-/p[0-9]*.json
-/m[0-9]*.json
-/s[0-9]*.json
-/t[0-9]*.json
-/probe_*.json
-/body_*.json
-/body[A-Z]*.json
-/scan_body.json
-/page[0-9]*.json
-/check.json
-
-# ─── Anotações pessoais ───
-jogo.txt
-projeto.txt
-
-# ─── Sistema ───
-Thumbs.db
+__pycache__/
+.env
+*.bak
+*.log
 .DS_Store
+firebase-service-account.json
+token.txt
