@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""montar_site.py — monta a versão estática (GitHub Pages) do site antigo e gera os arquivos PWA."""
+"""montar_site.py — monta a versão estática (GitHub Pages/Cloudflare) do site antigo e gera os arquivos PWA corrigidos."""
 
 import argparse
 import json
@@ -123,7 +123,6 @@ def sidebar(tab):
   <button id="mobileMore" type="button" aria-label="Abrir mais opções" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M4 12h16M4 18h16"/></svg><small>Mais</small></button>
 </nav>"""
 
-# TEMPLATE ATUALIZADO COM META TAGS DE COMPARTILHAMENTO E PWA
 PAGINA = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -190,12 +189,15 @@ def ler(p):
     return Path(p).read_text(encoding="utf-8-sig")
 
 def gerar_arquivos_pwa(OUT):
-    """Gera o manifest.json e o sw.js na pasta de saída."""
+    """Gera o manifest.json, sw.js e _redirects na pasta de saída com correções para Cloudflare Pages."""
+    
+    # 1. Manifest.json corrigido
     manifest_data = {
         "name": "Society MLBB",
         "short_name": "Society",
         "description": "Comunidade de Mobile Legends com meta, builds e ferramentas.",
-        "start_url": "./index.html",
+        "start_url": "/",  # <-- CORREÇÃO: Aponta para a raiz, que o Cloudflare serve
+        "scope": "/",
         "display": "standalone",
         "background_color": "#0a0a0b",
         "theme_color": "#0a0a0b",
@@ -216,10 +218,10 @@ def gerar_arquivos_pwa(OUT):
     }
     (OUT / "manifest.json").write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
 
-    sw_code = """const CACHE_NAME = 'society-mlbb-v1';
+    # 2. Service Worker (sw.js) corrigido
+    sw_code = """const CACHE_NAME = 'society-mlbb-v2'; // Atualize a versão para forçar o recache
 const ASSETS = [
   './',
-  './index.html',
   './css/static.css',
   './js/shell.js',
   './manifest.json',
@@ -229,11 +231,30 @@ const ASSETS = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => {
+      // Tenta cachear cada item. Se um falhar, não quebra os outros.
+      return Promise.all(
+        ASSETS.map(url => cache.add(url).catch(err => console.warn('Falha ao cachear:', url, err)))
+      );
+    })
+  );
+  self.skipWaiting(); // Ativa o novo SW imediatamente
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.map(key => {
+        if (key !== CACHE_NAME) return caches.delete(key);
+      })
+    )).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (e) => {
+  // Ignora requisições que não sejam GET (ex: POST)
+  if (e.request.method !== 'GET') return;
+
   e.respondWith(
     caches.match(e.request).then((res) => {
       return res || fetch(e.request);
@@ -242,7 +263,11 @@ self.addEventListener('fetch', (e) => {
 });
 """
     (OUT / "sw.js").write_text(sw_code, encoding="utf-8")
-    print("Arquivos PWA gerados (manifest.json e sw.js).")
+
+    # 3. _redirects (Garante que o Cloudflare sirva o index.html para qualquer rota)
+    (OUT / "_redirects").write_text("/* /index.html 200\n", encoding="utf-8")
+
+    print("Arquivos PWA (manifest.json, sw.js, _redirects) gerados com correções.")
 
 
 def main():
