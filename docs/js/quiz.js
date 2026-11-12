@@ -11,7 +11,7 @@
     { q: "Qual é a rota padrão do herói Khufra?", o: ["EXP", "Mid", "Roam (Suporte)", "Gold"], c: 2, e: "Khufra é um Tank com muito controle de grupo, ideal para a rota de Roam." },
     { q: "Quanto tempo leva para a primeira Tartaruga aparecer no mapa?", o: ["1:00", "2:00", "3:00", "4:00"], c: 1, e: "A primeira Tartaruga surge aos 2 minutos de jogo." },
     { q: "Qual feitiço de batalha é obrigatório para quem joga na selva (jungle)?", o: ["Flash", "Purificar", "Caçar (Retribuição)", "Teleporte"], c: 2, e: "O Caçar (Retribuição) é essencial para causar dano aos monstros e garantir objetivos." },
-    { q: "Qual herói tem a habilidade de puxar os inimigos com um gancho?", o: ["Franco", "Franco", "Franco", "Tigreal"], c: 0, e: "Franco é o atirador com o gancho icônico que puxa o alvo para perto do time." },
+    { q: "Qual herói tem a habilidade de puxar os inimigos com um gancho?", o: ["Franco", "Layla", "Miya", "Tigreal"], c: 0, e: "Franco é um Tank que usa seu gancho (Iron Hook) para puxar o alvo para perto do time." },
     { q: "O que significa 'CC' no jogo?", o: ["Cura Constante", "Controle de Grupo", "Crítico Certo", "Custo de Combate"], c: 1, e: "CC significa Crowd Control (Controle de Grupo), como stuns, slows e silences." },
     { q: "Qual desses é um Emblema de Classe?", o: ["Emblema do Caçador", "Emblema do Mago", "Emblema do Lord", "Emblema do Ouro"], c: 1, e: "Existem emblemas específicos para classes como Mago, Assassino, Tank, etc." },
     { q: "Quem derrota o Lord concede um buff significativo ao time. Onde ele geralmente aparece?", o: ["No meio do mapa", "Na selva superior", "Na selva inferior", "Na base inimiga"], c: 0, e: "O Lord aparece no poço central (pit) do mapa." },

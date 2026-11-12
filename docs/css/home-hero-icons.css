@@ -1,4 +1,4 @@
-/* /static/css/home-hero-icons.css — ícone do herói nas linhas de preview da home */
+/* css/home-hero-icons.css — ícone do herói nas linhas de preview da home */
 .home-preview-row.has-hero-icon {
   display: flex;
   align-items: center;
@@ -6,14 +6,20 @@
 }
 .home-preview-row.has-hero-icon > .build-icon {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(230, 195, 92, .22);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02));
+  transition: border-color .18s ease, transform .18s ease;
+}
+.home-preview-row.has-hero-icon:hover > .build-icon {
+  border-color: rgba(230, 195, 92, .6);
+  transform: scale(1.04);
 }
 .home-preview-row.has-hero-icon > .build-icon img {
   width: 100%;
@@ -24,6 +30,7 @@
 .home-preview-row.has-hero-icon > .build-icon .build-icon-placeholder {
   font-size: 13px;
   font-weight: 700;
+  color: #c7cad6;
 }
 .home-preview-row.has-hero-icon > .home-preview-copy { flex: 1 1 auto; min-width: 0; }
 .home-preview-row.has-hero-icon > .home-preview-summary { flex: 0 0 auto; margin-left: auto; }
